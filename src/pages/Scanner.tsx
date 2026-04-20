@@ -1,0 +1,681 @@
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
+import {
+  Play, ExternalLink, X, Plus, Youtube, Instagram, AlertCircle,
+  CheckCircle2, Clock, Loader2,
+} from "lucide-react";
+import { formatNumber, formatCompact } from "@/lib/formatters";
+
+type ScanSettings = {
+  id: string;
+  brand_keywords: string[] | null;
+  youtube_api_key: string | null;
+  scan_frequency_minutes: number | null;
+  platforms_to_scan: string[] | null;
+  auto_add_known_influencers: boolean | null;
+  stats_refresh_frequency_minutes: number | null;
+};
+
+type DetectedVideo = {
+  id: string;
+  video_url: string;
+  video_id: string;
+  platform: string;
+  video_title: string | null;
+  channel_name: string | null;
+  channel_id: string | null;
+  thumbnail_url: string | null;
+  influencer_id: string | null;
+  status: string | null;
+  published_at: string | null;
+  views: number | null;
+  likes: number | null;
+  comments: number | null;
+  mention_locations: string[] | null;
+  created_at: string | null;
+};
+
+type ScanLogRow = {
+  id: string;
+  scan_type: string;
+  status: string;
+  videos_found: number | null;
+  videos_new: number | null;
+  stats_updated: number | null;
+  started_at: string | null;
+  completed_at: string | null;
+  error_message: string | null;
+};
+
+type Influencer = {
+  id: string;
+  name: string;
+  country: string;
+  youtube_channel_id: string | null;
+};
+
+const SCAN_FREQ_OPTIONS = [
+  { v: 15, l: "Every 15 min" },
+  { v: 30, l: "Every 30 min" },
+  { v: 60, l: "Every hour" },
+  { v: 360, l: "Every 6 hours" },
+  { v: 1440, l: "Daily" },
+];
+const STATS_FREQ_OPTIONS = [
+  { v: 60, l: "Every hour" },
+  { v: 360, l: "Every 6 hours" },
+  { v: 720, l: "Every 12 hours" },
+  { v: 1440, l: "Daily" },
+];
+
+export default function Scanner() {
+  const [settings, setSettings] = useState<ScanSettings | null>(null);
+  const [detections, setDetections] = useState<DetectedVideo[]>([]);
+  const [logs, setLogs] = useState<ScanLogRow[]>([]);
+  const [influencers, setInfluencers] = useState<Influencer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [running, setRunning] = useState(false);
+  const [page, setPage] = useState(1);
+  const PAGE = 10;
+
+  const load = async () => {
+    setLoading(true);
+    const [s, d, l, inf] = await Promise.all([
+      supabase.from("scan_settings").select("*").limit(1).maybeSingle(),
+      supabase.from("detected_videos").select("*").eq("status", "pending").order("created_at", { ascending: false }),
+      supabase.from("scan_log").select("*").order("started_at", { ascending: false }).limit(200),
+      supabase.from("influencers").select("id,name,country,youtube_channel_id"),
+    ]);
+    if (s.data) setSettings(s.data as ScanSettings);
+    setDetections((d.data ?? []) as DetectedVideo[]);
+    setLogs((l.data ?? []) as ScanLogRow[]);
+    setInfluencers((inf.data ?? []) as Influencer[]);
+    setLoading(false);
+  };
+
+  useEffect(() => { void load(); }, []);
+
+  const lastScan = logs[0];
+  const status: { color: string; label: string; sub: string } = useMemo(() => {
+    if (!lastScan) return { color: "bg-muted-foreground", label: "Idle", sub: "No scans yet" };
+    if (lastScan.status === "running" || lastScan.status === "pending") {
+      return { color: "bg-yellow-500 animate-pulse", label: "Running", sub: "Scan in progress" };
+    }
+    if (lastScan.status === "failed") {
+      return { color: "bg-red-500", label: "Error", sub: lastScan.error_message ?? "Last scan failed" };
+    }
+    const ageMin = lastScan.completed_at
+      ? (Date.now() - new Date(lastScan.completed_at).getTime()) / 60000
+      : 9999;
+    const freq = settings?.scan_frequency_minutes ?? 60;
+    if (ageMin < freq * 1.2) return { color: "bg-emerald-500 animate-pulse", label: "Active", sub: "Scanner is running" };
+    return { color: "bg-muted-foreground", label: "Idle", sub: "Waiting for next scan" };
+  }, [lastScan, settings]);
+
+  const nextScanAt = useMemo(() => {
+    if (!lastScan?.completed_at || !settings?.scan_frequency_minutes) return null;
+    return new Date(new Date(lastScan.completed_at).getTime() + settings.scan_frequency_minutes * 60000);
+  }, [lastScan, settings]);
+
+  const totals = useMemo(() => {
+    return logs.reduce(
+      (a, x) => ({
+        scanned: a.scanned + (x.videos_found ?? 0),
+        nw: a.nw + (x.videos_new ?? 0),
+        stats: a.stats + (x.stats_updated ?? 0),
+      }),
+      { scanned: 0, nw: 0, stats: 0 },
+    );
+  }, [logs]);
+
+  const runScanNow = async () => {
+    setRunning(true);
+    const { error } = await supabase.from("scan_log").insert({
+      scan_type: "Manual",
+      status: "pending",
+    });
+    if (error) toast.error(error.message);
+    else toast.success("Scan queued");
+    await load();
+    setRunning(false);
+  };
+
+  return (
+    <div className="space-y-6 p-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Scanner</h1>
+        <p className="text-sm text-muted-foreground">Automatic brand-mention detection</p>
+      </div>
+
+      <StatusCard
+        status={status}
+        lastScan={lastScan}
+        nextScanAt={nextScanAt}
+        totals={totals}
+        running={running}
+        onRun={runScanNow}
+      />
+
+      <DetectionQueue
+        detections={detections}
+        influencers={influencers}
+        onChange={load}
+      />
+
+      {settings && <SettingsForm settings={settings} onSaved={load} />}
+
+      <ScanHistory logs={logs} page={page} setPage={setPage} pageSize={PAGE} />
+
+      {loading && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Status Card ---------- */
+function StatusCard({
+  status, lastScan, nextScanAt, totals, running, onRun,
+}: {
+  status: { color: string; label: string; sub: string };
+  lastScan?: ScanLogRow;
+  nextScanAt: Date | null;
+  totals: { scanned: number; nw: number; stats: number };
+  running: boolean;
+  onRun: () => void;
+}) {
+  const fmt = (d?: string | null) => (d ? new Date(d).toLocaleString("cs-CZ") : "—");
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-4">
+            <span className={`inline-block h-4 w-4 rounded-full ${status.color}`} />
+            <div>
+              <div className="text-xl font-semibold">{status.label}</div>
+              <div className="text-sm text-muted-foreground">{status.sub}</div>
+            </div>
+          </div>
+          <Button onClick={onRun} disabled={running} className="bg-emerald-600 hover:bg-emerald-700">
+            {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+            Run Scan Now
+          </Button>
+        </div>
+
+        <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-5">
+          <Stat label="Last scan" value={fmt(lastScan?.completed_at ?? lastScan?.started_at)} />
+          <Stat label="Next scan" value={nextScanAt ? fmt(nextScanAt.toISOString()) : "—"} />
+          <Stat label="Videos scanned" value={formatNumber(totals.scanned)} />
+          <Stat label="New detections" value={formatNumber(totals.nw)} />
+          <Stat label="Stats updated" value={formatNumber(totals.stats)} />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+const Stat = ({ label, value }: { label: string; value: string }) => (
+  <div>
+    <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
+    <div className="mt-1 font-medium">{value}</div>
+  </div>
+);
+
+/* ---------- Detection Queue ---------- */
+function DetectionQueue({
+  detections, influencers, onChange,
+}: {
+  detections: DetectedVideo[];
+  influencers: Influencer[];
+  onChange: () => void;
+}) {
+  const [approve, setApprove] = useState<DetectedVideo | null>(null);
+  const matchInfluencer = (d: DetectedVideo): Influencer | undefined => {
+    if (d.influencer_id) return influencers.find((i) => i.id === d.influencer_id);
+    if (d.channel_id) return influencers.find((i) => i.youtube_channel_id === d.channel_id);
+    return undefined;
+  };
+
+  const dismiss = async (id: string) => {
+    const { error } = await supabase.from("detected_videos").update({ status: "dismissed" }).eq("id", id);
+    if (error) toast.error(error.message); else { toast.success("Dismissed"); onChange(); }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex-row items-center justify-between space-y-0">
+        <CardTitle className="flex items-center gap-2">
+          Pending Detections
+          <Badge variant="secondary">{detections.length}</Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {detections.length === 0 && (
+          <div className="py-12 text-center text-sm text-muted-foreground">No pending detections.</div>
+        )}
+        {detections.map((d) => {
+          const matched = matchInfluencer(d);
+          const PlatIcon = d.platform.toLowerCase().includes("you") ? Youtube : Instagram;
+          const platColor = d.platform.toLowerCase().includes("you") ? "text-red-500" : "text-pink-500";
+          return (
+            <div key={d.id} className="rounded-lg border p-4">
+              <div className="flex flex-col gap-4 md:flex-row">
+                <div className="flex items-start gap-3">
+                  <PlatIcon className={`h-6 w-6 shrink-0 ${platColor}`} />
+                  {d.thumbnail_url && (
+                    <img src={d.thumbnail_url} alt="" className="h-20 w-32 shrink-0 rounded object-cover" />
+                  )}
+                </div>
+
+                <div className="flex-1 space-y-2">
+                  <a href={d.video_url} target="_blank" rel="noreferrer" className="block font-semibold hover:underline">
+                    {d.video_title ?? d.video_url}
+                  </a>
+                  <div className="text-sm text-muted-foreground">
+                    {d.channel_name ?? "Unknown channel"} ·{" "}
+                    {d.published_at ? new Date(d.published_at).toLocaleDateString("cs-CZ") : "—"}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {(d.mention_locations ?? []).map((m) => (
+                      <Badge key={m} variant="outline">{m}</Badge>
+                    ))}
+                    {matched ? (
+                      <Badge className="bg-emerald-600 hover:bg-emerald-700">Matched: {matched.name}</Badge>
+                    ) : (
+                      <Badge className="bg-orange-500 hover:bg-orange-600">Unknown Creator</Badge>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-end gap-1 text-xs text-muted-foreground">
+                  <div>👁 {formatCompact(d.views)}</div>
+                  <div>👍 {formatCompact(d.likes)}</div>
+                  <div>💬 {formatCompact(d.comments)}</div>
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setApprove(d)}>
+                  <CheckCircle2 className="h-4 w-4" /> Approve & Add
+                </Button>
+                <Button size="sm" variant="secondary" onClick={() => dismiss(d.id)}>
+                  <X className="h-4 w-4" /> Dismiss
+                </Button>
+                <Button size="sm" variant="outline" asChild>
+                  <a href={d.video_url} target="_blank" rel="noreferrer">
+                    <ExternalLink className="h-4 w-4" /> View Original
+                  </a>
+                </Button>
+                {!matched && (
+                  <Button size="sm" variant="outline" asChild>
+                    <a href="/creators"><Plus className="h-4 w-4" /> Add to Roster</a>
+                  </Button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </CardContent>
+
+      <ApproveDialog
+        open={!!approve}
+        detection={approve}
+        matched={approve ? matchInfluencer(approve) : undefined}
+        onClose={() => setApprove(null)}
+        onSaved={() => { setApprove(null); onChange(); }}
+      />
+    </Card>
+  );
+}
+
+function ApproveDialog({
+  open, detection, matched, onClose, onSaved,
+}: {
+  open: boolean;
+  detection: DetectedVideo | null;
+  matched?: Influencer;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [collab, setCollab] = useState("paid");
+  const [cost, setCost] = useState("0");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (detection) {
+      setName(detection.video_title ?? "");
+      setCollab("paid");
+      setCost("0");
+    }
+  }, [detection]);
+
+  const save = async () => {
+    if (!detection) return;
+    setSaving(true);
+    const { error: cErr } = await supabase.from("campaigns").insert({
+      campaign_name: name,
+      platform: detection.platform,
+      publish_date: detection.published_at ? detection.published_at.slice(0, 10) : null,
+      video_url: detection.video_url,
+      video_id: detection.video_id,
+      collaboration_type: collab,
+      campaign_cost: Number(cost) || 0,
+      views: detection.views ?? 0,
+      likes: detection.likes ?? 0,
+      comments: detection.comments ?? 0,
+      influencer_id: matched?.id ?? null,
+      detected_automatically: true,
+      detection_source: "scanner",
+    });
+    if (cErr) { toast.error(cErr.message); setSaving(false); return; }
+    const { error: uErr } = await supabase.from("detected_videos").update({ status: "approved" }).eq("id", detection.id);
+    if (uErr) { toast.error(uErr.message); setSaving(false); return; }
+    toast.success("Campaign created");
+    setSaving(false);
+    onSaved();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Approve Detection</DialogTitle></DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label>Campaign name</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={200} />
+          </div>
+          <div>
+            <Label>Collaboration type</Label>
+            <Select value={collab} onValueChange={setCollab}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="paid">Paid</SelectItem>
+                <SelectItem value="barter">Barter</SelectItem>
+                <SelectItem value="organic">Organic</SelectItem>
+                <SelectItem value="affiliate">Affiliate</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Campaign cost (Kč)</Label>
+            <Input type="number" min="0" value={cost} onChange={(e) => setCost(e.target.value)} />
+          </div>
+          {!matched && (
+            <div className="flex items-start gap-2 rounded border border-orange-500/40 bg-orange-500/10 p-3 text-sm">
+              <AlertCircle className="h-4 w-4 shrink-0 text-orange-500" />
+              <span>No matching creator. Campaign will be created without an influencer link.</span>
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button onClick={save} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700">
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />} Create campaign
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ---------- Settings ---------- */
+function SettingsForm({ settings, onSaved }: { settings: ScanSettings; onSaved: () => void }) {
+  const [keywords, setKeywords] = useState<string[]>(settings.brand_keywords ?? []);
+  const [kwInput, setKwInput] = useState("");
+  const [apiKey, setApiKey] = useState(settings.youtube_api_key ?? "");
+  const [freq, setFreq] = useState(settings.scan_frequency_minutes ?? 60);
+  const [statsFreq, setStatsFreq] = useState(settings.stats_refresh_frequency_minutes ?? 360);
+  const [platforms, setPlatforms] = useState<string[]>(settings.platforms_to_scan ?? []);
+  const [autoApprove, setAutoApprove] = useState(!!settings.auto_add_known_influencers);
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+
+  const addKw = () => {
+    const v = kwInput.trim();
+    if (!v || keywords.includes(v)) return;
+    setKeywords([...keywords, v]);
+    setKwInput("");
+  };
+  const togglePlatform = (p: string) => {
+    setPlatforms(platforms.includes(p) ? platforms.filter((x) => x !== p) : [...platforms, p]);
+  };
+
+  const save = async () => {
+    setSaving(true);
+    const { error } = await supabase.from("scan_settings").update({
+      brand_keywords: keywords,
+      youtube_api_key: apiKey || null,
+      scan_frequency_minutes: freq,
+      stats_refresh_frequency_minutes: statsFreq,
+      platforms_to_scan: platforms,
+      auto_add_known_influencers: autoApprove,
+    }).eq("id", settings.id);
+    setSaving(false);
+    if (error) toast.error(error.message);
+    else { toast.success("Settings saved"); onSaved(); }
+  };
+
+  const testKey = async () => {
+    if (!apiKey) { toast.error("Enter an API key first"); return; }
+    setTesting(true);
+    try {
+      const r = await fetch(
+        `https://www.googleapis.com/youtube/v3/search?part=snippet&q=test&maxResults=1&key=${encodeURIComponent(apiKey)}`,
+      );
+      const j = await r.json();
+      if (r.ok) toast.success("API key is valid");
+      else toast.error(j.error?.message ?? "Invalid API key");
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+    setTesting(false);
+  };
+
+  return (
+    <Card>
+      <CardHeader><CardTitle>Scan Settings</CardTitle></CardHeader>
+      <CardContent className="space-y-6">
+        <div>
+          <Label>Brand keywords</Label>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {keywords.map((k) => (
+              <Badge key={k} variant="secondary" className="gap-1">
+                {k}
+                <button type="button" onClick={() => setKeywords(keywords.filter((x) => x !== k))}>
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+          <div className="mt-2 flex gap-2">
+            <Input
+              value={kwInput}
+              onChange={(e) => setKwInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addKw())}
+              placeholder="Add keyword and press Enter"
+              maxLength={100}
+            />
+            <Button type="button" variant="secondary" onClick={addKw}>Add</Button>
+          </div>
+        </div>
+
+        <div>
+          <Label>YouTube API key</Label>
+          <div className="mt-2 flex gap-2">
+            <Input
+              type="password"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder="AIza…"
+              maxLength={200}
+            />
+            <Button type="button" variant="secondary" onClick={testKey} disabled={testing}>
+              {testing && <Loader2 className="h-4 w-4 animate-spin" />} Test
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <Label>Scan frequency</Label>
+            <Select value={String(freq)} onValueChange={(v) => setFreq(Number(v))}>
+              <SelectTrigger className="mt-2"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {SCAN_FREQ_OPTIONS.map((o) => (
+                  <SelectItem key={o.v} value={String(o.v)}>{o.l}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Stats refresh frequency</Label>
+            <Select value={String(statsFreq)} onValueChange={(v) => setStatsFreq(Number(v))}>
+              <SelectTrigger className="mt-2"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {STATS_FREQ_OPTIONS.map((o) => (
+                  <SelectItem key={o.v} value={String(o.v)}>{o.l}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div>
+          <Label>Platforms to scan</Label>
+          <div className="mt-2 flex gap-6">
+            {["YouTube", "Instagram"].map((p) => (
+              <label key={p} className="flex items-center gap-2 text-sm">
+                <Checkbox checked={platforms.includes(p)} onCheckedChange={() => togglePlatform(p)} />
+                {p}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between rounded-lg border p-4">
+          <div>
+            <div className="font-medium">Auto-approve known creators</div>
+            <div className="text-sm text-muted-foreground">
+              Auto-create campaigns when a video matches a known influencer's channel.
+            </div>
+          </div>
+          <Switch checked={autoApprove} onCheckedChange={setAutoApprove} />
+        </div>
+
+        <div className="flex justify-end">
+          <Button onClick={save} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700">
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />} Save Settings
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ---------- Scan History ---------- */
+function ScanHistory({
+  logs, page, setPage, pageSize,
+}: {
+  logs: ScanLogRow[];
+  page: number;
+  setPage: (n: number) => void;
+  pageSize: number;
+}) {
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const totalPages = Math.max(1, Math.ceil(logs.length / pageSize));
+  const slice = logs.slice((page - 1) * pageSize, page * pageSize);
+
+  const duration = (a?: string | null, b?: string | null) => {
+    if (!a || !b) return "—";
+    const ms = new Date(b).getTime() - new Date(a).getTime();
+    if (ms < 0) return "—";
+    if (ms < 60000) return `${Math.round(ms / 1000)}s`;
+    return `${Math.round(ms / 60000)}m`;
+  };
+
+  const statusBadge = (s: string) => {
+    if (s === "completed") return <Badge className="bg-emerald-600 hover:bg-emerald-700">Completed</Badge>;
+    if (s === "failed") return <Badge className="bg-red-600 hover:bg-red-700">Failed</Badge>;
+    return <Badge className="bg-yellow-600 hover:bg-yellow-700"><Clock className="h-3 w-3" />Running</Badge>;
+  };
+
+  return (
+    <Card>
+      <CardHeader><CardTitle>Scan History</CardTitle></CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Date/time</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Found</TableHead>
+              <TableHead className="text-right">New</TableHead>
+              <TableHead className="text-right">Stats</TableHead>
+              <TableHead>Duration</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {slice.length === 0 && (
+              <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">No scans yet.</TableCell></TableRow>
+            )}
+            {slice.map((l) => (
+              <>
+                <TableRow
+                  key={l.id}
+                  className={l.error_message ? "cursor-pointer" : ""}
+                  onClick={() => l.error_message && setExpanded(expanded === l.id ? null : l.id)}
+                >
+                  <TableCell>{l.started_at ? new Date(l.started_at).toLocaleString("cs-CZ") : "—"}</TableCell>
+                  <TableCell><Badge variant="outline">{l.scan_type}</Badge></TableCell>
+                  <TableCell>{statusBadge(l.status)}</TableCell>
+                  <TableCell className="text-right">{formatNumber(l.videos_found)}</TableCell>
+                  <TableCell className="text-right">{formatNumber(l.videos_new)}</TableCell>
+                  <TableCell className="text-right">{formatNumber(l.stats_updated)}</TableCell>
+                  <TableCell>{duration(l.started_at, l.completed_at)}</TableCell>
+                </TableRow>
+                {expanded === l.id && l.error_message && (
+                  <TableRow key={`${l.id}-err`}>
+                    <TableCell colSpan={7} className="bg-red-500/10 text-sm text-red-500">
+                      {l.error_message}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </>
+            ))}
+          </TableBody>
+        </Table>
+
+        {logs.length > pageSize && (
+          <div className="mt-4 flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">Page {page} of {totalPages}</div>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}>Prev</Button>
+              <Button size="sm" variant="outline" onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages}>Next</Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
