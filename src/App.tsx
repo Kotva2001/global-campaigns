@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "./components/AppLayout";
 import Dashboard from "./pages/Dashboard";
-import { Scanner } from "./pages/Placeholder";
+import Scanner from "./pages/Scanner";
 import Creators from "./pages/Creators";
 import Analytics from "./pages/Analytics";
 import Alerts from "./pages/Alerts";
