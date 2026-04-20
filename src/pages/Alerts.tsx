@@ -307,7 +307,7 @@ const RuleFormDialog = ({
     const payload = parsed.data;
     const { error } = editing
       ? await supabase.from("alert_rules").update(payload).eq("id", editing.id)
-      : await supabase.from("alert_rules").insert(payload);
+      : await supabase.from("alert_rules").insert([payload]);
     setSaving(false);
     if (error) return toast.error(error.message);
     toast.success(editing ? "Rule updated" : "Rule created");
