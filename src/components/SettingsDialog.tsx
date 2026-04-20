@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import type { SheetConfig } from "@/hooks/useSheetData";
+import { ImportFromSheets } from "./ImportFromSheets";
 
 interface Props {
   open: boolean;
