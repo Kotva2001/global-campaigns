@@ -311,7 +311,7 @@ const RuleFormDialog = ({
       return;
     }
     setSaving(true);
-    const payload = parsed.data;
+    const payload: RuleForm = parsed.data as RuleForm;
     const { error } = editing
       ? await supabase.from("alert_rules").update(payload).eq("id", editing.id)
       : await supabase.from("alert_rules").insert([payload]);
