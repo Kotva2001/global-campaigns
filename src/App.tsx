@@ -5,9 +5,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "./components/AppLayout";
 import Dashboard from "./pages/Dashboard";
-import { Alerts, Scanner } from "./pages/Placeholder";
+import { Scanner } from "./pages/Placeholder";
 import Creators from "./pages/Creators";
 import Analytics from "./pages/Analytics";
+import Alerts from "./pages/Alerts";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
