@@ -147,12 +147,10 @@ export default function Scanner() {
 
   const runScanNow = async () => {
     setRunning(true);
-    const { error } = await supabase.from("scan_log").insert({
-      scan_type: "Manual",
-      status: "pending",
-    });
+    const { data, error } = await supabase.functions.invoke("scan-youtube");
     if (error) toast.error(error.message);
-    else toast.success("Scan queued");
+    else if (data?.ok === false) toast.error(data.error ?? "Scan failed");
+    else toast.success(`Scan complete — ${data?.new ?? 0} new`);
     await load();
     setRunning(false);
   };
@@ -372,24 +370,19 @@ function ApproveDialog({
   const save = async () => {
     if (!detection) return;
     setSaving(true);
-    const { error: cErr } = await supabase.from("campaigns").insert({
-      campaign_name: name,
-      platform: detection.platform,
-      publish_date: detection.published_at ? detection.published_at.slice(0, 10) : null,
-      video_url: detection.video_url,
-      video_id: detection.video_id,
-      collaboration_type: collab,
-      campaign_cost: Number(cost) || 0,
-      views: detection.views ?? 0,
-      likes: detection.likes ?? 0,
-      comments: detection.comments ?? 0,
-      influencer_id: matched?.id ?? null,
-      detected_automatically: true,
-      detection_source: "scanner",
+    const { data, error } = await supabase.functions.invoke("process-detection", {
+      body: {
+        detected_video_id: detection.id,
+        campaign_name: name,
+        collaboration_type: collab,
+        campaign_cost: Number(cost) || 0,
+      },
     });
-    if (cErr) { toast.error(cErr.message); setSaving(false); return; }
-    const { error: uErr } = await supabase.from("detected_videos").update({ status: "approved" }).eq("id", detection.id);
-    if (uErr) { toast.error(uErr.message); setSaving(false); return; }
+    if (error || data?.ok === false) {
+      toast.error(error?.message ?? data?.error ?? "Failed");
+      setSaving(false);
+      return;
+    }
     toast.success("Campaign created");
     setSaving(false);
     onSaved();
