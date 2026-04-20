@@ -54,9 +54,9 @@ export const parseRow = (
     likes: parseCzechNumber(row[11]),
     comments: parseCzechNumber(row[12]),
     sessions: parseCzechNumber(row[13]),
-    engagementRate: parseCzechNumber(row[14]),
+    engagementRate: parsePercentage(row[14]),
     purchaseRevenue: parseCzechNumber(row[15]),
-    conversionRate: parseCzechNumber(row[16]),
+    conversionRate: parsePercentage(row[16]),
   };
 };
 
