@@ -11,6 +11,20 @@ export interface SheetConfig {
 
 const STORAGE_KEY = "irt.sheet.config";
 
+const normalizeHeaderCell = (value: unknown) =>
+  String(value ?? "")
+    .trim()
+    .toLowerCase();
+
+const rowsNeedTrackingPadding = (values: unknown[][]) => {
+  const header = values[0] ?? [];
+  const firstHeader = normalizeHeaderCell(header[0]);
+  return firstHeader === "influencer";
+};
+
+const alignRowForParser = (row: unknown[], needsTrackingPadding: boolean) =>
+  needsTrackingPadding ? ["", ...row] : row;
+
 export const loadConfig = (): SheetConfig => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -55,8 +69,10 @@ export const useSheetData = () => {
             }
             const json = await res.json();
             if (!json.values || json.values.length < 2) return [] as CampaignEntry[];
-            return (json.values.slice(1) as unknown[][]).map((row, i) =>
-              parseRow(row, country, i),
+            const values = json.values as unknown[][];
+            const needsTrackingPadding = rowsNeedTrackingPadding(values);
+            return values.slice(1).map((row, i) =>
+              parseRow(alignRowForParser(row, needsTrackingPadding), country, i),
             );
           } catch {
             toast.error(`Network error fetching ${country}`);
