@@ -31,45 +31,55 @@ export const SettingsDialog = ({ open, onOpenChange, config, onSave }: Props) =>
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-border bg-card">
+      <DialogContent className="max-h-[90vh] overflow-y-auto border-border bg-card sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Google Sheets configuration</DialogTitle>
+          <DialogTitle>Settings</DialogTitle>
           <DialogDescription>
-            Stored locally in your browser. Used to fetch all 11 country tabs.
+            Configure your data source and one-time migration tools.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="sheetId">Spreadsheet ID</Label>
-            <Input
-              id="sheetId"
-              value={sheetId}
-              onChange={(e) => setSheetId(e.target.value)}
-              placeholder="1AbCdEfGhIjKlMnOp…"
-              className="font-mono text-xs"
-            />
-            <p className="text-xs text-muted-foreground">
-              From the URL: <code>docs.google.com/spreadsheets/d/<b>SHEET_ID</b>/edit</code>
-            </p>
+
+        <div className="space-y-6 py-2">
+          <div className="space-y-4 rounded-lg border p-4">
+            <div>
+              <h3 className="text-base font-semibold">Google Sheets configuration</h3>
+              <p className="text-xs text-muted-foreground">
+                Stored locally in your browser. Used to fetch all 11 country tabs.
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="sheetId">Spreadsheet ID</Label>
+              <Input
+                id="sheetId"
+                value={sheetId}
+                onChange={(e) => setSheetId(e.target.value)}
+                placeholder="1AbCdEfGhIjKlMnOp…"
+                className="font-mono text-xs"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="apiKey">Google API key</Label>
+              <Input
+                id="apiKey"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="AIza…"
+                className="font-mono text-xs"
+                type="password"
+              />
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={submit} disabled={!sheetId || !apiKey} size="sm">
+                Save & fetch
+              </Button>
+            </div>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="apiKey">Google API key</Label>
-            <Input
-              id="apiKey"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="AIza…"
-              className="font-mono text-xs"
-              type="password"
-            />
-            <p className="text-xs text-muted-foreground">
-              Restrict this key to the Sheets API and your domain in Google Cloud Console.
-            </p>
-          </div>
+
+          <ImportFromSheets />
         </div>
+
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={submit} disabled={!sheetId || !apiKey}>Save & fetch</Button>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Close</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
