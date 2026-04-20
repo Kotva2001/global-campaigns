@@ -86,11 +86,18 @@ const ruleSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(120),
   metric: z.enum(["views", "likes", "comments", "engagement_rate", "revenue", "conversion_rate"]),
   condition: z.enum(["gt", "lt"]),
-  threshold: z.coerce.number().finite("Must be a number"),
+  threshold: z.number().finite("Must be a number"),
   applies_to: z.string().min(1),
   is_active: z.boolean(),
 });
-type RuleForm = z.infer<typeof ruleSchema>;
+type RuleForm = {
+  name: string;
+  metric: Metric;
+  condition: Condition;
+  threshold: number;
+  applies_to: string;
+  is_active: boolean;
+};
 
 const Alerts = () => {
   return (
