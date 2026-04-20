@@ -2,26 +2,33 @@ import type { CampaignEntry, Platform } from "@/types/campaign";
 
 const cleanCell = (v: unknown): string => (v == null ? "" : String(v).trim());
 
-/** Parse Czech-formatted number: "1 354 Kč", "12,5 %", "3 280" → number | null */
+/** Parse Czech-formatted number: "1 354 Kč", "12,5 %", "3 280" → number | null
+ *  Strips currency symbols, percent signs, all unicode whitespace,
+ *  and converts comma decimal separator to dot. */
 export const parseCzechNumber = (raw: unknown): number | null => {
-  const s = cleanCell(raw);
+  if (raw == null) return null;
+  if (typeof raw === "number") return Number.isFinite(raw) ? raw : null;
+  const s = String(raw).trim();
   if (!s) return null;
-  // strip currency, percent, NBSP, regular spaces
   const cleaned = s
-    .replace(/Kč|kč|€|\$|%/g, "")
-    .replace(/\u00A0/g, "")
-    .replace(/\s+/g, "")
+    .replace(/Kč|kč|CZK|EUR|USD|€|\$|%/gi, "")
+    // strip all whitespace incl. NBSP (\u00A0), narrow NBSP (\u202F), thin space (\u2009)
+    .replace(/[\s\u00A0\u202F\u2009]/g, "")
     .replace(",", ".")
     .trim();
-  if (!cleaned) return null;
+  if (!cleaned || cleaned === "-" || cleaned === ".") return null;
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : null;
 };
 
+/** Parse percentage: "52,38%" → 52.38, "0,81 %" → 0.81 */
+export const parsePercentage = (raw: unknown): number | null => parseCzechNumber(raw);
+
 const normalizePlatform = (raw: string): Platform => {
-  const v = raw.toLowerCase();
+  const v = raw.toLowerCase().trim();
   if (v.includes("short")) return "YB Shorts";
   if (v.includes("insta")) return "Instagram";
+  if (v.includes("you") || v.includes("yt")) return "YouTube";
   return "YouTube";
 };
 
@@ -47,9 +54,9 @@ export const parseRow = (
     likes: parseCzechNumber(row[11]),
     comments: parseCzechNumber(row[12]),
     sessions: parseCzechNumber(row[13]),
-    engagementRate: parseCzechNumber(row[14]),
+    engagementRate: parsePercentage(row[14]),
     purchaseRevenue: parseCzechNumber(row[15]),
-    conversionRate: parseCzechNumber(row[16]),
+    conversionRate: parsePercentage(row[16]),
   };
 };
 
