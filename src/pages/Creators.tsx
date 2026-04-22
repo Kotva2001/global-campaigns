@@ -1,151 +1,164 @@
 import { useEffect, useMemo, useState } from "react";
-import { z } from "zod";
-import { Plus, Search, Youtube, Instagram, MoreVertical, Pencil, PauseCircle, PlayCircle, Trash2, ExternalLink, Mail } from "lucide-react";
+import { ExternalLink, Instagram, Mail, MoreVertical, PauseCircle, Pencil, PlayCircle, Plus, Trash2, Youtube } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { COUNTRIES, COUNTRY_FLAGS, COUNTRY_NAMES } from "@/lib/countries";
-import { extractYouTubeChannelId } from "@/lib/youtube";
-import { formatCompact, formatCurrency } from "@/lib/formatters";
-import { cn } from "@/lib/utils";
-
+import { CreatorDialog } from "@/components/CreatorDialog";
+import { CampaignDialog } from "@/components/CampaignDialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { COUNTRIES, COUNTRY_FLAGS, COUNTRY_NAMES } from "@/lib/countries";
+import { computeKPIs } from "@/lib/calculations";
+import { formatCompact, formatCurrency, formatPercent } from "@/lib/formatters";
+import { cn } from "@/lib/utils";
+import type { CampaignEntry, InfluencerRecord, Platform } from "@/types/campaign";
 
-type Status = "active" | "paused" | "ended";
-
-interface Influencer {
+interface CampaignRow {
   id: string;
-  name: string;
-  country: string;
-  platforms: string[] | null;
-  youtube_channel_id: string | null;
-  youtube_channel_url: string | null;
-  instagram_handle: string | null;
-  contact_email: string | null;
-  contact_person: string | null;
-  notes: string | null;
-  status: Status;
+  influencer_id: string | null;
+  campaign_name: string | null;
+  platform: string;
+  publish_date: string | null;
+  video_url: string | null;
+  collaboration_type: string | null;
+  campaign_cost: number | string | null;
+  utm_link: string | null;
+  managed_by: string | null;
+  views: number | null;
+  likes: number | null;
+  comments: number | null;
+  sessions: number | null;
+  engagement_rate: number | string | null;
+  purchase_revenue: number | string | null;
+  conversion_rate: number | string | null;
 }
 
-interface CampaignAgg {
-  influencer_id: string;
-  campaigns: number;
-  totalViews: number;
-  totalRevenue: number;
-}
-
-const STATUS_META: Record<Status, { label: string; cls: string }> = {
+const STATUS_META = {
   active: { label: "Active", cls: "bg-success/15 text-success" },
-  paused: { label: "Paused", cls: "bg-yellow-500/15 text-yellow-500" },
+  paused: { label: "Paused", cls: "bg-warning/15 text-warning" },
   ended: { label: "Ended", cls: "bg-muted text-muted-foreground" },
 };
 
-const formSchema = z.object({
-  name: z.string().trim().min(1, "Name is required").max(120),
-  country: z.enum(COUNTRIES, { errorMap: () => ({ message: "Country is required" }) }),
-  platforms: z.array(z.enum(["YouTube", "Instagram"])).default([]),
-  youtube_channel_url: z.string().trim().max(500).optional().or(z.literal("")),
-  instagram_handle: z.string().trim().max(80).optional().or(z.literal("")),
-  contact_person: z.string().trim().max(120).optional().or(z.literal("")),
-  contact_email: z.string().trim().max(255).email("Invalid email").optional().or(z.literal("")),
-  notes: z.string().trim().max(2000).optional().or(z.literal("")),
-  status: z.enum(["active", "paused", "ended"]),
-});
-
-type FormValues = z.infer<typeof formSchema>;
-
-const emptyForm: FormValues = {
-  name: "", country: "CZ" as (typeof COUNTRIES)[number], platforms: [],
-  youtube_channel_url: "", instagram_handle: "", contact_person: "",
-  contact_email: "", notes: "", status: "active",
+const num = (value: unknown): number | null => {
+  const next = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(next) ? next : null;
 };
 
-const Creators = () => {
-  const [influencers, setInfluencers] = useState<Influencer[]>([]);
-  const [aggs, setAggs] = useState<Map<string, CampaignAgg>>(new Map());
-  const [loading, setLoading] = useState(true);
-  const [country, setCountry] = useState<string>("All");
-  const [status, setStatus] = useState<"All" | Status>("All");
-  const [search, setSearch] = useState("");
+const normalizePlatform = (raw: string): Platform => {
+  const value = raw.toLowerCase();
+  if (value.includes("insta")) return "Instagram";
+  if (value.includes("short")) return "YB Shorts";
+  if (value.includes("tik")) return "TikTok";
+  if (value.includes("you") || value.includes("yt")) return "YouTube";
+  return "Other";
+};
 
-  const [editing, setEditing] = useState<Influencer | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState<Influencer | null>(null);
+const formatDate = (iso: string | null) => {
+  if (!iso) return "";
+  const date = new Date(`${iso}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? iso : date.toLocaleDateString("cs-CZ");
+};
+
+const mapCampaign = (row: CampaignRow, influencer: InfluencerRecord): CampaignEntry => ({
+  id: row.id,
+  influencerId: row.influencer_id,
+  country: influencer.country,
+  influencer: influencer.name,
+  campaignName: row.campaign_name ?? "",
+  platform: normalizePlatform(row.platform),
+  publishDate: formatDate(row.publish_date),
+  publishDateIso: row.publish_date,
+  videoLink: row.video_url ?? "",
+  collaborationType: row.collaboration_type ?? "",
+  campaignCost: num(row.campaign_cost),
+  utmLink: row.utm_link ?? "",
+  managedBy: row.managed_by ?? "",
+  views: num(row.views),
+  likes: num(row.likes),
+  comments: num(row.comments),
+  sessions: num(row.sessions),
+  engagementRate: num(row.engagement_rate),
+  purchaseRevenue: num(row.purchase_revenue),
+  conversionRate: num(row.conversion_rate),
+});
+
+const Creators = () => {
+  const [influencers, setInfluencers] = useState<InfluencerRecord[]>([]);
+  const [campaigns, setCampaigns] = useState<CampaignEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [country, setCountry] = useState("All");
+  const [status, setStatus] = useState("All");
+  const [search, setSearch] = useState("");
+  const [editing, setEditing] = useState<InfluencerRecord | null>(null);
+  const [creatorOpen, setCreatorOpen] = useState(false);
+  const [campaignOpen, setCampaignOpen] = useState(false);
+  const [campaignInfluencerId, setCampaignInfluencerId] = useState<string | null>(null);
+  const [detailCreator, setDetailCreator] = useState<InfluencerRecord | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<InfluencerRecord | null>(null);
 
   const load = async () => {
     setLoading(true);
-    const [{ data: infl, error: e1 }, { data: camps, error: e2 }] = await Promise.all([
+    const [{ data: infl, error: inflError }, { data: camps, error: campError }] = await Promise.all([
       supabase.from("influencers").select("*").order("name"),
-      supabase.from("campaigns").select("influencer_id, views, purchase_revenue"),
+      supabase.from("campaigns").select("*").order("publish_date", { ascending: false, nullsFirst: false }),
     ]);
-    if (e1) toast.error(`Failed to load creators: ${e1.message}`);
-    if (e2) toast.error(`Failed to load stats: ${e2.message}`);
-    setInfluencers((infl ?? []) as Influencer[]);
-    const m = new Map<string, CampaignAgg>();
-    for (const c of camps ?? []) {
-      if (!c.influencer_id) continue;
-      const cur = m.get(c.influencer_id) ?? { influencer_id: c.influencer_id, campaigns: 0, totalViews: 0, totalRevenue: 0 };
-      cur.campaigns += 1;
-      cur.totalViews += Number(c.views ?? 0);
-      cur.totalRevenue += Number(c.purchase_revenue ?? 0);
-      m.set(c.influencer_id, cur);
-    }
-    setAggs(m);
+    if (inflError) toast.error(inflError.message);
+    if (campError) toast.error(campError.message);
+    const creatorRows = (infl ?? []) as InfluencerRecord[];
+    const byId = new Map(creatorRows.map((creator) => [creator.id, creator]));
+    setInfluencers(creatorRows);
+    setCampaigns(((camps ?? []) as CampaignRow[]).flatMap((campaign) => {
+      const creator = campaign.influencer_id ? byId.get(campaign.influencer_id) : undefined;
+      return creator ? [mapCampaign(campaign, creator)] : [];
+    }));
     setLoading(false);
   };
 
-  useEffect(() => {
-    void load();
-  }, []);
+  useEffect(() => { void load(); }, []);
+
+  const campaignGroups = useMemo(() => {
+    const map = new Map<string, CampaignEntry[]>();
+    campaigns.forEach((campaign) => {
+      if (!campaign.influencerId) return;
+      map.set(campaign.influencerId, [...(map.get(campaign.influencerId) ?? []), campaign]);
+    });
+    return map;
+  }, [campaigns]);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return influencers.filter((i) => {
-      if (country !== "All" && i.country !== country) return false;
-      if (status !== "All" && i.status !== status) return false;
-      if (q && !i.name.toLowerCase().includes(q) && !(i.contact_person ?? "").toLowerCase().includes(q)) return false;
-      return true;
+    const query = search.trim().toLowerCase();
+    return influencers.filter((creator) => {
+      if (country !== "All" && creator.country !== country) return false;
+      if (status !== "All" && creator.status !== status) return false;
+      return !query || creator.name.toLowerCase().includes(query) || (creator.contact_person ?? "").toLowerCase().includes(query);
     });
-  }, [influencers, country, status, search]);
+  }, [country, influencers, search, status]);
 
-  const openCreate = () => {
-    setEditing(null);
-    setDialogOpen(true);
-  };
-  const openEdit = (i: Influencer) => {
-    setEditing(i);
-    setDialogOpen(true);
-  };
+  const openCreate = () => { setEditing(null); setCreatorOpen(true); };
+  const openCampaign = (creatorId: string) => { setCampaignInfluencerId(creatorId); setCampaignOpen(true); };
 
-  const togglePause = async (i: Influencer) => {
-    const next: Status = i.status === "active" ? "paused" : "active";
-    const { error } = await supabase.from("influencers").update({ status: next }).eq("id", i.id);
+  const togglePause = async (creator: InfluencerRecord) => {
+    const next = creator.status === "active" ? "paused" : "active";
+    const { error } = await supabase.from("influencers").update({ status: next }).eq("id", creator.id);
     if (error) return toast.error(error.message);
     toast.success(next === "paused" ? "Creator paused" : "Creator resumed");
     void load();
   };
 
-  const deleteCreator = async (i: Influencer) => {
-    const { error } = await supabase.from("influencers").delete().eq("id", i.id);
+  const deleteCreator = async () => {
+    if (!confirmDelete) return;
+    const { error } = await supabase.from("influencers").delete().eq("id", confirmDelete.id);
     if (error) return toast.error(error.message);
     toast.success("Creator deleted");
     setConfirmDelete(null);
+    setDetailCreator(null);
     void load();
   };
 
@@ -153,445 +166,56 @@ const Creators = () => {
     <div>
       <header className="sticky top-0 z-20 border-b border-border bg-background/80 backdrop-blur">
         <div className="flex items-center justify-between gap-4 px-6 py-4">
-          <div>
-            <h1 className="text-lg font-bold tracking-tight">Creators</h1>
-            <p className="text-xs text-muted-foreground">Roster of influencers across markets</p>
-          </div>
-          <Button className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90" onClick={openCreate}>
-            <Plus className="h-4 w-4" /> Add Creator
-          </Button>
+          <div><h1 className="text-lg font-bold tracking-tight">Creators</h1><p className="text-xs text-muted-foreground">Roster of influencers across markets</p></div>
+          <Button className="gap-2" onClick={openCreate}><Plus className="h-4 w-4" /> Add Creator</Button>
         </div>
-
         <div className="flex gap-2 overflow-x-auto px-6 pb-3">
           <CountryTab active={country === "All"} onClick={() => setCountry("All")} flag="🌍" code="All" />
-          {COUNTRIES.map((c) => (
-            <CountryTab
-              key={c}
-              active={country === c}
-              onClick={() => setCountry(c)}
-              flag={COUNTRY_FLAGS[c]}
-              code={c}
-            />
-          ))}
+          {COUNTRIES.map((code) => <CountryTab key={code} active={country === code} onClick={() => setCountry(code)} flag={COUNTRY_FLAGS[code]} code={code} />)}
         </div>
-
         <div className="flex flex-wrap items-center gap-3 px-6 pb-4">
-          <div className="relative flex-1 min-w-[220px]">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name or contact…"
-              className="pl-9"
-            />
-          </div>
-          <Select value={status} onValueChange={(v) => setStatus(v as typeof status)}>
-            <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="All">All statuses</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="paused">Paused</SelectItem>
-              <SelectItem value="ended">Ended</SelectItem>
-            </SelectContent>
-          </Select>
+          <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by name or contact…" className="min-w-[220px] flex-1" />
+          <Select value={status} onValueChange={setStatus}><SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="All">All statuses</SelectItem><SelectItem value="active">Active</SelectItem><SelectItem value="paused">Paused</SelectItem><SelectItem value="ended">Ended</SelectItem></SelectContent></Select>
           <span className="text-xs text-muted-foreground">{filtered.length} creator{filtered.length === 1 ? "" : "s"}</span>
         </div>
       </header>
 
       <div className="px-6 py-6">
-        {loading ? (
-          <div className="text-sm text-muted-foreground">Loading…</div>
-        ) : filtered.length === 0 ? (
-          <EmptyState country={country} onAdd={openCreate} />
-        ) : (
+        {loading ? <div className="text-sm text-muted-foreground">Loading…</div> : filtered.length === 0 ? <EmptyState country={country} onAdd={openCreate} /> : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((i) => (
-              <CreatorCard
-                key={i.id}
-                i={i}
-                agg={aggs.get(i.id)}
-                onEdit={() => openEdit(i)}
-                onTogglePause={() => togglePause(i)}
-                onDelete={() => setConfirmDelete(i)}
-              />
-            ))}
+            {filtered.map((creator) => <CreatorCard key={creator.id} creator={creator} campaigns={campaignGroups.get(creator.id) ?? []} onOpen={() => setDetailCreator(creator)} onAddCampaign={() => openCampaign(creator.id)} onEdit={() => { setEditing(creator); setCreatorOpen(true); }} onTogglePause={() => togglePause(creator)} onDelete={() => setConfirmDelete(creator)} />)}
           </div>
         )}
       </div>
 
-      <CreatorFormDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        editing={editing}
-        onSaved={() => {
-          setDialogOpen(false);
-          void load();
-        }}
-      />
+      <CreatorDialog open={creatorOpen} onOpenChange={setCreatorOpen} editing={editing} onSaved={() => { setCreatorOpen(false); void load(); }} />
+      <CampaignDialog open={campaignOpen} onOpenChange={setCampaignOpen} initialInfluencerId={campaignInfluencerId} onSaved={() => { setCampaignOpen(false); void load(); }} />
+      <CreatorDetail creator={detailCreator} campaigns={detailCreator ? campaignGroups.get(detailCreator.id) ?? [] : []} onClose={() => setDetailCreator(null)} onEdit={() => { setEditing(detailCreator); setCreatorOpen(true); }} onAddCampaign={() => detailCreator && openCampaign(detailCreator.id)} />
 
-      <AlertDialog open={!!confirmDelete} onOpenChange={(v) => !v && setConfirmDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete {confirmDelete?.name}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This permanently removes the creator and all their campaigns. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => confirmDelete && deleteCreator(confirmDelete)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
+      <AlertDialog open={!!confirmDelete} onOpenChange={(open) => !open && setConfirmDelete(null)}>
+        <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete {confirmDelete?.name} and all their campaigns?</AlertDialogTitle><AlertDialogDescription>This permanently removes the creator and every linked campaign.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={deleteCreator} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
       </AlertDialog>
     </div>
   );
 };
 
-const CountryTab = ({ active, onClick, flag, code }: { active: boolean; onClick: () => void; flag: string; code: string }) => (
-  <button
-    onClick={onClick}
-    className={cn(
-      "flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-colors",
-      active ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground hover:text-foreground",
-    )}
-  >
-    <span>{flag}</span>
-    <span className="font-medium">{code}</span>
-  </button>
-);
+const CountryTab = ({ active, onClick, flag, code }: { active: boolean; onClick: () => void; flag: string; code: string }) => <button onClick={onClick} className={cn("flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-colors", active ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground hover:text-foreground")}><span>{flag}</span><span className="font-medium">{code}</span></button>;
 
-const EmptyState = ({ country, onAdd }: { country: string; onAdd: () => void }) => {
-  const label = country === "All" ? "🌍 any market" : `${COUNTRY_FLAGS[country] ?? ""} ${COUNTRY_NAMES[country] ?? country}`;
-  return (
-    <div className="flex min-h-[40vh] items-center justify-center">
-      <Card className="border-dashed border-border bg-card/40 p-10 text-center">
-        <div className="text-3xl">🌱</div>
-        <div className="mt-2 text-sm font-medium">No creators in {label} yet</div>
-        <Button className="mt-4 gap-2" onClick={onAdd}>
-          <Plus className="h-4 w-4" /> Add your first creator
-        </Button>
-      </Card>
-    </div>
-  );
+const EmptyState = ({ country, onAdd }: { country: string; onAdd: () => void }) => <div className="flex min-h-[40vh] items-center justify-center"><Card className="border-dashed border-border bg-card/40 p-10 text-center"><div className="text-3xl">🌱</div><div className="mt-2 text-sm font-medium">No creators in {country === "All" ? "any market" : COUNTRY_NAMES[country]} yet</div><Button className="mt-4 gap-2" onClick={onAdd}><Plus className="h-4 w-4" /> Add your first creator</Button></Card></div>;
+
+const CreatorCard = ({ creator, campaigns, onOpen, onAddCampaign, onEdit, onTogglePause, onDelete }: { creator: InfluencerRecord; campaigns: CampaignEntry[]; onOpen: () => void; onAddCampaign: () => void; onEdit: () => void; onTogglePause: () => void; onDelete: () => void }) => {
+  const kpis = computeKPIs(campaigns);
+  const meta = STATUS_META[creator.status];
+  return <Card className="border-border bg-card p-4 transition-colors hover:bg-card-hover"><div className="flex items-start justify-between gap-2"><button onClick={onOpen} className="min-w-0 flex-1 text-left"><div className="truncate text-base font-bold">{creator.name}</div><div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground"><span>{COUNTRY_FLAGS[creator.country] ?? "🏳️"}</span><span>{creator.country}</span><span>·</span><span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", meta.cls)}>{meta.label}</span></div></button><Button variant="secondary" size="icon" className="h-8 w-8" onClick={onAddCampaign}><Plus className="h-4 w-4" /></Button><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={onEdit}><Pencil className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem><DropdownMenuItem onClick={onTogglePause}>{creator.status === "active" ? <><PauseCircle className="mr-2 h-4 w-4" /> Pause</> : <><PlayCircle className="mr-2 h-4 w-4" /> Resume</>}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div><CreatorLinks creator={creator} /><div className="mt-4 grid grid-cols-3 gap-2 border-t border-border pt-3 text-xs"><Stat label="Campaigns" value={String(campaigns.length)} /><Stat label="Views" value={formatCompact(kpis.totalViews)} /><Stat label="ROI" value={formatPercent(kpis.roi)} valueClass={kpis.roi && kpis.roi > 0 ? "text-success" : undefined} /></div></Card>;
 };
 
-const CreatorCard = ({
-  i, agg, onEdit, onTogglePause, onDelete,
-}: {
-  i: Influencer;
-  agg: CampaignAgg | undefined;
-  onEdit: () => void;
-  onTogglePause: () => void;
-  onDelete: () => void;
-}) => {
-  const platforms = i.platforms ?? [];
-  const meta = STATUS_META[i.status];
-  return (
-    <Card className="border-border bg-card p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-base font-bold">{i.name}</div>
-          <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-            <span>{COUNTRY_FLAGS[i.country] ?? "🏳️"}</span>
-            <span>{i.country}</span>
-            <span>·</span>
-            <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", meta.cls)}>{meta.label}</span>
-          </div>
-        </div>
+const CreatorLinks = ({ creator }: { creator: InfluencerRecord }) => <div className="mt-3 space-y-1 text-xs">{creator.youtube_channel_url && <a href={creator.youtube_channel_url} target="_blank" rel="noreferrer" className="flex items-center gap-1 truncate text-muted-foreground hover:text-foreground"><Youtube className="h-3 w-3" /><ExternalLink className="h-3 w-3" /><span className="truncate">{creator.youtube_channel_url.replace(/^https?:\/\//, "")}</span></a>}{creator.instagram_handle && <a href={`https://instagram.com/${creator.instagram_handle.replace(/^@/, "")}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-muted-foreground hover:text-foreground"><Instagram className="h-3 w-3" /><span>@{creator.instagram_handle.replace(/^@/, "")}</span></a>}{(creator.contact_person || creator.contact_email) && <div className="flex items-center gap-1 text-muted-foreground"><Mail className="h-3 w-3" /><span className="truncate">{creator.contact_person}{creator.contact_person && creator.contact_email ? " · " : ""}{creator.contact_email}</span></div>}</div>;
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={onEdit}><Pencil className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
-            <DropdownMenuItem onClick={onTogglePause}>
-              {i.status === "active" ? (
-                <><PauseCircle className="mr-2 h-4 w-4" /> Pause</>
-              ) : (
-                <><PlayCircle className="mr-2 h-4 w-4" /> Resume</>
-              )}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
-              <Trash2 className="mr-2 h-4 w-4" /> Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      <div className="mt-3 flex flex-wrap gap-1">
-        {platforms.includes("YouTube") && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-[hsl(var(--platform-youtube)/0.15)] px-2 py-0.5 text-[10px] font-semibold text-[hsl(var(--platform-youtube))]">
-            <Youtube className="h-3 w-3" /> YouTube
-          </span>
-        )}
-        {platforms.includes("Instagram") && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-[hsl(var(--platform-instagram)/0.15)] px-2 py-0.5 text-[10px] font-semibold text-[hsl(var(--platform-instagram))]">
-            <Instagram className="h-3 w-3" /> Instagram
-          </span>
-        )}
-      </div>
-
-      <div className="mt-3 space-y-1 text-xs">
-        {i.youtube_channel_url && (
-          <a
-            href={i.youtube_channel_url}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-1 truncate text-muted-foreground hover:text-foreground"
-          >
-            <ExternalLink className="h-3 w-3 shrink-0" />
-            <span className="truncate">{i.youtube_channel_url.replace(/^https?:\/\//, "")}</span>
-          </a>
-        )}
-        {i.instagram_handle && (
-          <a
-            href={`https://instagram.com/${i.instagram_handle.replace(/^@/, "")}`}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
-          >
-            <Instagram className="h-3 w-3" />
-            <span>@{i.instagram_handle.replace(/^@/, "")}</span>
-          </a>
-        )}
-        {(i.contact_person || i.contact_email) && (
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <Mail className="h-3 w-3 shrink-0" />
-            <span className="truncate">
-              {i.contact_person}
-              {i.contact_person && i.contact_email ? " · " : ""}
-              {i.contact_email}
-            </span>
-          </div>
-        )}
-      </div>
-
-      <div className="mt-4 grid grid-cols-3 gap-2 border-t border-border pt-3 text-xs">
-        <Stat label="Campaigns" value={String(agg?.campaigns ?? 0)} />
-        <Stat label="Views" value={formatCompact(agg?.totalViews ?? 0)} />
-        <Stat label="Revenue" value={formatCurrency(agg?.totalRevenue ?? 0)} valueClass={(agg?.totalRevenue ?? 0) > 0 ? "text-success" : undefined} />
-      </div>
-    </Card>
-  );
+const CreatorDetail = ({ creator, campaigns, onClose, onEdit, onAddCampaign }: { creator: InfluencerRecord | null; campaigns: CampaignEntry[]; onClose: () => void; onEdit: () => void; onAddCampaign: () => void }) => {
+  const kpis = computeKPIs(campaigns);
+  return <Dialog open={!!creator} onOpenChange={(open) => !open && onClose()}><DialogContent className="max-h-[92vh] overflow-y-auto border-border bg-card sm:max-w-4xl">{creator && <><DialogHeader><DialogTitle>{creator.name}</DialogTitle></DialogHeader><div className="grid gap-4 lg:grid-cols-[280px_1fr]"><div className="space-y-4"><Card className="border-border bg-background p-4"><div className="text-sm font-semibold">{COUNTRY_FLAGS[creator.country]} {COUNTRY_NAMES[creator.country]} ({creator.country})</div><CreatorLinks creator={creator} />{creator.notes && <p className="mt-3 text-sm text-muted-foreground">{creator.notes}</p>}<div className="mt-4 flex gap-2"><Button size="sm" onClick={onEdit}>Edit</Button><Button size="sm" variant="secondary" className="gap-2" onClick={onAddCampaign}><Plus className="h-4 w-4" /> Add campaign</Button></div></Card><div className="grid grid-cols-2 gap-2"><Stat label="Campaigns" value={String(campaigns.length)} /><Stat label="Views" value={formatCompact(kpis.totalViews)} /><Stat label="Revenue" value={formatCurrency(kpis.totalRevenue)} valueClass="text-success" /><Stat label="ROI" value={formatPercent(kpis.roi)} /></div></div><div className="overflow-x-auto rounded-md border border-border"><table className="w-full text-sm"><thead className="bg-muted/60"><tr><th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">Campaign</th><th className="px-3 py-2 text-left">Platform</th><th className="px-3 py-2 text-right">Views</th><th className="px-3 py-2 text-right">Revenue</th></tr></thead><tbody>{campaigns.map((campaign) => <tr key={campaign.id} className="border-t border-border"><td className="px-3 py-2 text-muted-foreground">{campaign.publishDate || "—"}</td><td className="px-3 py-2 font-medium">{campaign.campaignName || "—"}</td><td className="px-3 py-2">{campaign.platform}</td><td className="px-3 py-2 text-right">{formatCompact(campaign.views)}</td><td className="px-3 py-2 text-right">{formatCurrency(campaign.purchaseRevenue)}</td></tr>)}{!campaigns.length && <tr><td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">No campaigns yet.</td></tr>}</tbody></table></div></div></>}</DialogContent></Dialog>;
 };
 
-const Stat = ({ label, value, valueClass }: { label: string; value: string; valueClass?: string }) => (
-  <div className="rounded-md bg-muted/40 p-2">
-    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
-    <div className={cn("text-sm font-bold", valueClass)}>{value}</div>
-  </div>
-);
-
-const CreatorFormDialog = ({
-  open, onOpenChange, editing, onSaved,
-}: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  editing: Influencer | null;
-  onSaved: () => void;
-}) => {
-  const [values, setValues] = useState<FormValues>(emptyForm);
-  const [errors, setErrors] = useState<Partial<Record<keyof FormValues, string>>>({});
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    if (editing) {
-      setValues({
-        name: editing.name,
-        country: (editing.country as (typeof COUNTRIES)[number]) ?? "CZ",
-        platforms: ((editing.platforms ?? []) as ("YouTube" | "Instagram")[]).filter((p) => p === "YouTube" || p === "Instagram"),
-        youtube_channel_url: editing.youtube_channel_url ?? "",
-        instagram_handle: editing.instagram_handle ?? "",
-        contact_person: editing.contact_person ?? "",
-        contact_email: editing.contact_email ?? "",
-        notes: editing.notes ?? "",
-        status: editing.status,
-      });
-    } else {
-      setValues(emptyForm);
-    }
-    setErrors({});
-  }, [open, editing]);
-
-  const togglePlatform = (p: "YouTube" | "Instagram", checked: boolean) => {
-    setValues((v) => ({
-      ...v,
-      platforms: checked ? Array.from(new Set([...v.platforms, p])) : v.platforms.filter((x) => x !== p),
-    }));
-  };
-
-  const submit = async () => {
-    const parsed = formSchema.safeParse(values);
-    if (!parsed.success) {
-      const errs: Partial<Record<keyof FormValues, string>> = {};
-      for (const issue of parsed.error.issues) {
-        const k = issue.path[0] as keyof FormValues;
-        if (k && !errs[k]) errs[k] = issue.message;
-      }
-      setErrors(errs);
-      return;
-    }
-    const v = parsed.data;
-    const ytUrl = v.platforms.includes("YouTube") ? (v.youtube_channel_url || "") : "";
-    const igHandle = v.platforms.includes("Instagram")
-      ? (v.instagram_handle || "").replace(/^@/, "")
-      : "";
-
-    const payload = {
-      name: v.name,
-      country: v.country,
-      platforms: v.platforms,
-      youtube_channel_url: ytUrl || null,
-      youtube_channel_id: ytUrl ? extractYouTubeChannelId(ytUrl) : null,
-      instagram_handle: igHandle || null,
-      contact_person: v.contact_person || null,
-      contact_email: v.contact_email || null,
-      notes: v.notes || null,
-      status: v.status,
-    };
-
-    setSaving(true);
-    const { error } = editing
-      ? await supabase.from("influencers").update(payload).eq("id", editing.id)
-      : await supabase.from("influencers").insert(payload);
-    setSaving(false);
-
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    toast.success(editing ? "Creator updated" : "Creator added");
-    onSaved();
-  };
-
-  const showYT = values.platforms.includes("YouTube");
-  const showIG = values.platforms.includes("Instagram");
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto border-border bg-card sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{editing ? "Edit creator" : "Add creator"}</DialogTitle>
-          <DialogDescription>Influencer roster entry. Used for tracking and auto-detection.</DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 py-2">
-          <Field label="Name" error={errors.name} required>
-            <Input value={values.name} onChange={(e) => setValues({ ...values, name: e.target.value })} maxLength={120} />
-          </Field>
-
-          <Field label="Country" error={errors.country} required>
-            <Select value={values.country} onValueChange={(v) => setValues({ ...values, country: v as (typeof COUNTRIES)[number] })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {COUNTRIES.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {COUNTRY_FLAGS[c]} {COUNTRY_NAMES[c]} ({c})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-
-          <Field label="Platforms">
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox checked={showYT} onCheckedChange={(c) => togglePlatform("YouTube", !!c)} />
-                YouTube
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox checked={showIG} onCheckedChange={(c) => togglePlatform("Instagram", !!c)} />
-                Instagram
-              </label>
-            </div>
-          </Field>
-
-          {showYT && (
-            <Field label="YouTube channel URL">
-              <Input
-                value={values.youtube_channel_url}
-                onChange={(e) => setValues({ ...values, youtube_channel_url: e.target.value })}
-                placeholder="https://www.youtube.com/channel/UCxxxx or /@handle"
-                maxLength={500}
-              />
-            </Field>
-          )}
-
-          {showIG && (
-            <Field label="Instagram handle">
-              <div className="relative">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">@</span>
-                <Input
-                  value={values.instagram_handle.replace(/^@/, "")}
-                  onChange={(e) => setValues({ ...values, instagram_handle: e.target.value.replace(/^@/, "") })}
-                  className="pl-7"
-                  maxLength={80}
-                />
-              </div>
-            </Field>
-          )}
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label="Contact person">
-              <Input value={values.contact_person} onChange={(e) => setValues({ ...values, contact_person: e.target.value })} maxLength={120} />
-            </Field>
-            <Field label="Contact email" error={errors.contact_email}>
-              <Input type="email" value={values.contact_email} onChange={(e) => setValues({ ...values, contact_email: e.target.value })} maxLength={255} />
-            </Field>
-          </div>
-
-          <Field label="Notes">
-            <Textarea
-              value={values.notes}
-              onChange={(e) => setValues({ ...values, notes: e.target.value })}
-              maxLength={2000}
-              rows={3}
-            />
-          </Field>
-
-          <Field label="Status">
-            <RadioGroup
-              value={values.status}
-              onValueChange={(v) => setValues({ ...values, status: v as Status })}
-              className="flex gap-4"
-            >
-              {(["active", "paused", "ended"] as Status[]).map((s) => (
-                <label key={s} className="flex items-center gap-2 text-sm capitalize">
-                  <RadioGroupItem value={s} /> {s}
-                </label>
-              ))}
-            </RadioGroup>
-          </Field>
-        </div>
-
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={submit} disabled={saving}>{saving ? "Saving…" : editing ? "Save changes" : "Add creator"}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-const Field = ({ label, error, required, children }: { label: string; error?: string; required?: boolean; children: React.ReactNode }) => (
-  <div className="space-y-1.5">
-    <Label className="text-xs">
-      {label}
-      {required && <span className="ml-0.5 text-destructive">*</span>}
-    </Label>
-    {children}
-    {error && <p className="text-xs text-destructive">{error}</p>}
-  </div>
-);
+const Stat = ({ label, value, valueClass }: { label: string; value: string; valueClass?: string }) => <div className="rounded-md bg-muted/40 p-2"><div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div><div className={cn("text-sm font-bold", valueClass)}>{value}</div></div>;
 
 export default Creators;
