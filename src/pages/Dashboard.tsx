@@ -5,6 +5,7 @@ import { KPISummary } from "@/components/KPISummary";
 import { FilterBar } from "@/components/FilterBar";
 import { InfluencerCards } from "@/components/InfluencerCards";
 import { InfluencerDetailPanel } from "@/components/InfluencerDetailPanel";
+import { CreatorDialog } from "@/components/CreatorDialog";
 import { DataTable } from "@/components/DataTable";
 import { CampaignCharts } from "@/components/CampaignCharts";
 import { CampaignDialog } from "@/components/CampaignDialog";
@@ -26,6 +27,7 @@ const Dashboard = () => {
   const { data, loading, lastFetched, refresh } = useSheetData();
   const [campaignOpen, setCampaignOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState(null);
+  const [creatorOpen, setCreatorOpen] = useState(false);
   const [detailCreator, setDetailCreator] = useState<InfluencerRecord | null>(null);
   const [campaignInfluencerId, setCampaignInfluencerId] = useState<string | null>(null);
   const filters = useFilters(data);
@@ -145,10 +147,12 @@ const Dashboard = () => {
           void refresh();
         }}
       />
+      <CreatorDialog open={creatorOpen} onOpenChange={setCreatorOpen} editing={detailCreator} onSaved={() => { setCreatorOpen(false); void refresh(); }} />
       <InfluencerDetailPanel
         creator={detailCreator}
         campaigns={detailCampaigns}
         onClose={() => setDetailCreator(null)}
+        onEditInfluencer={() => setCreatorOpen(true)}
         onAddCampaign={() => {
           setEditingCampaign(null);
           setCampaignInfluencerId(detailCreator?.id ?? null);
