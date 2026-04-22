@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { PlatformLinkIcon } from "@/components/PlatformLinkIcon";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -174,6 +175,7 @@ export const DataTable = ({ rows, onChanged, onAddCampaign, onEditCampaign }: Pr
     { id: "influencer", header: "Influencer", accessorKey: "influencer", cell: ({ getValue }) => <span className="font-semibold text-foreground">{String(getValue() || "—")}</span> },
     { id: "campaign", header: "Campaign", accessorKey: "campaignName", cell: ({ getValue }) => <span className="block max-w-[220px] truncate text-foreground/80">{String(getValue() || "—")}</span> },
     { id: "platform", header: "Platform", accessorKey: "platform", cell: ({ getValue }) => platformBadge(String(getValue())) },
+    { id: "link", header: "Link", cell: ({ row }) => <PlatformLinkIcon platform={row.original.platform} url={row.original.videoLink} />, enableSorting: false },
     { id: "date", header: "Date", accessorKey: "publishDate", cell: ({ getValue }) => <span className="whitespace-nowrap text-muted-foreground">{String(getValue() || "—")}</span> },
     { id: "collab", header: "Collab", accessorKey: "collaborationType", cell: ({ getValue }) => collabBadge(String(getValue() || "")) },
     { id: "cost", header: () => <div className="text-right">Cost</div>, accessorKey: "campaignCost", cell: ({ getValue }) => <div className="text-right tabular-nums text-foreground">{formatCurrency(getValue() as number | null)}</div> },
