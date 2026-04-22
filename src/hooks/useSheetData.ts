@@ -105,9 +105,6 @@ export const useSheetData = () => {
 
   useEffect(() => {
     void refresh();
-  }, [refresh]);
-
-  useEffect(() => {
     const handleChange = () => { void refresh(); };
     window.addEventListener("campaign-data-changed", handleChange);
     return () => window.removeEventListener("campaign-data-changed", handleChange);
