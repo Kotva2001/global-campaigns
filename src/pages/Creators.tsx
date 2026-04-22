@@ -4,9 +4,9 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { CreatorDialog } from "@/components/CreatorDialog";
 import { CampaignDialog } from "@/components/CampaignDialog";
+import { InfluencerDetailPanel } from "@/components/InfluencerDetailPanel";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -16,7 +16,7 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { COUNTRIES, COUNTRY_FLAGS, COUNTRY_NAMES } from "@/lib/countries";
 import { computeKPIs } from "@/lib/calculations";
-import { formatCompact, formatCurrency, formatPercent } from "@/lib/formatters";
+import { formatCompact, formatPercent } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { CampaignEntry, InfluencerRecord, Platform } from "@/types/campaign";
 
@@ -100,6 +100,7 @@ const Creators = () => {
   const [creatorOpen, setCreatorOpen] = useState(false);
   const [campaignOpen, setCampaignOpen] = useState(false);
   const [campaignInfluencerId, setCampaignInfluencerId] = useState<string | null>(null);
+  const [editingCampaign, setEditingCampaign] = useState<CampaignEntry | null>(null);
   const [detailCreator, setDetailCreator] = useState<InfluencerRecord | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<InfluencerRecord | null>(null);
 
@@ -142,7 +143,7 @@ const Creators = () => {
   }, [country, influencers, search, status]);
 
   const openCreate = () => { setEditing(null); setCreatorOpen(true); };
-  const openCampaign = (creatorId: string) => { setCampaignInfluencerId(creatorId); setCampaignOpen(true); };
+  const openCampaign = (creatorId: string) => { setEditingCampaign(null); setCampaignInfluencerId(creatorId); setCampaignOpen(true); };
 
   const togglePause = async (creator: InfluencerRecord) => {
     const next = creator.status === "active" ? "paused" : "active";
@@ -189,8 +190,8 @@ const Creators = () => {
       </div>
 
       <CreatorDialog open={creatorOpen} onOpenChange={setCreatorOpen} editing={editing} onSaved={() => { setCreatorOpen(false); void load(); }} />
-      <CampaignDialog open={campaignOpen} onOpenChange={setCampaignOpen} initialInfluencerId={campaignInfluencerId} onSaved={() => { setCampaignOpen(false); void load(); }} />
-      <CreatorDetail creator={detailCreator} campaigns={detailCreator ? campaignGroups.get(detailCreator.id) ?? [] : []} onClose={() => setDetailCreator(null)} onEdit={() => { setEditing(detailCreator); setCreatorOpen(true); }} onAddCampaign={() => detailCreator && openCampaign(detailCreator.id)} />
+      <CampaignDialog open={campaignOpen} onOpenChange={setCampaignOpen} editing={editingCampaign} initialInfluencerId={campaignInfluencerId} onSaved={() => { setCampaignOpen(false); setEditingCampaign(null); void load(); }} />
+      <InfluencerDetailPanel creator={detailCreator} campaigns={detailCreator ? campaignGroups.get(detailCreator.id) ?? [] : []} onClose={() => setDetailCreator(null)} onEditInfluencer={() => { setEditing(detailCreator); setCreatorOpen(true); }} onAddCampaign={() => detailCreator && openCampaign(detailCreator.id)} onEditCampaign={(campaign) => { setEditingCampaign(campaign); setCampaignOpen(true); }} onChanged={load} />
 
       <AlertDialog open={!!confirmDelete} onOpenChange={(open) => !open && setConfirmDelete(null)}>
         <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete {confirmDelete?.name} and all their campaigns?</AlertDialogTitle><AlertDialogDescription>This permanently removes the creator and every linked campaign.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={deleteCreator} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
@@ -206,15 +207,10 @@ const EmptyState = ({ country, onAdd }: { country: string; onAdd: () => void }) 
 const CreatorCard = ({ creator, campaigns, onOpen, onAddCampaign, onEdit, onTogglePause, onDelete }: { creator: InfluencerRecord; campaigns: CampaignEntry[]; onOpen: () => void; onAddCampaign: () => void; onEdit: () => void; onTogglePause: () => void; onDelete: () => void }) => {
   const kpis = computeKPIs(campaigns);
   const meta = STATUS_META[creator.status];
-  return <Card className="border-border bg-card p-4 transition-colors hover:bg-card-hover"><div className="flex items-start justify-between gap-2"><button onClick={onOpen} className="min-w-0 flex-1 text-left"><div className="truncate text-base font-bold">{creator.name}</div><div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground"><span>{COUNTRY_FLAGS[creator.country] ?? "🏳️"}</span><span>{creator.country}</span><span>·</span><span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", meta.cls)}>{meta.label}</span></div></button><Button variant="secondary" size="icon" className="h-8 w-8" onClick={onAddCampaign}><Plus className="h-4 w-4" /></Button><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={onEdit}><Pencil className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem><DropdownMenuItem onClick={onTogglePause}>{creator.status === "active" ? <><PauseCircle className="mr-2 h-4 w-4" /> Pause</> : <><PlayCircle className="mr-2 h-4 w-4" /> Resume</>}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div><CreatorLinks creator={creator} /><div className="mt-4 grid grid-cols-3 gap-2 border-t border-border pt-3 text-xs"><Stat label="Campaigns" value={String(campaigns.length)} /><Stat label="Views" value={formatCompact(kpis.totalViews)} /><Stat label="ROI" value={formatPercent(kpis.roi)} valueClass={kpis.roi && kpis.roi > 0 ? "text-success" : undefined} /></div></Card>;
+  return <Card onClick={onOpen} className="group cursor-pointer border-border bg-card p-4 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card-hover hover:shadow-lg"><div className="flex items-start justify-between gap-2"><button className="min-w-0 flex-1 text-left"><div className="truncate text-base font-bold">{creator.name}</div><div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground"><span>{COUNTRY_FLAGS[creator.country] ?? "🏳️"}</span><span>{creator.country}</span><span>·</span><span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", meta.cls)}>{meta.label}</span></div></button><Button variant="secondary" size="icon" className="h-8 w-8" onClick={(event) => { event.stopPropagation(); onAddCampaign(); }}><Plus className="h-4 w-4" /></Button><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" onClick={(event) => event.stopPropagation()}><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={(event) => { event.stopPropagation(); onEdit(); }}><Pencil className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem><DropdownMenuItem onClick={(event) => { event.stopPropagation(); onTogglePause(); }}>{creator.status === "active" ? <><PauseCircle className="mr-2 h-4 w-4" /> Pause</> : <><PlayCircle className="mr-2 h-4 w-4" /> Resume</>}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={(event) => { event.stopPropagation(); onDelete(); }} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div><CreatorLinks creator={creator} /><div className="mt-4 grid grid-cols-3 gap-2 border-t border-border pt-3 text-xs"><Stat label="Campaigns" value={String(campaigns.length)} /><Stat label="Views" value={formatCompact(kpis.totalViews)} /><Stat label="ROI" value={formatPercent(kpis.roi)} valueClass={kpis.roi && kpis.roi > 0 ? "text-success" : undefined} /></div><div className="mt-3 text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">View details →</div></Card>;
 };
 
 const CreatorLinks = ({ creator }: { creator: InfluencerRecord }) => <div className="mt-3 space-y-1 text-xs">{creator.youtube_channel_url && <a href={creator.youtube_channel_url} target="_blank" rel="noreferrer" className="flex items-center gap-1 truncate text-muted-foreground hover:text-foreground"><Youtube className="h-3 w-3" /><ExternalLink className="h-3 w-3" /><span className="truncate">{creator.youtube_channel_url.replace(/^https?:\/\//, "")}</span></a>}{creator.instagram_handle && <a href={`https://instagram.com/${creator.instagram_handle.replace(/^@/, "")}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-muted-foreground hover:text-foreground"><Instagram className="h-3 w-3" /><span>@{creator.instagram_handle.replace(/^@/, "")}</span></a>}{(creator.contact_person || creator.contact_email) && <div className="flex items-center gap-1 text-muted-foreground"><Mail className="h-3 w-3" /><span className="truncate">{creator.contact_person}{creator.contact_person && creator.contact_email ? " · " : ""}{creator.contact_email}</span></div>}</div>;
-
-const CreatorDetail = ({ creator, campaigns, onClose, onEdit, onAddCampaign }: { creator: InfluencerRecord | null; campaigns: CampaignEntry[]; onClose: () => void; onEdit: () => void; onAddCampaign: () => void }) => {
-  const kpis = computeKPIs(campaigns);
-  return <Dialog open={!!creator} onOpenChange={(open) => !open && onClose()}><DialogContent className="max-h-[92vh] overflow-y-auto border-border bg-card sm:max-w-4xl">{creator && <><DialogHeader><DialogTitle>{creator.name}</DialogTitle></DialogHeader><div className="grid gap-4 lg:grid-cols-[280px_1fr]"><div className="space-y-4"><Card className="border-border bg-background p-4"><div className="text-sm font-semibold">{COUNTRY_FLAGS[creator.country]} {COUNTRY_NAMES[creator.country]} ({creator.country})</div><CreatorLinks creator={creator} />{creator.notes && <p className="mt-3 text-sm text-muted-foreground">{creator.notes}</p>}<div className="mt-4 flex gap-2"><Button size="sm" onClick={onEdit}>Edit</Button><Button size="sm" variant="secondary" className="gap-2" onClick={onAddCampaign}><Plus className="h-4 w-4" /> Add campaign</Button></div></Card><div className="grid grid-cols-2 gap-2"><Stat label="Campaigns" value={String(campaigns.length)} /><Stat label="Views" value={formatCompact(kpis.totalViews)} /><Stat label="Revenue" value={formatCurrency(kpis.totalRevenue)} valueClass="text-success" /><Stat label="ROI" value={formatPercent(kpis.roi)} /></div></div><div className="overflow-x-auto rounded-md border border-border"><table className="w-full text-sm"><thead className="bg-muted/60"><tr><th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">Campaign</th><th className="px-3 py-2 text-left">Platform</th><th className="px-3 py-2 text-right">Views</th><th className="px-3 py-2 text-right">Revenue</th></tr></thead><tbody>{campaigns.map((campaign) => <tr key={campaign.id} className="border-t border-border"><td className="px-3 py-2 text-muted-foreground">{campaign.publishDate || "—"}</td><td className="px-3 py-2 font-medium">{campaign.campaignName || "—"}</td><td className="px-3 py-2">{campaign.platform}</td><td className="px-3 py-2 text-right">{formatCompact(campaign.views)}</td><td className="px-3 py-2 text-right">{formatCurrency(campaign.purchaseRevenue)}</td></tr>)}{!campaigns.length && <tr><td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">No campaigns yet.</td></tr>}</tbody></table></div></div></>}</DialogContent></Dialog>;
-};
 
 const Stat = ({ label, value, valueClass }: { label: string; value: string; valueClass?: string }) => <div className="rounded-md bg-muted/40 p-2"><div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div><div className={cn("text-sm font-bold", valueClass)}>{value}</div></div>;
 
