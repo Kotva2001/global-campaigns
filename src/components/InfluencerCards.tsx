@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 interface Props {
   influencers: InfluencerSummary[];
+  onSelectInfluencer?: (influencer: InfluencerSummary) => void;
 }
 
 const platformClass = (p: string) => {
@@ -14,7 +15,7 @@ const platformClass = (p: string) => {
   return "bg-[hsl(var(--platform-shorts)/0.15)] text-[hsl(var(--platform-shorts))]";
 };
 
-export const InfluencerCards = ({ influencers }: Props) => {
+export const InfluencerCards = ({ influencers, onSelectInfluencer }: Props) => {
   if (!influencers.length) {
     return (
       <div className="px-6 pt-6">
@@ -38,7 +39,8 @@ export const InfluencerCards = ({ influencers }: Props) => {
           return (
             <Card
               key={inf.key}
-              className="group border-border bg-card p-4 transition-all hover:border-primary/40 hover:bg-card-hover"
+              onClick={() => onSelectInfluencer?.(inf)}
+              className="group cursor-pointer border-border bg-card p-4 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card-hover hover:shadow-lg"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
@@ -83,6 +85,9 @@ export const InfluencerCards = ({ influencers }: Props) => {
                   Top: <span className="text-foreground">{inf.topCampaign}</span>
                 </div>
               )}
+              <div className="mt-3 text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                View details →
+              </div>
             </Card>
           );
         })}
