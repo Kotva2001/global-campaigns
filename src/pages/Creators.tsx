@@ -7,7 +7,6 @@ import { CampaignDialog } from "@/components/CampaignDialog";
 import { InfluencerDetailPanel } from "@/components/InfluencerDetailPanel";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -17,7 +16,7 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { COUNTRIES, COUNTRY_FLAGS, COUNTRY_NAMES } from "@/lib/countries";
 import { computeKPIs } from "@/lib/calculations";
-import { formatCompact, formatCurrency, formatPercent } from "@/lib/formatters";
+import { formatCompact, formatPercent } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { CampaignEntry, InfluencerRecord, Platform } from "@/types/campaign";
 
@@ -212,11 +211,6 @@ const CreatorCard = ({ creator, campaigns, onOpen, onAddCampaign, onEdit, onTogg
 };
 
 const CreatorLinks = ({ creator }: { creator: InfluencerRecord }) => <div className="mt-3 space-y-1 text-xs">{creator.youtube_channel_url && <a href={creator.youtube_channel_url} target="_blank" rel="noreferrer" className="flex items-center gap-1 truncate text-muted-foreground hover:text-foreground"><Youtube className="h-3 w-3" /><ExternalLink className="h-3 w-3" /><span className="truncate">{creator.youtube_channel_url.replace(/^https?:\/\//, "")}</span></a>}{creator.instagram_handle && <a href={`https://instagram.com/${creator.instagram_handle.replace(/^@/, "")}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-muted-foreground hover:text-foreground"><Instagram className="h-3 w-3" /><span>@{creator.instagram_handle.replace(/^@/, "")}</span></a>}{(creator.contact_person || creator.contact_email) && <div className="flex items-center gap-1 text-muted-foreground"><Mail className="h-3 w-3" /><span className="truncate">{creator.contact_person}{creator.contact_person && creator.contact_email ? " · " : ""}{creator.contact_email}</span></div>}</div>;
-
-const CreatorDetail = ({ creator, campaigns, onClose, onEdit, onAddCampaign }: { creator: InfluencerRecord | null; campaigns: CampaignEntry[]; onClose: () => void; onEdit: () => void; onAddCampaign: () => void }) => {
-  const kpis = computeKPIs(campaigns);
-  return <Dialog open={!!creator} onOpenChange={(open) => !open && onClose()}><DialogContent className="max-h-[92vh] overflow-y-auto border-border bg-card sm:max-w-4xl">{creator && <><DialogHeader><DialogTitle>{creator.name}</DialogTitle></DialogHeader><div className="grid gap-4 lg:grid-cols-[280px_1fr]"><div className="space-y-4"><Card className="border-border bg-background p-4"><div className="text-sm font-semibold">{COUNTRY_FLAGS[creator.country]} {COUNTRY_NAMES[creator.country]} ({creator.country})</div><CreatorLinks creator={creator} />{creator.notes && <p className="mt-3 text-sm text-muted-foreground">{creator.notes}</p>}<div className="mt-4 flex gap-2"><Button size="sm" onClick={onEdit}>Edit</Button><Button size="sm" variant="secondary" className="gap-2" onClick={onAddCampaign}><Plus className="h-4 w-4" /> Add campaign</Button></div></Card><div className="grid grid-cols-2 gap-2"><Stat label="Campaigns" value={String(campaigns.length)} /><Stat label="Views" value={formatCompact(kpis.totalViews)} /><Stat label="Revenue" value={formatCurrency(kpis.totalRevenue)} valueClass="text-success" /><Stat label="ROI" value={formatPercent(kpis.roi)} /></div></div><div className="overflow-x-auto rounded-md border border-border"><table className="w-full text-sm"><thead className="bg-muted/60"><tr><th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">Campaign</th><th className="px-3 py-2 text-left">Platform</th><th className="px-3 py-2 text-right">Views</th><th className="px-3 py-2 text-right">Revenue</th></tr></thead><tbody>{campaigns.map((campaign) => <tr key={campaign.id} className="border-t border-border"><td className="px-3 py-2 text-muted-foreground">{campaign.publishDate || "—"}</td><td className="px-3 py-2 font-medium">{campaign.campaignName || "—"}</td><td className="px-3 py-2">{campaign.platform}</td><td className="px-3 py-2 text-right">{formatCompact(campaign.views)}</td><td className="px-3 py-2 text-right">{formatCurrency(campaign.purchaseRevenue)}</td></tr>)}{!campaigns.length && <tr><td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">No campaigns yet.</td></tr>}</tbody></table></div></div></>}</DialogContent></Dialog>;
-};
 
 const Stat = ({ label, value, valueClass }: { label: string; value: string; valueClass?: string }) => <div className="rounded-md bg-muted/40 p-2"><div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div><div className={cn("text-sm font-bold", valueClass)}>{value}</div></div>;
 
