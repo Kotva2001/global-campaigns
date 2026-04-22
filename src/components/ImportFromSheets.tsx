@@ -17,6 +17,7 @@ type Preview = {
   influencersByCountry: Map<string, Set<string>>;
   campaignsByCountry: Map<string, number>;
   failedTabs: { country: string; reason: string }[];
+  tabResults: { country: string; rowCount: number; status: "success" | "failed"; reason?: string }[];
   warnings: string[];
 };
 
@@ -37,9 +38,11 @@ export const ImportFromSheets = () => {
   const fetchAllTabs = async (): Promise<{
     rows: CampaignEntry[];
     failedTabs: { country: string; reason: string }[];
+    tabResults: { country: string; rowCount: number; status: "success" | "failed"; reason?: string }[];
   }> => {
     const all: CampaignEntry[] = [];
     const failedTabs: { country: string; reason: string }[] = [];
+    const tabResults: { country: string; rowCount: number; status: "success" | "failed"; reason?: string }[] = [];
     for (const country of COUNTRIES) {
       const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(country)}?key=${encodeURIComponent(apiKey)}`;
       console.log(`[Import] Fetching tab: ${country}`);
@@ -53,49 +56,63 @@ export const ImportFromSheets = () => {
           if (r.status === 403) {
             console.error(`[Import] 403 — sheet not publicly accessible. Share as 'Anyone with the link can view'.`);
             failedTabs.push({ country, reason: "403 — sheet not publicly accessible (share as 'Anyone with the link can view')" });
+            tabResults.push({ country, rowCount: 0, status: "failed", reason: "403 — sheet not publicly accessible" });
           } else if (r.status === 400) {
             console.warn(`[Import] Tab "${country}" returned 400 — likely missing tab, skipping`);
             failedTabs.push({ country, reason: "tab not found" });
+            tabResults.push({ country, rowCount: 0, status: "failed", reason: "400 — tab not found" });
           } else {
             console.warn(`[Import] Tab "${country}" returned ${r.status}: ${reason}`);
             failedTabs.push({ country, reason: `${r.status}: ${reason}` });
+            tabResults.push({ country, rowCount: 0, status: "failed", reason: `${r.status}: ${reason}` });
           }
           continue;
         }
         const data = await r.json();
+        console.log(`[Import] Raw data:`, data);
         const values: unknown[][] = data.values ?? [];
         console.log(`[Import] ${country}: ${values.length} total rows (incl. header)`);
         if (values.length > 0) console.log(`[Import] ${country} header:`, values[0]);
         if (values.length > 1) console.log(`[Import] ${country} first data row:`, values[1]);
         if (values.length < 2) {
           console.log(`[Import] ${country}: no data rows, skipping`);
+          tabResults.push({ country, rowCount: 0, status: "success" });
           continue;
         }
-        // Skip header (row 0); process data rows
+        let addedForCountry = 0;
         const dataRows = values.slice(1);
         dataRows.forEach((row, idx) => {
-          // parseRow expects row[1]=influencer name (Column B). Sheets API row[0]=Col A already.
           const r0 = (row ?? []) as unknown[];
           const entry = parseRow(r0, country, idx + 2);
-          if (entry.influencer) all.push(entry);
+          if (entry.influencer) {
+            all.push(entry);
+            addedForCountry += 1;
+          } else {
+            console.log(`[Import] Skipping empty row in ${country}`, r0);
+          }
         });
+        console.log(`[Import] ${country}: ${addedForCountry} parsed rows`);
+        tabResults.push({ country, rowCount: addedForCountry, status: "success" });
       } catch (err) {
         console.error(`[Import] Error fetching ${country}:`, err);
-        failedTabs.push({ country, reason: (err as Error).message });
+        const reason = (err as Error).message;
+        failedTabs.push({ country, reason });
+        tabResults.push({ country, rowCount: 0, status: "failed", reason });
       }
     }
     console.log(`[Import] Total parsed rows: ${all.length}`);
-    return { rows: all, failedTabs };
+    return { rows: all, failedTabs, tabResults };
   };
 
   const buildPreview = (
     rows: CampaignEntry[],
     failedTabs: { country: string; reason: string }[],
+    tabResults: { country: string; rowCount: number; status: "success" | "failed"; reason?: string }[],
   ): Preview => {
     const influencersByCountry = new Map<string, Set<string>>();
     const campaignsByCountry = new Map<string, number>();
     const warnings: string[] = [];
-    const seenCampaigns = new Set<string>();
+    const seenVideoLinks = new Set<string>();
     for (const r of rows) {
       if (!r.influencer) {
         warnings.push(`Row in ${r.country}: missing influencer name`);
@@ -104,11 +121,13 @@ export const ImportFromSheets = () => {
       if (!influencersByCountry.has(r.country)) influencersByCountry.set(r.country, new Set());
       influencersByCountry.get(r.country)!.add(r.influencer);
       campaignsByCountry.set(r.country, (campaignsByCountry.get(r.country) ?? 0) + 1);
-      const key = `${r.country}|${r.influencer}|${r.campaignName}|${r.publishDate}|${r.videoLink}`;
-      if (seenCampaigns.has(key)) warnings.push(`Duplicate: ${r.influencer} – ${r.campaignName}`);
-      seenCampaigns.add(key);
+      const key = r.videoLink.trim();
+      if (key) {
+        if (seenVideoLinks.has(key)) warnings.push(`Duplicate video URL: ${key}`);
+        seenVideoLinks.add(key);
+      }
     }
-    return { rows, influencersByCountry, campaignsByCountry, failedTabs, warnings };
+    return { rows, influencersByCountry, campaignsByCountry, failedTabs, tabResults, warnings };
   };
 
   const onPreview = async () => {
@@ -117,8 +136,8 @@ export const ImportFromSheets = () => {
     setPreview(null);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ sheetId, apiKey }));
-      const { rows, failedTabs } = await fetchAllTabs();
-      const p = buildPreview(rows, failedTabs);
+      const { rows, failedTabs, tabResults } = await fetchAllTabs();
+      const p = buildPreview(rows, failedTabs, tabResults);
       setPreview(p);
       if (rows.length === 0) {
         toast.warning(failedTabs.length ? `0 rows — ${failedTabs.length} tab(s) failed. See console.` : "0 rows found. Check console for details.");
@@ -296,6 +315,16 @@ export const ImportFromSheets = () => {
           </div>
 
           <div className="space-y-2">
+            <div className="space-y-1">
+              {preview.tabResults.map((tab) => (
+                <div key={tab.country} className="text-xs text-muted-foreground">
+                  {tab.status === "success"
+                    ? `${tab.country}: ${tab.rowCount} rows found`
+                    : `${tab.country}: fetch failed (${tab.reason})`}
+                </div>
+              ))}
+            </div>
+
             {[...preview.influencersByCountry.entries()].map(([country, names]) => (
               <div key={country} className="flex flex-wrap items-center gap-2">
                 <Badge variant="outline">
