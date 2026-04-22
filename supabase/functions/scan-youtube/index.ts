@@ -9,6 +9,7 @@ type Influencer = {
   id: string;
   name: string;
   youtube_channel_id: string | null;
+  youtube_channel_url: string | null;
   status: string | null;
 };
 
@@ -24,6 +25,12 @@ type AlertRule = {
 
 const YT_SEARCH = "https://www.googleapis.com/youtube/v3/search";
 const YT_VIDEOS = "https://www.googleapis.com/youtube/v3/videos";
+
+const extractYouTubeChannelId = (url: string | null): string | null => {
+  if (!url) return null;
+  const match = url.match(/youtube\.com\/channel\/([A-Za-z0-9_-]+)/i);
+  return match?.[1] ?? null;
+};
 
 const findMentions = (
   title: string,
@@ -119,9 +126,14 @@ Deno.serve(async (req) => {
 
     const { data: influencers } = await supabase
       .from("influencers")
-      .select("id,name,youtube_channel_id,status,country")
+      .select("id,name,youtube_channel_id,youtube_channel_url,status,country")
       .eq("status", "active");
-    const tracked = (influencers ?? []).filter((i: Influencer) => i.youtube_channel_id) as (Influencer & { country: string | null })[];
+    const tracked = (influencers ?? [])
+      .map((i: Influencer & { country: string | null }) => ({
+        ...i,
+        youtube_channel_id: i.youtube_channel_id ?? extractYouTubeChannelId(i.youtube_channel_url),
+      }))
+      .filter((i): i is Influencer & { country: string | null; youtube_channel_id: string } => !!i.youtube_channel_id);
 
     const { data: rulesData } = await supabase.from("alert_rules").select("*").eq("is_active", true);
     const rules = (rulesData ?? []) as AlertRule[];
@@ -154,22 +166,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 2. Global keyword search
-    for (const kw of keywords) {
-      const url = `${YT_SEARCH}?part=snippet&q=${encodeURIComponent(kw)}&type=video&order=date&maxResults=25&publishedAfter=${cutoff}&key=${apiKey}`;
-      const r = await fetch(url);
-      if (!r.ok) continue;
-      const j = await r.json();
-      for (const item of j.items ?? []) {
-        const vid = item?.id?.videoId;
-        const channelId = item?.snippet?.channelId;
-        if (!vid) continue;
-        if (!candidates.has(vid)) {
-          const match = tracked.find((t) => t.youtube_channel_id === channelId);
-          candidates.set(vid, { influencer: match });
-        }
-      }
-    }
+    // Global keyword search intentionally disabled: only scan known active influencer channels.
+
 
     videosFound = candidates.size;
     if (videosFound === 0) {
@@ -218,8 +216,8 @@ Deno.serve(async (req) => {
         const matchedInf = cand?.influencer ?? tracked.find((t) => t.youtube_channel_id === channelId);
         const mentions = findMentions(title, description, tags, keywords);
 
-        // Require a brand mention UNLESS the video came from a tracked channel (those count regardless)
-        if (mentions.length === 0 && !matchedInf) continue;
+        // Only keep videos from tracked creators that explicitly mention the brand.
+        if (mentions.length === 0 || !matchedInf) continue;
 
         const views = Number(stats.viewCount ?? 0);
         const likes = Number(stats.likeCount ?? 0);
