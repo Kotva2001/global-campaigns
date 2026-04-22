@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Loader2, Download, Eye, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +35,14 @@ const normalizeCollabType = (raw: string): string | null => {
   return value;
 };
 
+type ImportMode = "fresh" | "new-only";
+
+const campaignKey = (row: { influencer_id: string | null; platform: string; publish_date: string | null; video_url?: string | null; campaign_name?: string | null }) => {
+  const url = row.video_url?.trim().toLowerCase();
+  const campaign = row.campaign_name?.trim().toLowerCase() ?? "";
+  return [row.influencer_id ?? "", row.platform, row.publish_date ?? "", url ? `url:${url}` : `campaign:${campaign}`].join("|");
+};
+
 export const ImportFromSheets = () => {
   const initial = (() => {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}"); }
@@ -45,6 +54,8 @@ export const ImportFromSheets = () => {
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [preview, setPreview] = useState<Preview | null>(null);
+  const [existingCount, setExistingCount] = useState(0);
+  const [confirmImportOpen, setConfirmImportOpen] = useState(false);
 
   const fetchAllTabs = async (): Promise<{
     rows: CampaignEntry[];
@@ -203,11 +214,16 @@ export const ImportFromSheets = () => {
     }
   };
 
-  const onImport = async () => {
+  const performImport = async (mode: ImportMode) => {
     if (!preview) return;
     setImporting(true);
     setProgress(0);
     try {
+      if (mode === "fresh") {
+        const { error } = await supabase.from("campaigns").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+        if (error) throw error;
+      }
+
       // Step 1: upsert influencers
       const influencerKeys = new Map<string, string>(); // key=country|name -> id
       const tasks: { country: string; name: string }[] = [];
@@ -252,40 +268,53 @@ export const ImportFromSheets = () => {
 
       setProgress(30);
 
+      const existingCampaignKeys = new Set<string>();
+      if (mode === "new-only") {
+        const { data: existingCampaigns, error } = await supabase
+          .from("campaigns")
+          .select("influencer_id,platform,publish_date,video_url,campaign_name");
+        if (error) throw error;
+        (existingCampaigns ?? []).forEach((row) => existingCampaignKeys.add(campaignKey(row)));
+      }
+
+      const campaignRows = preview.rows.map((r) => {
+        const dt = parseCzechDate(r.publishDate);
+        const row = {
+          influencer_id: influencerKeys.get(`${r.country}|${r.influencer}`) ?? null,
+          campaign_name: r.campaignName || null,
+          platform: r.platform,
+          publish_date: dt ? dt.toISOString().slice(0, 10) : null,
+          video_url: r.videoLink || null,
+          video_id: extractYouTubeVideoId(r.videoLink),
+          collaboration_type: normalizeCollabType(r.collaborationType),
+          campaign_cost: r.campaignCost ?? 0,
+          utm_link: r.utmLink || null,
+          managed_by: r.managedBy || null,
+          views: r.views ?? 0,
+          likes: r.likes ?? 0,
+          comments: r.comments ?? 0,
+          sessions: r.sessions ?? 0,
+          engagement_rate: r.engagementRate,
+          purchase_revenue: r.purchaseRevenue ?? 0,
+          conversion_rate: r.conversionRate,
+        };
+        return row;
+      }).filter((row) => mode === "fresh" || !existingCampaignKeys.has(campaignKey(row)));
+
       // Step 2: insert campaigns in batches of 100
-      const total = preview.rows.length;
+      const total = campaignRows.length;
       let done = 0;
       const BATCH = 100;
       for (let i = 0; i < total; i += BATCH) {
-        const batch = preview.rows.slice(i, i + BATCH).map((r) => {
-          const dt = parseCzechDate(r.publishDate);
-          return {
-            influencer_id: influencerKeys.get(`${r.country}|${r.influencer}`) ?? null,
-            campaign_name: r.campaignName || null,
-            platform: r.platform,
-            publish_date: dt ? dt.toISOString().slice(0, 10) : null,
-            video_url: r.videoLink || null,
-            video_id: extractYouTubeVideoId(r.videoLink),
-            collaboration_type: normalizeCollabType(r.collaborationType),
-            campaign_cost: r.campaignCost ?? 0,
-            utm_link: r.utmLink || null,
-            managed_by: r.managedBy || null,
-            views: r.views ?? 0,
-            likes: r.likes ?? 0,
-            comments: r.comments ?? 0,
-            sessions: r.sessions ?? 0,
-            engagement_rate: r.engagementRate,
-            purchase_revenue: r.purchaseRevenue ?? 0,
-            conversion_rate: r.conversionRate,
-          };
-        });
+        const batch = campaignRows.slice(i, i + BATCH);
         const { error } = await supabase.from("campaigns").insert(batch);
         if (error) throw error;
         done += batch.length;
-        setProgress(30 + Math.round((done / total) * 70));
+        setProgress(total ? 30 + Math.round((done / total) * 70) : 100);
       }
 
       toast.success(`Imported ${tasks.length} influencers and ${total} campaigns`);
+      window.dispatchEvent(new Event("campaign-data-changed"));
       setPreview(null);
     } catch (e) {
       toast.error((e as Error).message);
@@ -293,6 +322,18 @@ export const ImportFromSheets = () => {
       setImporting(false);
       setProgress(0);
     }
+  };
+
+  const onImport = async () => {
+    if (!preview) return;
+    const { count, error } = await supabase.from("campaigns").select("*", { count: "exact", head: true });
+    if (error) return toast.error(error.message);
+    if ((count ?? 0) > 0) {
+      setExistingCount(count ?? 0);
+      setConfirmImportOpen(true);
+      return;
+    }
+    void performImport("new-only");
   };
 
   return (
@@ -426,6 +467,20 @@ export const ImportFromSheets = () => {
           )}
         </div>
       )}
+
+      <AlertDialog open={confirmImportOpen} onOpenChange={setConfirmImportOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Campaigns already exist</AlertDialogTitle>
+            <AlertDialogDescription>There are already {existingCount} campaigns in the database. What would you like to do?</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-row">
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setConfirmImportOpen(false); void performImport("new-only"); }}>Import only new</AlertDialogAction>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => { setConfirmImportOpen(false); void performImport("fresh"); }}>Clear & reimport</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
