@@ -2,6 +2,14 @@ import type { CampaignEntry, Platform } from "@/types/campaign";
 
 const cleanCell = (v: unknown): string => (v == null ? "" : String(v).trim());
 
+const detectColumnOffset = (row: unknown[]): 0 | 1 => {
+  const first = cleanCell(row[0]).toLowerCase();
+  if (!first) return row.length >= 17 ? 1 : 0;
+  if (first === "tr" || /^\d+$/.test(first)) return 1;
+  if (first.includes("influencer")) return 0;
+  return row.length >= 17 ? 1 : 0;
+};
+
 /** Parse Czech-formatted number: "1 354 Kč", "12,5 %", "3 280" → number | null
  *  Strips currency symbols, percent signs, all unicode whitespace,
  *  and converts comma decimal separator to dot. */
@@ -37,26 +45,27 @@ export const parseRow = (
   country: string,
   rowIndex: number,
 ): CampaignEntry => {
-  const c = (i: number) => cleanCell(row[i]);
+  const offset = detectColumnOffset(row);
+  const c = (i: number) => cleanCell(row[i + offset]);
   return {
     id: `${country}-${rowIndex}`,
     country,
-    influencer: c(1),
-    campaignName: c(2),
-    platform: normalizePlatform(c(3)),
-    publishDate: c(4),
-    videoLink: c(5),
-    collaborationType: c(6),
-    campaignCost: parseCzechNumber(row[7]),
-    utmLink: c(8),
-    managedBy: c(9),
-    views: parseCzechNumber(row[10]),
-    likes: parseCzechNumber(row[11]),
-    comments: parseCzechNumber(row[12]),
-    sessions: parseCzechNumber(row[13]),
-    engagementRate: parsePercentage(row[14]),
-    purchaseRevenue: parseCzechNumber(row[15]),
-    conversionRate: parsePercentage(row[16]),
+    influencer: c(0),
+    campaignName: c(1),
+    platform: normalizePlatform(c(2)),
+    publishDate: c(3),
+    videoLink: c(4),
+    collaborationType: c(5),
+    campaignCost: parseCzechNumber(c(6)),
+    utmLink: c(7),
+    managedBy: c(8),
+    views: parseCzechNumber(c(9)),
+    likes: parseCzechNumber(c(10)),
+    comments: parseCzechNumber(c(11)),
+    sessions: parseCzechNumber(c(12)),
+    engagementRate: parsePercentage(c(13)),
+    purchaseRevenue: parseCzechNumber(c(14)),
+    conversionRate: parsePercentage(c(15)),
   };
 };
 
