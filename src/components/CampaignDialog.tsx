@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { COUNTRIES, COUNTRY_FLAGS } from "@/lib/countries";
+import { defaultCurrencyForCountry, type CurrencyCode } from "@/lib/currency";
 import { extractYouTubeVideoId } from "@/lib/youtube";
 import type { CampaignEntry, InfluencerRecord, Platform } from "@/types/campaign";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ const campaignSchema = z.object({
   publishDate: z.date(),
   videoLink: z.string().trim().max(1000).optional(),
   collaborationType: z.string().trim().max(80).optional(),
+  currency: z.enum(["CZK", "EUR", "HUF", "RON"]),
   campaignCost: numeric,
   utmLink: z.string().trim().max(1000).optional(),
   managedBy: z.string().trim().max(160).optional(),
@@ -72,6 +74,7 @@ export const CampaignDialog = ({ open, onOpenChange, editing, initialInfluencerI
     publishDate: new Date(),
     videoLink: "",
     collaborationType: "Barter",
+    currency: "CZK",
     campaignCost: 0,
     utmLink: "",
     managedBy: "",
@@ -98,13 +101,16 @@ export const CampaignDialog = ({ open, onOpenChange, editing, initialInfluencerI
 
   useEffect(() => {
     if (!open) return;
+    const selectedInfluencerId = editing?.influencerId ?? initialInfluencerId ?? "";
+    const selectedInfluencer = influencers.find((influencer) => influencer.id === selectedInfluencerId);
     setValues({
-      influencerId: editing?.influencerId ?? initialInfluencerId ?? "",
+      influencerId: selectedInfluencerId,
       campaignName: editing?.campaignName ?? "",
       platform: editing?.platform ?? "YouTube",
       publishDate: parseDisplayDate(editing?.publishDateIso ?? editing?.publishDate),
       videoLink: editing?.videoLink ?? "",
       collaborationType: editing?.collaborationType || "Barter",
+      currency: editing?.currency ?? defaultCurrencyForCountry(selectedInfluencer?.country),
       campaignCost: toInputNumber(editing?.campaignCost ?? 0),
       utmLink: editing?.utmLink ?? "",
       managedBy: editing?.managedBy ?? "",
@@ -118,7 +124,12 @@ export const CampaignDialog = ({ open, onOpenChange, editing, initialInfluencerI
     });
     setErrors({});
     setStatsOpen(!!editing);
-  }, [editing, initialInfluencerId, open]);
+  }, [editing, influencers, initialInfluencerId, open]);
+
+  const updateInfluencer = (influencerId: string) => {
+    const influencer = influencers.find((row) => row.id === influencerId);
+    setValues({ ...values, influencerId, currency: editing ? values.currency : defaultCurrencyForCountry(influencer?.country) });
+  };
 
   const grouped = useMemo(() => COUNTRIES.map((country) => ({ country, rows: influencers.filter((influencer) => influencer.country === country) })).filter((group) => group.rows.length), [influencers]);
 
@@ -140,6 +151,7 @@ export const CampaignDialog = ({ open, onOpenChange, editing, initialInfluencerI
       video_url: value.videoLink || null,
       video_id: extractYouTubeVideoId(value.videoLink ?? ""),
       collaboration_type: value.collaborationType || null,
+      currency: value.currency,
       campaign_cost: toDbNumber(value.campaignCost) ?? 0,
       utm_link: value.utmLink || null,
       managed_by: value.managedBy || null,
@@ -181,7 +193,7 @@ export const CampaignDialog = ({ open, onOpenChange, editing, initialInfluencerI
         <div className="grid grid-cols-1 gap-4 py-2 sm:grid-cols-2">
           <Field label="Influencer" error={errors.influencerId} required className="sm:col-span-2">
             <div className="flex gap-2">
-              <Select value={values.influencerId} onValueChange={(influencerId) => setValues({ ...values, influencerId })}>
+              <Select value={values.influencerId} onValueChange={updateInfluencer}>
                 <SelectTrigger><SelectValue placeholder="Select influencer" /></SelectTrigger>
                 <SelectContent>
                   {grouped.map((group) => (
@@ -227,7 +239,7 @@ export const CampaignDialog = ({ open, onOpenChange, editing, initialInfluencerI
             </Select>
           </Field>
 
-          {values.collaborationType === "Paid" && <NumberField label="Campaign Cost" value={values.campaignCost} onChange={(campaignCost) => setValues({ ...values, campaignCost })} />}
+          {values.collaborationType === "Paid" && <CurrencyNumberField label="Campaign Cost" value={values.campaignCost} currency={values.currency} onCurrencyChange={(currency) => setValues({ ...values, currency })} onChange={(campaignCost) => setValues({ ...values, campaignCost })} />}
 
           <Field label="UTM Link"><Input value={values.utmLink} onChange={(event) => setValues({ ...values, utmLink: event.target.value })} maxLength={1000} /></Field>
           <Field label="Managed By"><Input value={values.managedBy} onChange={(event) => setValues({ ...values, managedBy: event.target.value })} maxLength={160} /></Field>
@@ -241,7 +253,7 @@ export const CampaignDialog = ({ open, onOpenChange, editing, initialInfluencerI
             <NumberField label="Comments" value={values.comments} onChange={(comments) => setValues({ ...values, comments })} />
             <NumberField label="Sessions" value={values.sessions} onChange={(sessions) => setValues({ ...values, sessions })} />
             <NumberField label="Engagement Rate" value={values.engagementRate} onChange={(engagementRate) => setValues({ ...values, engagementRate })} step="0.01" />
-            <NumberField label="Revenue" value={values.purchaseRevenue} onChange={(purchaseRevenue) => setValues({ ...values, purchaseRevenue })} />
+            <CurrencyNumberField label="Revenue" value={values.purchaseRevenue} currency={values.currency} onCurrencyChange={(currency) => setValues({ ...values, currency })} onChange={(purchaseRevenue) => setValues({ ...values, purchaseRevenue })} />
             <NumberField label="Conversion Rate" value={values.conversionRate} onChange={(conversionRate) => setValues({ ...values, conversionRate })} step="0.01" />
           </CollapsibleContent>
         </Collapsible>
@@ -266,5 +278,17 @@ const Field = ({ label, error, required, className, children }: { label: string;
 const NumberField = ({ label, value, onChange, step = "1" }: { label: string; value: number | "" | null; onChange: (value: number | "") => void; step?: string }) => (
   <Field label={label}>
     <Input type="number" min="0" step={step} value={value ?? ""} onChange={(event) => onChange(event.target.value === "" ? "" : Number(event.target.value))} />
+  </Field>
+);
+
+const CurrencyNumberField = ({ label, value, currency, onCurrencyChange, onChange }: { label: string; value: number | "" | null; currency: CurrencyCode; onCurrencyChange: (currency: CurrencyCode) => void; onChange: (value: number | "") => void }) => (
+  <Field label={label}>
+    <div className="flex gap-2">
+      <Input type="number" min="0" step="1" value={value ?? ""} onChange={(event) => onChange(event.target.value === "" ? "" : Number(event.target.value))} />
+      <Select value={currency} onValueChange={(next) => onCurrencyChange(next as CurrencyCode)}>
+        <SelectTrigger className="w-[96px]"><SelectValue /></SelectTrigger>
+        <SelectContent><SelectItem value="CZK">CZK</SelectItem><SelectItem value="EUR">EUR</SelectItem><SelectItem value="HUF">HUF</SelectItem><SelectItem value="RON">RON</SelectItem></SelectContent>
+      </Select>
+    </div>
   </Field>
 );
