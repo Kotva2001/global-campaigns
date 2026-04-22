@@ -367,7 +367,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      remove_duplicate_import_data: {
+        Args: never
+        Returns: {
+          merged_influencers: number
+          removed_campaigns: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -82,7 +83,8 @@ const EditableNumber = ({ value, campaignId, field, onChanged }: { value: number
       toast.error("Enter a valid number");
       return;
     }
-    const { error } = await supabase.from("campaigns").update({ [field]: next }).eq("id", campaignId);
+    const payload = field === "views" ? { views: next } : field === "likes" ? { likes: next } : { comments: next };
+    const { error } = await supabase.from("campaigns").update(payload).eq("id", campaignId);
     if (error) return toast.error(error.message);
     setEditing(false);
     toast.success("Stat updated");
