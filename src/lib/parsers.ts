@@ -49,11 +49,13 @@ export const parseRow = (
   const c = (i: number) => cleanCell(row[i + offset]);
   return {
     id: `${country}-${rowIndex}`,
+    influencerId: null,
     country,
     influencer: c(0),
     campaignName: c(1),
     platform: normalizePlatform(c(2)),
     publishDate: c(3),
+    publishDateIso: null,
     videoLink: c(4),
     collaborationType: c(5),
     campaignCost: parseCzechNumber(c(6)),
