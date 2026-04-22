@@ -8,7 +8,6 @@ import {
   Radar,
   Settings as SettingsIcon,
   Menu,
-  LogOut,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -129,14 +128,6 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
         >
           <SettingsIcon className="h-4 w-4" />
           Settings
-        </Button>
-        <Button
-          variant="ghost"
-          className="mt-1 w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
-          onClick={() => void supabase.auth.signOut()}
-        >
-          <LogOut className="h-4 w-4" />
-          Sign out
         </Button>
       </div>
     </div>
