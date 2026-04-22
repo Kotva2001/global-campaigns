@@ -25,6 +25,8 @@ const BodySchema = z.object({
 });
 
 const normalizeHandle = (handle: string) => handle.trim().replace(/^@/, "").toLowerCase();
+const externalSupabaseUrl = "https://vnggokmmxkiazkgkrdqs.supabase.co";
+const externalSupabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZuZ2dva21teGtpYXprZ2tyZHFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4NTYzMDQsImV4cCI6MjA5MjQzMjMwNH0.Nur-y2ERqUbkO--ZuEJ6McbbjWmB38Z-zYhlQ71VIp4";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -43,16 +45,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!supabaseUrl || !serviceRoleKey) {
-    return new Response(JSON.stringify({ error: "Backend configuration missing" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  const supabase = createClient(supabaseUrl, serviceRoleKey);
+  const supabase = createClient(externalSupabaseUrl, externalSupabaseAnonKey);
   const handles = [...new Set(parsed.data.detections.map((d) => normalizeHandle(d.influencer_handle)))];
 
   const { data: influencers, error: influencerError } = await supabase
