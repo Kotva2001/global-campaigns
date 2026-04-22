@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
-import { Edit3, ExternalLink, Pencil, Plus, Trash2 } from "lucide-react";
+import { Edit3, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PlatformLinkIcon } from "@/components/PlatformLinkIcon";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -154,7 +155,7 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
                     <table className="w-full text-sm">
                       <thead className="sticky top-0 z-10 bg-muted/60 backdrop-blur">
                         <tr className="border-b border-border">
-                          {['Date', 'Campaign', 'Platform', 'Collab', 'URL', 'Views', 'Likes', 'Comments', 'Cost', 'Revenue', 'Engagement', 'Conversion', ''].map((head) => (
+                          {['Date', 'Campaign', 'Platform', 'Collab', 'Link', 'Views', 'Likes', 'Comments', 'Cost', 'Revenue', 'Engagement', 'Conversion', ''].map((head) => (
                             <th key={head} className="whitespace-nowrap px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{head}</th>
                           ))}
                         </tr>
@@ -167,7 +168,7 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
                             <td className="whitespace-nowrap px-3 py-2.5">{platformBadge(campaign.platform)}</td>
                             <td className="whitespace-nowrap px-3 py-2.5">{collabBadge(campaign.collaborationType)}</td>
                             <td className="px-3 py-2.5">
-                              {campaign.videoLink ? <a href={campaign.videoLink} target="_blank" rel="noreferrer" className="inline-flex items-center text-primary hover:underline"><ExternalLink className="h-4 w-4" /></a> : <span className="text-muted-foreground">—</span>}
+                              <PlatformLinkIcon platform={campaign.platform} url={campaign.videoLink} />
                             </td>
                             <td className="whitespace-nowrap px-3 py-2.5 text-right"><EditableNumber value={campaign.views} campaignId={campaign.id} field="views" onChanged={onChanged} /></td>
                             <td className="whitespace-nowrap px-3 py-2.5 text-right"><EditableNumber value={campaign.likes} campaignId={campaign.id} field="likes" onChanged={onChanged} /></td>
