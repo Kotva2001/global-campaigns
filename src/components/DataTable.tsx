@@ -61,9 +61,9 @@ const csvEscape = (value: unknown) => {
 };
 
 const exportCsv = (rows: CampaignEntry[]) => {
-  const headers = ["Country", "Influencer", "Campaign", "Platform", "Date", "Collab", "Cost", "Views", "Likes", "Comments", "Sessions", "Engagement %", "Revenue", "Conversion %"];
+  const headers = ["Country", "Influencer", "Campaign", "Platform", "Currency", "Date", "Collab", "Cost", "Views", "Likes", "Comments", "Sessions", "Engagement %", "Revenue", "Conversion %"];
   const body = rows.map((row) => [
-    row.country, row.influencer, row.campaignName, row.platform, row.publishDate, row.collaborationType,
+    row.country, row.influencer, row.campaignName, row.platform, row.currency, row.publishDate, row.collaborationType,
     row.campaignCost ?? "", row.views ?? "", row.likes ?? "", row.comments ?? "", row.sessions ?? "",
     row.engagementRate ?? "", row.purchaseRevenue ?? "", row.conversionRate ?? "",
   ].map(csvEscape).join(","));
@@ -176,15 +176,16 @@ export const DataTable = ({ rows, onChanged, onAddCampaign, onEditCampaign }: Pr
     { id: "campaign", header: "Campaign", accessorKey: "campaignName", cell: ({ getValue }) => <span className="block max-w-[220px] truncate text-foreground/80">{String(getValue() || "—")}</span> },
     { id: "platform", header: "Platform", accessorKey: "platform", cell: ({ getValue }) => platformBadge(String(getValue())) },
     { id: "link", header: "Link", cell: ({ row }) => <PlatformLinkIcon platform={row.original.platform} url={row.original.videoLink} />, enableSorting: false },
+    { id: "currency", header: "Curr.", accessorKey: "currency", cell: ({ getValue }) => <span className="text-xs font-semibold text-muted-foreground">{String(getValue() || "CZK")}</span> },
     { id: "date", header: "Date", accessorKey: "publishDate", cell: ({ getValue }) => <span className="whitespace-nowrap text-muted-foreground">{String(getValue() || "—")}</span> },
     { id: "collab", header: "Collab", accessorKey: "collaborationType", cell: ({ getValue }) => collabBadge(String(getValue() || "")) },
-    { id: "cost", header: () => <div className="text-right">Cost</div>, accessorKey: "campaignCost", cell: ({ getValue }) => <div className="text-right tabular-nums text-foreground">{formatCurrency(getValue() as number | null)}</div> },
+    { id: "cost", header: () => <div className="text-right">Cost</div>, accessorKey: "campaignCost", cell: ({ row, getValue }) => <div className="text-right tabular-nums text-foreground">{formatCurrency(getValue() as number | null, row.original.currency)}</div> },
     { id: "views", header: () => <div className="text-right">Views</div>, accessorKey: "views", cell: ({ row, getValue }) => <div className="text-right font-bold"><EditableNumber value={getValue() as number | null} campaignId={row.original.id} field="views" onChanged={onChanged} /></div> },
     { id: "likes", header: () => <div className="text-right">Likes</div>, accessorKey: "likes", cell: ({ row, getValue }) => <div className="text-right"><EditableNumber value={getValue() as number | null} campaignId={row.original.id} field="likes" onChanged={onChanged} /></div> },
     { id: "comments", header: () => <div className="text-right">Comments</div>, accessorKey: "comments", cell: ({ row, getValue }) => <div className="text-right"><EditableNumber value={getValue() as number | null} campaignId={row.original.id} field="comments" onChanged={onChanged} /></div> },
     { id: "sessions", header: () => <div className="text-right">Sessions</div>, accessorKey: "sessions", cell: ({ getValue }) => <div className="text-right tabular-nums text-muted-foreground">{formatNumber(getValue() as number | null)}</div> },
     { id: "engagement", header: () => <div className="text-right">Engagement</div>, accessorKey: "engagementRate", cell: ({ getValue }) => <div className="text-right tabular-nums text-muted-foreground">{formatPercent(getValue() as number | null)}</div> },
-    { id: "revenue", header: () => <div className="text-right">Revenue</div>, accessorKey: "purchaseRevenue", cell: ({ getValue }) => <div className={cn("text-right tabular-nums", (getValue() as number | null) ? "font-bold text-success" : "text-muted-foreground")}>{formatCurrency(getValue() as number | null)}</div> },
+    { id: "revenue", header: () => <div className="text-right">Revenue</div>, accessorKey: "purchaseRevenue", cell: ({ row, getValue }) => <div className={cn("text-right tabular-nums", (getValue() as number | null) ? "font-bold text-success" : "text-muted-foreground")}>{formatCurrency(getValue() as number | null, row.original.currency)}</div> },
     { id: "conversion", header: () => <div className="text-right">Conv. %</div>, accessorKey: "conversionRate", cell: ({ getValue }) => <div className="text-right tabular-nums text-muted-foreground">{formatPercent(getValue() as number | null)}</div> },
     { id: "actions", header: "", cell: ({ row }) => <div className="flex justify-end gap-1"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEditCampaign?.(row.original)}><Edit3 className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteCampaign(row.original)}><Trash2 className="h-4 w-4" /></Button></div>, enableSorting: false },
   ], [onChanged, onEditCampaign, selected]);
