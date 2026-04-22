@@ -27,7 +27,6 @@ const Dashboard = () => {
   const [campaignOpen, setCampaignOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState(null);
   const [detailCreator, setDetailCreator] = useState<InfluencerRecord | null>(null);
-  const [detailCampaigns, setDetailCampaigns] = useState<typeof data>([]);
   const [campaignInfluencerId, setCampaignInfluencerId] = useState<string | null>(null);
   const filters = useFilters(data);
   const { selectedCountry, filtered } = filters;
@@ -40,6 +39,7 @@ const Dashboard = () => {
   const totalViews = useMemo(() => data.reduce((a, r) => a + (r.views ?? 0), 0), [data]);
   const kpis = useMemo(() => computeKPIs(filtered), [filtered]);
   const influencers = useMemo(() => summarizeInfluencers(filtered), [filtered]);
+  const detailCampaigns = useMemo(() => detailCreator ? data.filter((campaign) => campaign.influencerId === detailCreator.id) : [], [data, detailCreator]);
 
   const marketLabel =
     selectedCountry === "All"
@@ -64,14 +64,10 @@ const Dashboard = () => {
       notes: null,
       status: "active",
     });
-    setDetailCampaigns(campaignsForInfluencer);
   };
 
   const refreshAndUpdateDetail = async () => {
     await refresh();
-    if (detailCreator) {
-      setDetailCampaigns(data.filter((campaign) => campaign.influencerId === detailCreator.id));
-    }
   };
 
   return (
