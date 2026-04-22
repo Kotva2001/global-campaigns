@@ -107,6 +107,12 @@ export const useSheetData = () => {
     void refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    const handleChange = () => { void refresh(); };
+    window.addEventListener("campaign-data-changed", handleChange);
+    return () => window.removeEventListener("campaign-data-changed", handleChange);
+  }, [refresh]);
+
   return {
     config: { sheetId: "", apiKey: "" } as SheetConfig,
     updateConfig: (_cfg: SheetConfig) => {
