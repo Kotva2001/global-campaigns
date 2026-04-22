@@ -28,6 +28,7 @@ interface CampaignRow {
   publish_date: string | null;
   video_url: string | null;
   collaboration_type: string | null;
+  currency: string | null;
   campaign_cost: number | string | null;
   utm_link: string | null;
   managed_by: string | null;
@@ -77,6 +78,7 @@ const mapCampaign = (row: CampaignRow, influencer: InfluencerRecord): CampaignEn
   publishDateIso: row.publish_date,
   videoLink: row.video_url ?? "",
   collaborationType: row.collaboration_type ?? "",
+  currency: row.currency === "EUR" || row.currency === "HUF" || row.currency === "RON" ? row.currency : "CZK",
   campaignCost: num(row.campaign_cost),
   utmLink: row.utm_link ?? "",
   managedBy: row.managed_by ?? "",

@@ -1,4 +1,5 @@
 import type { CampaignEntry, Platform } from "@/types/campaign";
+import { defaultCurrencyForCountry, detectCurrency } from "@/lib/currency";
 
 const cleanCell = (v: unknown): string => (v == null ? "" : String(v).trim());
 
@@ -47,6 +48,7 @@ export const parseRow = (
 ): CampaignEntry => {
   const offset = detectColumnOffset(row);
   const c = (i: number) => cleanCell(row[i + offset]);
+  const fallbackCurrency = defaultCurrencyForCountry(country);
   return {
     id: `${country}-${rowIndex}`,
     influencerId: null,
@@ -58,6 +60,7 @@ export const parseRow = (
     publishDateIso: null,
     videoLink: c(4),
     collaborationType: c(5),
+    currency: detectCurrency(`${c(6)} ${c(14)}`, fallbackCurrency),
     campaignCost: parseCzechNumber(c(6)),
     utmLink: c(7),
     managedBy: c(8),

@@ -32,6 +32,7 @@ interface CampaignRow {
   publish_date: string | null;
   video_url: string | null;
   collaboration_type: string | null;
+  currency: string | null;
   campaign_cost: number | string | null;
   utm_link: string | null;
   managed_by: string | null;
@@ -63,6 +64,7 @@ const mapRow = (r: CampaignRow): CampaignEntry => ({
   publishDateIso: r.publish_date,
   videoLink: r.video_url ?? "",
   collaborationType: r.collaboration_type ?? "",
+  currency: r.currency === "EUR" || r.currency === "HUF" || r.currency === "RON" ? r.currency : "CZK",
   campaignCost: num(r.campaign_cost),
   utmLink: r.utm_link ?? "",
   managedBy: r.managed_by ?? "",
@@ -88,7 +90,7 @@ export const useSheetData = () => {
       const { data: rows, error: err } = await supabase
         .from("campaigns")
         .select(
-          "id, influencer_id, campaign_name, platform, publish_date, video_url, collaboration_type, campaign_cost, utm_link, managed_by, views, likes, comments, sessions, engagement_rate, purchase_revenue, conversion_rate, influencers!inner(name, country)",
+          "id, influencer_id, campaign_name, platform, publish_date, video_url, collaboration_type, currency, campaign_cost, utm_link, managed_by, views, likes, comments, sessions, engagement_rate, purchase_revenue, conversion_rate, influencers!inner(name, country)",
         )
         .order("publish_date", { ascending: false, nullsFirst: false });
       if (err) throw err;
