@@ -25,6 +25,15 @@ type Preview = {
 
 const STORAGE_KEY = "lovable-import-sheets";
 
+const normalizeCollabType = (raw: string): string | null => {
+  const value = raw.trim();
+  if (!value) return null;
+  const lower = value.toLowerCase();
+  if (lower === "barter") return "Barter";
+  if (lower === "paid" || lower.includes("placen")) return "Paid";
+  return value;
+};
+
 export const ImportFromSheets = () => {
   const initial = (() => {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}"); }
@@ -160,7 +169,6 @@ export const ImportFromSheets = () => {
     const influencersByCountry = new Map<string, Set<string>>();
     const campaignsByCountry = new Map<string, number>();
     const warnings: string[] = [];
-    const seenVideoLinks = new Set<string>();
     for (const r of rows) {
       if (!r.influencer) {
         warnings.push(`Row in ${r.country}: missing influencer name`);
@@ -169,11 +177,6 @@ export const ImportFromSheets = () => {
       if (!influencersByCountry.has(r.country)) influencersByCountry.set(r.country, new Set());
       influencersByCountry.get(r.country)!.add(r.influencer);
       campaignsByCountry.set(r.country, (campaignsByCountry.get(r.country) ?? 0) + 1);
-      const key = r.videoLink.trim();
-      if (key) {
-        if (seenVideoLinks.has(key)) warnings.push(`Duplicate video URL: ${key}`);
-        seenVideoLinks.add(key);
-      }
     }
     skippedTabs.forEach((tab) => warnings.push(`Tab "${tab}" was not matched to any country. Should it be imported?`));
     return { rows, influencersByCountry, campaignsByCountry, discoveredTabs, skippedTabs, failedTabs, tabResults, warnings };
@@ -263,7 +266,7 @@ export const ImportFromSheets = () => {
             publish_date: dt ? dt.toISOString().slice(0, 10) : null,
             video_url: r.videoLink || null,
             video_id: extractYouTubeVideoId(r.videoLink),
-            collaboration_type: r.collaborationType || null,
+            collaboration_type: normalizeCollabType(r.collaborationType),
             campaign_cost: r.campaignCost ?? 0,
             utm_link: r.utmLink || null,
             managed_by: r.managedBy || null,
