@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import type { SheetConfig } from "@/hooks/useSheetData";
 import { ImportFromSheets } from "./ImportFromSheets";
+import { DuplicateCleanup } from "./DuplicateCleanup";
 
 interface Props {
   open: boolean;
@@ -77,6 +78,7 @@ export const SettingsDialog = ({ open, onOpenChange, config, onSave }: Props) =>
           </div>
 
           <ImportFromSheets />
+          <DuplicateCleanup />
         </div>
 
         <DialogFooter>
