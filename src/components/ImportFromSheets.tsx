@@ -355,6 +355,16 @@ export const ImportFromSheets = () => {
               across {preview.influencersByCountry.size} markets
             </div>
             <div className="text-muted-foreground">{preview.rows.length} campaign entries</div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              Discovered tabs: {preview.discoveredTabs.length
+                ? preview.discoveredTabs.map((tab) => tab.tabName === tab.country ? tab.country : `${tab.country} (${tab.tabName})`).join(", ")
+                : "none"}
+            </div>
+            {preview.skippedTabs.length > 0 && (
+              <div className="mt-1 text-xs text-muted-foreground">
+                Other tabs (skipped): {preview.skippedTabs.join(", ")}
+              </div>
+            )}
             {preview.rows.length > 0 && (
               <div className="mt-1 text-xs text-muted-foreground">
                 Sample: {preview.rows.slice(0, 3).map((r) => r.influencer).join(", ")}
