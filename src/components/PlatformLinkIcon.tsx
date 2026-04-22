@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -22,7 +23,7 @@ const YouTubeLogo = ({ shorts = false }: { shorts?: boolean }) => (
 );
 
 const InstagramLogo = () => {
-  const gradientId = `ig-grad-${Math.random().toString(36).slice(2)}`;
+  const gradientId = useId();
   return (
     <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
       <defs>
