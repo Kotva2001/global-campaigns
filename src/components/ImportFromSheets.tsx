@@ -16,6 +16,8 @@ type Preview = {
   rows: CampaignEntry[];
   influencersByCountry: Map<string, Set<string>>;
   campaignsByCountry: Map<string, number>;
+  discoveredTabs: { country: string; tabName: string }[];
+  skippedTabs: string[];
   failedTabs: { country: string; reason: string }[];
   tabResults: { country: string; rowCount: number; status: "success" | "failed"; reason?: string }[];
   warnings: string[];
@@ -37,15 +39,59 @@ export const ImportFromSheets = () => {
 
   const fetchAllTabs = async (): Promise<{
     rows: CampaignEntry[];
+    discoveredTabs: { country: string; tabName: string }[];
+    skippedTabs: string[];
     failedTabs: { country: string; reason: string }[];
     tabResults: { country: string; rowCount: number; status: "success" | "failed"; reason?: string }[];
   }> => {
     const all: CampaignEntry[] = [];
     const failedTabs: { country: string; reason: string }[] = [];
     const tabResults: { country: string; rowCount: number; status: "success" | "failed"; reason?: string }[] = [];
-    for (const country of COUNTRIES) {
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(country)}?key=${encodeURIComponent(apiKey)}`;
-      console.log(`[Import] Fetching tab: ${country}`);
+    const metadataUrl = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}?key=${encodeURIComponent(apiKey)}&fields=sheets.properties.title`;
+    console.log("[Import] Fetching spreadsheet metadata:", metadataUrl);
+    const metaResponse = await fetch(metadataUrl);
+    console.log(`[Import] Metadata response status: ${metaResponse.status}`);
+    if (!metaResponse.ok) {
+      const body = await metaResponse.json().catch(() => ({}));
+      const reason = body?.error?.message ?? metaResponse.statusText;
+      throw new Error(metaResponse.status === 403
+        ? "Sheet is not publicly accessible. Please share it as 'Anyone with the link can view' in Google Sheets sharing settings."
+        : `Could not read spreadsheet tabs: ${reason}`);
+    }
+    const metaData = await metaResponse.json();
+    console.log("[Import] Metadata raw data:", metaData);
+    const availableTabs: string[] = metaData.sheets?.map((s: { properties?: { title?: string } }) => s.properties?.title).filter(Boolean) ?? [];
+    console.log("[Import] Available tabs in spreadsheet:", availableTabs);
+
+    const discoveredTabs: { country: string; tabName: string }[] = [];
+    for (const tabName of availableTabs) {
+      const trimmed = tabName.trim().toUpperCase();
+      const direct = COUNTRIES.find((country) => country === trimmed);
+      if (direct) {
+        discoveredTabs.push({ country: direct, tabName });
+        continue;
+      }
+      const partial = COUNTRIES.find((country) =>
+        trimmed.startsWith(`${country} `) || trimmed.startsWith(`${country}-`) || trimmed.startsWith(`${country} (`),
+      );
+      if (partial) discoveredTabs.push({ country: partial, tabName });
+    }
+    const skippedTabs = availableTabs.filter((tab) => !discoveredTabs.some((mapped) => mapped.tabName === tab));
+    console.log("[Import] Tab mapping:", discoveredTabs);
+    console.log("[Import] Unmatched tabs:", skippedTabs);
+
+    const mappedCountries = new Set(discoveredTabs.map((tab) => tab.country));
+    COUNTRIES.forEach((country) => {
+      if (!mappedCountries.has(country)) {
+        const reason = "no matching sheet tab found";
+        failedTabs.push({ country, reason });
+        tabResults.push({ country, rowCount: 0, status: "failed", reason });
+      }
+    });
+
+    for (const { country, tabName } of discoveredTabs) {
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(tabName)}?key=${encodeURIComponent(apiKey)}`;
+      console.log(`[Import] Fetching tab: ${country} (${tabName})`);
       console.log(`[Import] URL: ${url}`);
       try {
         const r = await fetch(url);
@@ -101,11 +147,13 @@ export const ImportFromSheets = () => {
       }
     }
     console.log(`[Import] Total parsed rows: ${all.length}`);
-    return { rows: all, failedTabs, tabResults };
+    return { rows: all, discoveredTabs, skippedTabs, failedTabs, tabResults };
   };
 
   const buildPreview = (
     rows: CampaignEntry[],
+    discoveredTabs: { country: string; tabName: string }[],
+    skippedTabs: string[],
     failedTabs: { country: string; reason: string }[],
     tabResults: { country: string; rowCount: number; status: "success" | "failed"; reason?: string }[],
   ): Preview => {
@@ -127,7 +175,8 @@ export const ImportFromSheets = () => {
         seenVideoLinks.add(key);
       }
     }
-    return { rows, influencersByCountry, campaignsByCountry, failedTabs, tabResults, warnings };
+    skippedTabs.forEach((tab) => warnings.push(`Tab "${tab}" was not matched to any country. Should it be imported?`));
+    return { rows, influencersByCountry, campaignsByCountry, discoveredTabs, skippedTabs, failedTabs, tabResults, warnings };
   };
 
   const onPreview = async () => {
@@ -136,8 +185,8 @@ export const ImportFromSheets = () => {
     setPreview(null);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ sheetId, apiKey }));
-      const { rows, failedTabs, tabResults } = await fetchAllTabs();
-      const p = buildPreview(rows, failedTabs, tabResults);
+      const { rows, discoveredTabs, skippedTabs, failedTabs, tabResults } = await fetchAllTabs();
+      const p = buildPreview(rows, discoveredTabs, skippedTabs, failedTabs, tabResults);
       setPreview(p);
       if (rows.length === 0) {
         toast.warning(failedTabs.length ? `0 rows — ${failedTabs.length} tab(s) failed. See console.` : "0 rows found. Check console for details.");
