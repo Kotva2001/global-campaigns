@@ -13,7 +13,9 @@ const normalizePlatform = (raw: string | null | undefined): Platform => {
   const v = (raw ?? "").toLowerCase().trim();
   if (v.includes("short")) return "YB Shorts";
   if (v.includes("insta")) return "Instagram";
-  return "YouTube";
+  if (v.includes("tik")) return "TikTok";
+  if (v.includes("you") || v.includes("yt")) return "YouTube";
+  return "Other";
 };
 
 const num = (v: unknown): number | null => {
@@ -52,11 +54,13 @@ const formatDate = (iso: string | null): string => {
 
 const mapRow = (r: CampaignRow): CampaignEntry => ({
   id: r.id,
+  influencerId: r.influencer_id,
   country: r.influencers?.country ?? "",
   influencer: r.influencers?.name ?? "",
   campaignName: r.campaign_name ?? "",
   platform: normalizePlatform(r.platform),
   publishDate: formatDate(r.publish_date),
+  publishDateIso: r.publish_date,
   videoLink: r.video_url ?? "",
   collaborationType: r.collaboration_type ?? "",
   campaignCost: num(r.campaign_cost),

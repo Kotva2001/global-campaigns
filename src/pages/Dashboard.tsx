@@ -1,11 +1,12 @@
-import { useMemo } from "react";
-import { RefreshCw } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Plus, RefreshCw } from "lucide-react";
 import { MarketSelector } from "@/components/MarketSelector";
 import { KPISummary } from "@/components/KPISummary";
 import { FilterBar } from "@/components/FilterBar";
 import { InfluencerCards } from "@/components/InfluencerCards";
 import { DataTable } from "@/components/DataTable";
 import { CampaignCharts } from "@/components/CampaignCharts";
+import { CampaignDialog } from "@/components/CampaignDialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSheetData } from "@/hooks/useSheetData";
@@ -19,6 +20,8 @@ import { COUNTRY_FLAGS, COUNTRY_NAMES } from "@/lib/countries";
 
 const Dashboard = () => {
   const { data, loading, lastFetched, refresh } = useSheetData();
+  const [campaignOpen, setCampaignOpen] = useState(false);
+  const [editingCampaign, setEditingCampaign] = useState(null);
   const filters = useFilters(data);
   const { selectedCountry, filtered } = filters;
 
@@ -50,6 +53,10 @@ const Dashboard = () => {
                 Updated {lastFetched.toLocaleTimeString("cs-CZ")}
               </span>
             )}
+            <Button size="sm" onClick={() => { setEditingCampaign(null); setCampaignOpen(true); }} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Add Campaign
+            </Button>
             <Button variant="secondary" size="sm" onClick={refresh} disabled={loading} className="gap-2">
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
               Refresh
@@ -89,7 +96,22 @@ const Dashboard = () => {
 
       <InfluencerCards influencers={influencers} />
       <CampaignCharts rows={filtered} selectedCountry={selectedCountry} />
-      <DataTable rows={filtered} />
+      <DataTable
+        rows={filtered}
+        onChanged={refresh}
+        onAddCampaign={() => { setEditingCampaign(null); setCampaignOpen(true); }}
+        onEditCampaign={(campaign) => { setEditingCampaign(campaign); setCampaignOpen(true); }}
+      />
+      <CampaignDialog
+        open={campaignOpen}
+        onOpenChange={setCampaignOpen}
+        editing={editingCampaign}
+        onSaved={() => {
+          setCampaignOpen(false);
+          setEditingCampaign(null);
+          void refresh();
+        }}
+      />
       <div className="h-12" />
     </div>
   );
