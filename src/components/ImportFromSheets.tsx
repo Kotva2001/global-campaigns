@@ -288,13 +288,18 @@ export const ImportFromSheets = () => {
               across {preview.influencersByCountry.size} markets
             </div>
             <div className="text-muted-foreground">{preview.rows.length} campaign entries</div>
+            {preview.rows.length > 0 && (
+              <div className="mt-1 text-xs text-muted-foreground">
+                Sample: {preview.rows.slice(0, 3).map((r) => r.influencer).join(", ")}
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
             {[...preview.influencersByCountry.entries()].map(([country, names]) => (
               <div key={country} className="flex flex-wrap items-center gap-2">
                 <Badge variant="outline">
-                  {COUNTRY_FLAGS[country]} {country} · {names.size}
+                  {COUNTRY_FLAGS[country]} {country} · {names.size} influencers · {preview.campaignsByCountry.get(country) ?? 0} campaigns
                 </Badge>
                 <span className="text-xs text-muted-foreground">
                   {[...names].slice(0, 6).join(", ")}{names.size > 6 ? `, +${names.size - 6} more` : ""}
@@ -303,9 +308,24 @@ export const ImportFromSheets = () => {
             ))}
           </div>
 
+          {preview.failedTabs.length > 0 && (
+            <div className="space-y-1">
+              <div className="flex items-center gap-1 text-xs font-medium text-destructive">
+                <AlertTriangle className="h-3 w-3" /> {preview.failedTabs.length} tab(s) failed
+              </div>
+              <ul className="max-h-32 list-disc overflow-auto pl-5 text-xs text-muted-foreground">
+                {preview.failedTabs.map((f) => (
+                  <li key={f.country}>
+                    {COUNTRY_FLAGS[f.country] ?? ""} {f.country}: {f.reason}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {preview.warnings.length > 0 && (
             <div className="space-y-1">
-              <div className="flex items-center gap-1 text-xs font-medium text-orange-500">
+              <div className="flex items-center gap-1 text-xs font-medium text-amber-500">
                 <AlertTriangle className="h-3 w-3" /> {preview.warnings.length} warning(s)
               </div>
               <ul className="max-h-32 list-disc overflow-auto pl-5 text-xs text-muted-foreground">
