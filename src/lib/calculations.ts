@@ -1,4 +1,5 @@
 import type { CampaignEntry } from "@/types/campaign";
+import { convertCurrency, type CurrencyCode, type ExchangeRates } from "@/lib/currency";
 
 const sum = (xs: (number | null)[]) =>
   xs.reduce<number>((a, b) => a + (b ?? 0), 0);
@@ -19,9 +20,9 @@ export interface KPISet {
   avgEngagement: number | null;
 }
 
-export const computeKPIs = (rows: CampaignEntry[]): KPISet => {
-  const totalSpend = sum(rows.map((r) => r.campaignCost));
-  const totalRevenue = sum(rows.map((r) => r.purchaseRevenue));
+export const computeKPIs = (rows: CampaignEntry[], displayCurrency: CurrencyCode = "CZK", rates?: ExchangeRates): KPISet => {
+  const totalSpend = sum(rows.map((r) => convertCurrency(r.campaignCost, r.currency, displayCurrency, rates)));
+  const totalRevenue = sum(rows.map((r) => convertCurrency(r.purchaseRevenue, r.currency, displayCurrency, rates)));
   return {
     campaigns: rows.length,
     influencers: new Set(rows.map((r) => `${r.country}|${r.influencer}`).filter((k) => k.split("|")[1])).size,
@@ -47,7 +48,7 @@ export interface InfluencerSummary {
   topCampaign: string;
 }
 
-export const summarizeInfluencers = (rows: CampaignEntry[]): InfluencerSummary[] => {
+export const summarizeInfluencers = (rows: CampaignEntry[], displayCurrency: CurrencyCode = "CZK", rates?: ExchangeRates): InfluencerSummary[] => {
   const map = new Map<string, CampaignEntry[]>();
   for (const r of rows) {
     if (!r.influencer) continue;
@@ -57,8 +58,8 @@ export const summarizeInfluencers = (rows: CampaignEntry[]): InfluencerSummary[]
   }
   const out: InfluencerSummary[] = [];
   for (const [key, entries] of map) {
-    const totalSpend = sum(entries.map((e) => e.campaignCost));
-    const totalRevenue = sum(entries.map((e) => e.purchaseRevenue));
+    const totalSpend = sum(entries.map((e) => convertCurrency(e.campaignCost, e.currency, displayCurrency, rates)));
+    const totalRevenue = sum(entries.map((e) => convertCurrency(e.purchaseRevenue, e.currency, displayCurrency, rates)));
     const totalViews = sum(entries.map((e) => e.views));
     const top = [...entries].sort((a, b) => (b.views ?? 0) - (a.views ?? 0))[0];
     out.push({
