@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import type { SheetConfig } from "@/hooks/useSheetData";
 import { ImportFromSheets } from "./ImportFromSheets";
 import { DuplicateCleanup } from "./DuplicateCleanup";
+import { ExchangeRateSettings } from "./ExchangeRateSettings";
 
 interface Props {
   open: boolean;
@@ -77,6 +78,7 @@ export const SettingsDialog = ({ open, onOpenChange, config, onSave }: Props) =>
             </div>
           </div>
 
+          <ExchangeRateSettings />
           <ImportFromSheets />
           <DuplicateCleanup />
         </div>

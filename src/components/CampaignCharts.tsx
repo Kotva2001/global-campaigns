@@ -8,10 +8,13 @@ import { COUNTRIES, COUNTRY_FLAGS } from "@/lib/countries";
 import type { CampaignEntry } from "@/types/campaign";
 import { parseCzechDate } from "@/lib/parsers";
 import { formatCompact, formatCurrency } from "@/lib/formatters";
+import { convertCurrency, type CurrencyCode, type ExchangeRates } from "@/lib/currency";
 
 interface Props {
   rows: CampaignEntry[];
   selectedCountry: string;
+  displayCurrency?: CurrencyCode;
+  rates?: ExchangeRates;
 }
 
 const COUNTRY_COLORS = [
@@ -19,7 +22,7 @@ const COUNTRY_COLORS = [
   "#ef4444", "#06b6d4", "#84cc16", "#f97316", "#a855f7", "#14b8a6",
 ];
 
-export const CampaignCharts = ({ rows, selectedCountry }: Props) => {
+export const CampaignCharts = ({ rows, selectedCountry, displayCurrency = "CZK", rates }: Props) => {
   const perInfluencer = useMemo(() => {
     const m = new Map<string, { name: string; cost: number; revenue: number }>();
     for (const r of rows) {
@@ -27,13 +30,13 @@ export const CampaignCharts = ({ rows, selectedCountry }: Props) => {
       const key = r.influencer;
       if (!m.has(key)) m.set(key, { name: key, cost: 0, revenue: 0 });
       const x = m.get(key)!;
-      x.cost += r.campaignCost ?? 0;
-      x.revenue += r.purchaseRevenue ?? 0;
+      x.cost += convertCurrency(r.campaignCost, r.currency, displayCurrency, rates);
+      x.revenue += convertCurrency(r.purchaseRevenue, r.currency, displayCurrency, rates);
     }
     return Array.from(m.values())
       .sort((a, b) => b.revenue + b.cost - (a.revenue + a.cost))
       .slice(0, 10);
-  }, [rows]);
+  }, [displayCurrency, rates, rows]);
 
   const viewsOverTime = useMemo(() => {
     // group by month, by country
@@ -61,7 +64,7 @@ export const CampaignCharts = ({ rows, selectedCountry }: Props) => {
       <Card className="border-border bg-card p-4">
         <div className="mb-3 flex items-baseline justify-between">
           <h3 className="text-sm font-semibold text-foreground">Revenue vs. Cost · Top 10 influencers</h3>
-          <span className="text-xs text-muted-foreground">Kč</span>
+          <span className="text-xs text-muted-foreground">{displayCurrency}</span>
         </div>
         <div className="h-72">
           <ResponsiveContainer>
@@ -85,7 +88,7 @@ export const CampaignCharts = ({ rows, selectedCountry }: Props) => {
                   borderRadius: 8,
                   color: "hsl(var(--foreground))",
                 }}
-                formatter={(v: number) => formatCurrency(v)}
+                formatter={(v: number) => formatCurrency(v, displayCurrency)}
               />
               <Legend wrapperStyle={{ fontSize: 12, color: "hsl(var(--muted-foreground))" }} />
               <Bar dataKey="cost" name="Cost" fill="hsl(var(--platform-instagram))" radius={[4, 4, 0, 0]} />

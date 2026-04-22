@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 interface Props {
   influencers: InfluencerSummary[];
+  currency?: string;
   onSelectInfluencer?: (influencer: InfluencerSummary) => void;
 }
 
@@ -15,7 +16,7 @@ const platformClass = (p: string) => {
   return "bg-[hsl(var(--platform-shorts)/0.15)] text-[hsl(var(--platform-shorts))]";
 };
 
-export const InfluencerCards = ({ influencers, onSelectInfluencer }: Props) => {
+export const InfluencerCards = ({ influencers, currency = "CZK", onSelectInfluencer }: Props) => {
   if (!influencers.length) {
     return (
       <div className="px-6 pt-6">
@@ -72,10 +73,10 @@ export const InfluencerCards = ({ influencers, onSelectInfluencer }: Props) => {
                   value={inf.roi == null ? "—" : `${roiPos ? "+" : ""}${inf.roi.toFixed(0)}%`}
                   valueClass={inf.roi == null ? undefined : roiPos ? "text-success" : "text-destructive"}
                 />
-                <Stat label="Spend" value={formatCurrency(inf.totalSpend)} />
+                <Stat label="Spend" value={formatCurrency(inf.totalSpend, currency)} />
                 <Stat
                   label="Revenue"
-                  value={formatCurrency(inf.totalRevenue)}
+                  value={formatCurrency(inf.totalRevenue, currency)}
                   valueClass={inf.totalRevenue > 0 ? "text-success" : undefined}
                 />
               </div>

@@ -20,6 +20,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { COUNTRY_FLAGS, COUNTRY_NAMES } from "@/lib/countries";
 import { computeKPIs } from "@/lib/calculations";
 import { formatCompact, formatCurrency, formatNumber, formatPercent } from "@/lib/formatters";
+import type { CurrencyCode, ExchangeRates } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import type { CampaignEntry, InfluencerRecord } from "@/types/campaign";
 
@@ -31,6 +32,8 @@ interface Props {
   onAddCampaign?: () => void;
   onEditCampaign?: (campaign: CampaignEntry) => void;
   onChanged?: () => void;
+  displayCurrency?: CurrencyCode;
+  rates?: ExchangeRates;
 }
 
 const STATUS_META = {
@@ -101,9 +104,9 @@ const EditableNumber = ({ value, campaignId, field, onChanged }: { value: number
   );
 };
 
-export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInfluencer, onAddCampaign, onEditCampaign, onChanged }: Props) => {
+export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInfluencer, onAddCampaign, onEditCampaign, onChanged, displayCurrency = "CZK", rates }: Props) => {
   const [deleteCampaign, setDeleteCampaign] = useState<CampaignEntry | null>(null);
-  const kpis = useMemo(() => computeKPIs(campaigns), [campaigns]);
+  const kpis = useMemo(() => computeKPIs(campaigns, displayCurrency, rates), [campaigns, displayCurrency, rates]);
   const platforms = useMemo(() => {
     const fromCreator = creator?.platforms?.filter(Boolean) ?? [];
     const fromCampaigns = campaigns.map((campaign) => campaign.platform).filter(Boolean);
@@ -144,8 +147,8 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
                   <Stat label="Campaigns" value={String(campaigns.length)} />
                   <Stat label="Views" value={formatCompact(kpis.totalViews)} />
-                  <Stat label="Spend" value={formatCurrency(kpis.totalSpend)} />
-                  <Stat label="Revenue" value={formatCurrency(kpis.totalRevenue)} valueClass={kpis.totalRevenue > 0 ? "text-success" : undefined} />
+                  <Stat label="Spend" value={formatCurrency(kpis.totalSpend, displayCurrency)} />
+                  <Stat label="Revenue" value={formatCurrency(kpis.totalRevenue, displayCurrency)} valueClass={kpis.totalRevenue > 0 ? "text-success" : undefined} />
                   <Stat label="ROI" value={formatPercent(kpis.roi)} valueClass={kpis.roi == null ? undefined : kpis.roi >= 0 ? "text-success" : "text-destructive"} />
                   <Stat label="Avg. engagement" value={formatPercent(kpis.avgEngagement)} />
                 </div>
@@ -173,8 +176,8 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
                             <td className="whitespace-nowrap px-3 py-2.5 text-right"><EditableNumber value={campaign.views} campaignId={campaign.id} field="views" onChanged={onChanged} /></td>
                             <td className="whitespace-nowrap px-3 py-2.5 text-right"><EditableNumber value={campaign.likes} campaignId={campaign.id} field="likes" onChanged={onChanged} /></td>
                             <td className="whitespace-nowrap px-3 py-2.5 text-right"><EditableNumber value={campaign.comments} campaignId={campaign.id} field="comments" onChanged={onChanged} /></td>
-                            <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">{formatCurrency(campaign.campaignCost)}</td>
-                            <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">{formatCurrency(campaign.purchaseRevenue)}</td>
+                            <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">{formatCurrency(campaign.campaignCost, campaign.currency)}</td>
+                            <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">{formatCurrency(campaign.purchaseRevenue, campaign.currency)}</td>
                             <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-muted-foreground">{formatPercent(campaign.engagementRate)}</td>
                             <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-muted-foreground">{formatPercent(campaign.conversionRate)}</td>
                             <td className="whitespace-nowrap px-3 py-2.5">

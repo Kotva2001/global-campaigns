@@ -287,6 +287,7 @@ export const ImportFromSheets = () => {
           video_url: r.videoLink || null,
           video_id: extractYouTubeVideoId(r.videoLink),
           collaboration_type: normalizeCollabType(r.collaborationType),
+          currency: r.currency,
           campaign_cost: r.campaignCost ?? 0,
           utm_link: r.utmLink || null,
           managed_by: r.managedBy || null,

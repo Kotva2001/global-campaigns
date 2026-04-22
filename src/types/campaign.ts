@@ -1,4 +1,5 @@
 export type Platform = "YouTube" | "Instagram" | "YB Shorts" | "TikTok" | "Other";
+export type CurrencyCode = "CZK" | "EUR" | "HUF" | "RON";
 
 export interface CampaignEntry {
   id: string;
@@ -11,6 +12,7 @@ export interface CampaignEntry {
   publishDateIso: string | null;
   videoLink: string;
   collaborationType: string;
+  currency: CurrencyCode;
   campaignCost: number | null;
   utmLink: string;
   managedBy: string;

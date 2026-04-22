@@ -6,9 +6,11 @@ import { cn } from "@/lib/utils";
 
 interface Props {
   kpis: KPISet;
+  currency?: string;
+  convertedSub?: string;
 }
 
-export const KPISummary = ({ kpis }: Props) => {
+export const KPISummary = ({ kpis, currency = "CZK", convertedSub }: Props) => {
   const roiPositive = (kpis.roi ?? 0) >= 0;
   return (
     <div className="grid grid-cols-2 gap-3 px-6 pt-6 md:grid-cols-3 xl:grid-cols-6">
@@ -27,12 +29,14 @@ export const KPISummary = ({ kpis }: Props) => {
       <KPI
         icon={<Wallet className="h-4 w-4" />}
         label="Total Spend"
-        value={formatCurrency(kpis.totalSpend)}
+        value={formatCurrency(kpis.totalSpend, currency)}
+        sub={convertedSub}
       />
       <KPI
         icon={<DollarSign className="h-4 w-4" />}
         label="Revenue"
-        value={formatCurrency(kpis.totalRevenue)}
+        value={formatCurrency(kpis.totalRevenue, currency)}
+        sub={convertedSub}
         valueClass={kpis.totalRevenue > 0 ? "text-success" : undefined}
       />
       <KPI

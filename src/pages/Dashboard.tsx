@@ -11,8 +11,10 @@ import { CampaignCharts } from "@/components/CampaignCharts";
 import { CampaignDialog } from "@/components/CampaignDialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useSheetData } from "@/hooks/useSheetData";
+import { useCurrencySettings } from "@/hooks/useCurrencySettings";
 import { useFilters } from "@/hooks/useFilters";
 import {
   computeKPIs,
@@ -25,6 +27,7 @@ import type { InfluencerRecord } from "@/types/campaign";
 
 const Dashboard = () => {
   const { data, loading, lastFetched, refresh } = useSheetData();
+  const { displayCurrency, setDisplayCurrency, eurCzkRate } = useCurrencySettings();
   const [campaignOpen, setCampaignOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState(null);
   const [creatorOpen, setCreatorOpen] = useState(false);
@@ -39,9 +42,14 @@ const Dashboard = () => {
     [data],
   );
   const totalViews = useMemo(() => data.reduce((a, r) => a + (r.views ?? 0), 0), [data]);
-  const kpis = useMemo(() => computeKPIs(filtered), [filtered]);
-  const influencers = useMemo(() => summarizeInfluencers(filtered), [filtered]);
+  const rates = useMemo(() => ({ EUR_CZK: eurCzkRate }), [eurCzkRate]);
+  const kpis = useMemo(() => computeKPIs(filtered, displayCurrency, rates), [displayCurrency, filtered, rates]);
+  const influencers = useMemo(() => summarizeInfluencers(filtered, displayCurrency, rates), [displayCurrency, filtered, rates]);
   const detailCampaigns = useMemo(() => detailCreator ? data.filter((campaign) => campaign.influencerId === detailCreator.id) : [], [data, detailCreator]);
+  const convertedSub = useMemo(() => {
+    const eur = filtered.reduce((sum, row) => sum + (row.currency === "EUR" ? (row.campaignCost ?? 0) : 0), 0);
+    return eur > 0 && displayCurrency === "CZK" ? `(incl. ${eur.toLocaleString("cs-CZ")} € converted)` : undefined;
+  }, [displayCurrency, filtered]);
 
   const marketLabel =
     selectedCountry === "All"
@@ -86,6 +94,13 @@ const Dashboard = () => {
                 Updated {lastFetched.toLocaleTimeString("cs-CZ")}
               </span>
             )}
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>Display in</span>
+              <Select value={displayCurrency} onValueChange={(value) => setDisplayCurrency(value as typeof displayCurrency)}>
+                <SelectTrigger className="h-9 w-[86px]"><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="CZK">CZK</SelectItem><SelectItem value="EUR">EUR</SelectItem></SelectContent>
+              </Select>
+            </div>
             <Button size="sm" onClick={() => { setEditingCampaign(null); setCampaignInfluencerId(null); setCampaignOpen(true); }} className="gap-2">
               <Plus className="h-4 w-4" />
               Add Campaign
@@ -114,7 +129,7 @@ const Dashboard = () => {
           ))}
         </div>
       ) : (
-        <KPISummary kpis={kpis} />
+        <KPISummary kpis={kpis} currency={displayCurrency} convertedSub={convertedSub} />
       )}
 
       <FilterBar
@@ -127,8 +142,8 @@ const Dashboard = () => {
         resultCount={filtered.length}
       />
 
-      <InfluencerCards influencers={influencers} onSelectInfluencer={openInfluencerDetail} />
-      <CampaignCharts rows={filtered} selectedCountry={selectedCountry} />
+      <InfluencerCards influencers={influencers} currency={displayCurrency} onSelectInfluencer={openInfluencerDetail} />
+      <CampaignCharts rows={filtered} selectedCountry={selectedCountry} displayCurrency={displayCurrency} rates={rates} />
       <DataTable
         rows={filtered}
         onChanged={refresh}
@@ -151,6 +166,8 @@ const Dashboard = () => {
       <InfluencerDetailPanel
         creator={detailCreator}
         campaigns={detailCampaigns}
+        displayCurrency={displayCurrency}
+        rates={rates}
         onClose={() => setDetailCreator(null)}
         onEditInfluencer={() => setCreatorOpen(true)}
         onAddCampaign={() => {
