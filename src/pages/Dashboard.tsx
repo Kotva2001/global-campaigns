@@ -4,24 +4,31 @@ import { MarketSelector } from "@/components/MarketSelector";
 import { KPISummary } from "@/components/KPISummary";
 import { FilterBar } from "@/components/FilterBar";
 import { InfluencerCards } from "@/components/InfluencerCards";
+import { InfluencerDetailPanel } from "@/components/InfluencerDetailPanel";
 import { DataTable } from "@/components/DataTable";
 import { CampaignCharts } from "@/components/CampaignCharts";
 import { CampaignDialog } from "@/components/CampaignDialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { supabase } from "@/integrations/supabase/client";
 import { useSheetData } from "@/hooks/useSheetData";
 import { useFilters } from "@/hooks/useFilters";
 import {
   computeKPIs,
+  type InfluencerSummary,
   summarizeInfluencers,
   summarizeMarkets,
 } from "@/lib/calculations";
 import { COUNTRY_FLAGS, COUNTRY_NAMES } from "@/lib/countries";
+import type { InfluencerRecord } from "@/types/campaign";
 
 const Dashboard = () => {
   const { data, loading, lastFetched, refresh } = useSheetData();
   const [campaignOpen, setCampaignOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState(null);
+  const [detailCreator, setDetailCreator] = useState<InfluencerRecord | null>(null);
+  const [detailCampaigns, setDetailCampaigns] = useState<typeof data>([]);
+  const [campaignInfluencerId, setCampaignInfluencerId] = useState<string | null>(null);
   const filters = useFilters(data);
   const { selectedCountry, filtered } = filters;
 
@@ -38,6 +45,34 @@ const Dashboard = () => {
     selectedCountry === "All"
       ? "🌍 All markets"
       : `${COUNTRY_FLAGS[selectedCountry] ?? ""} ${COUNTRY_NAMES[selectedCountry] ?? selectedCountry}`;
+
+  const openInfluencerDetail = async (influencer: InfluencerSummary) => {
+    const campaignsForInfluencer = filtered.filter((campaign) => campaign.country === influencer.country && campaign.influencer === influencer.influencer);
+    const influencerId = campaignsForInfluencer.find((campaign) => campaign.influencerId)?.influencerId ?? null;
+    if (!influencerId) return;
+    const { data: creator } = await supabase.from("influencers").select("*").eq("id", influencerId).maybeSingle();
+    setDetailCreator((creator as InfluencerRecord | null) ?? {
+      id: influencerId,
+      name: influencer.influencer,
+      country: influencer.country,
+      platforms: influencer.platforms,
+      youtube_channel_id: null,
+      youtube_channel_url: null,
+      instagram_handle: null,
+      contact_email: null,
+      contact_person: null,
+      notes: null,
+      status: "active",
+    });
+    setDetailCampaigns(campaignsForInfluencer);
+  };
+
+  const refreshAndUpdateDetail = async () => {
+    await refresh();
+    if (detailCreator) {
+      setDetailCampaigns(data.filter((campaign) => campaign.influencerId === detailCreator.id));
+    }
+  };
 
   return (
     <div>
@@ -94,7 +129,7 @@ const Dashboard = () => {
         resultCount={filtered.length}
       />
 
-      <InfluencerCards influencers={influencers} />
+      <InfluencerCards influencers={influencers} onSelectInfluencer={openInfluencerDetail} />
       <CampaignCharts rows={filtered} selectedCountry={selectedCountry} />
       <DataTable
         rows={filtered}
@@ -111,6 +146,18 @@ const Dashboard = () => {
           setEditingCampaign(null);
           void refresh();
         }}
+      />
+      <InfluencerDetailPanel
+        creator={detailCreator}
+        campaigns={detailCampaigns}
+        onClose={() => setDetailCreator(null)}
+        onAddCampaign={() => {
+          setEditingCampaign(null);
+          setCampaignInfluencerId(detailCreator?.id ?? null);
+          setCampaignOpen(true);
+        }}
+        onEditCampaign={(campaign) => { setEditingCampaign(campaign); setCampaignOpen(true); }}
+        onChanged={refreshAndUpdateDetail}
       />
       <div className="h-12" />
     </div>
