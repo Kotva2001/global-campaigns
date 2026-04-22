@@ -88,7 +88,7 @@ const Dashboard = () => {
                 Updated {lastFetched.toLocaleTimeString("cs-CZ")}
               </span>
             )}
-            <Button size="sm" onClick={() => { setEditingCampaign(null); setCampaignOpen(true); }} className="gap-2">
+            <Button size="sm" onClick={() => { setEditingCampaign(null); setCampaignInfluencerId(null); setCampaignOpen(true); }} className="gap-2">
               <Plus className="h-4 w-4" />
               Add Campaign
             </Button>
@@ -134,16 +134,18 @@ const Dashboard = () => {
       <DataTable
         rows={filtered}
         onChanged={refresh}
-        onAddCampaign={() => { setEditingCampaign(null); setCampaignOpen(true); }}
+        onAddCampaign={() => { setEditingCampaign(null); setCampaignInfluencerId(null); setCampaignOpen(true); }}
         onEditCampaign={(campaign) => { setEditingCampaign(campaign); setCampaignOpen(true); }}
       />
       <CampaignDialog
         open={campaignOpen}
         onOpenChange={setCampaignOpen}
         editing={editingCampaign}
+        initialInfluencerId={campaignInfluencerId}
         onSaved={() => {
           setCampaignOpen(false);
           setEditingCampaign(null);
+          setCampaignInfluencerId(null);
           void refresh();
         }}
       />
