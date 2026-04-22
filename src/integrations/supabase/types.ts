@@ -100,6 +100,7 @@ export type Database = {
           comments: number | null
           conversion_rate: number | null
           created_at: string | null
+          currency: string | null
           detected_automatically: boolean | null
           detection_source: string | null
           engagement_rate: number | null
@@ -126,6 +127,7 @@ export type Database = {
           comments?: number | null
           conversion_rate?: number | null
           created_at?: string | null
+          currency?: string | null
           detected_automatically?: boolean | null
           detection_source?: string | null
           engagement_rate?: number | null
@@ -152,6 +154,7 @@ export type Database = {
           comments?: number | null
           conversion_rate?: number | null
           created_at?: string | null
+          currency?: string | null
           detected_automatically?: boolean | null
           detection_source?: string | null
           engagement_rate?: number | null
@@ -333,6 +336,8 @@ export type Database = {
         Row: {
           auto_add_known_influencers: boolean | null
           brand_keywords: string[] | null
+          eur_czk_rate: number | null
+          eur_czk_rate_updated_at: string | null
           id: string
           platforms_to_scan: string[] | null
           scan_frequency_minutes: number | null
@@ -343,6 +348,8 @@ export type Database = {
         Insert: {
           auto_add_known_influencers?: boolean | null
           brand_keywords?: string[] | null
+          eur_czk_rate?: number | null
+          eur_czk_rate_updated_at?: string | null
           id?: string
           platforms_to_scan?: string[] | null
           scan_frequency_minutes?: number | null
@@ -353,6 +360,8 @@ export type Database = {
         Update: {
           auto_add_known_influencers?: boolean | null
           brand_keywords?: string[] | null
+          eur_czk_rate?: number | null
+          eur_czk_rate_updated_at?: string | null
           id?: string
           platforms_to_scan?: string[] | null
           scan_frequency_minutes?: number | null
