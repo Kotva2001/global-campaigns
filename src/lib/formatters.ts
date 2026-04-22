@@ -1,3 +1,5 @@
+export { formatCurrency } from "@/lib/currency";
+
 /** Czech number formatting: 1234567 → "1 234 567" */
 export const formatNumber = (n: number | null | undefined, fractionDigits = 0): string => {
   if (n == null || !Number.isFinite(n)) return "—";
@@ -5,11 +7,6 @@ export const formatNumber = (n: number | null | undefined, fractionDigits = 0): 
     minimumFractionDigits: fractionDigits,
     maximumFractionDigits: fractionDigits,
   });
-};
-
-export const formatCurrency = (n: number | null | undefined): string => {
-  if (n == null || !Number.isFinite(n)) return "—";
-  return `${formatNumber(Math.round(n))} Kč`;
 };
 
 export const formatPercent = (n: number | null | undefined): string => {
