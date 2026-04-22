@@ -1,12 +1,14 @@
-export type Platform = "YouTube" | "Instagram" | "YB Shorts";
+export type Platform = "YouTube" | "Instagram" | "YB Shorts" | "TikTok" | "Other";
 
 export interface CampaignEntry {
   id: string;
+  influencerId: string | null;
   country: string;
   influencer: string;
   campaignName: string;
   platform: Platform;
   publishDate: string;
+  publishDateIso: string | null;
   videoLink: string;
   collaborationType: string;
   campaignCost: number | null;
@@ -19,4 +21,18 @@ export interface CampaignEntry {
   engagementRate: number | null;
   purchaseRevenue: number | null;
   conversionRate: number | null;
+}
+
+export interface InfluencerRecord {
+  id: string;
+  name: string;
+  country: string;
+  platforms: string[] | null;
+  youtube_channel_id: string | null;
+  youtube_channel_url: string | null;
+  instagram_handle: string | null;
+  contact_email: string | null;
+  contact_person: string | null;
+  notes: string | null;
+  status: "active" | "paused" | "ended";
 }
