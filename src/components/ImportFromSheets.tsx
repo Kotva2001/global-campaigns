@@ -290,7 +290,6 @@ export const ImportFromSheets = () => {
         <Button
           onClick={onImport}
           disabled={!preview || importing}
-          className="bg-emerald-600 hover:bg-emerald-700"
         >
           {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
           Import
@@ -355,6 +354,7 @@ export const ImportFromSheets = () => {
           {preview.warnings.length > 0 && (
             <div className="space-y-1">
               <div className="flex items-center gap-1 text-xs font-medium text-amber-500">
+              <div className="flex items-center gap-1 text-xs font-medium text-foreground">
                 <AlertTriangle className="h-3 w-3" /> {preview.warnings.length} warning(s)
               </div>
               <ul className="max-h-32 list-disc overflow-auto pl-5 text-xs text-muted-foreground">
