@@ -8,8 +8,6 @@ export const DEFAULT_RATES: ExchangeRates = { EUR_CZK: 25 };
 
 export const defaultCurrencyForCountry = (country?: string): CurrencyCode => {
   if (country === "CZ" || country === "SK") return "CZK";
-  if (country === "HU") return "HUF";
-  if (country === "RO") return "RON";
   return "EUR";
 };
 
