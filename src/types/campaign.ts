@@ -32,7 +32,7 @@ export interface InfluencerRecord {
   platforms: string[] | null;
   youtube_channel_id: string | null;
   youtube_channel_url: string | null;
-  instagram_handle: string | null;
+  instagram_handle: string | string[] | null;
   contact_email: string | null;
   contact_person: string | null;
   notes: string | null;
