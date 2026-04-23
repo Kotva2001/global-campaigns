@@ -23,6 +23,7 @@ import {
 
 interface CampaignRow {
   id: string;
+  influencer_id: string | null;
   campaign_name: string | null;
   platform: string;
   publish_date: string | null;
@@ -30,7 +31,12 @@ interface CampaignRow {
   views: number | null;
   engagement_rate: number | string | null;
   purchase_revenue: number | string | null;
-  influencers: { name: string; country: string } | null;
+}
+
+interface InfluencerLookupRow {
+  id: string;
+  name: string;
+  country: string;
 }
 
 interface Row {
@@ -87,13 +93,26 @@ const Analytics = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from("campaigns")
-        .select("id, campaign_name, platform, publish_date, campaign_cost, views, engagement_rate, purchase_revenue, influencers!inner(name, country)");
+        .select("id, influencer_id, campaign_name, platform, publish_date, campaign_cost, views, engagement_rate, purchase_revenue");
       if (error) {
         toast.error(error.message);
         setLoading(false);
         return;
       }
-      const mapped: Row[] = ((data ?? []) as unknown as CampaignRow[]).map((r) => ({
+      const campaignRows = (data ?? []) as unknown as CampaignRow[];
+      const influencerIds = [...new Set(campaignRows.map((row) => row.influencer_id).filter(Boolean))] as string[];
+      const { data: influencers, error: influencerError } = influencerIds.length
+        ? await supabase.from("influencers").select("id,name,country").in("id", influencerIds)
+        : { data: [], error: null };
+      if (influencerError) {
+        toast.error(influencerError.message);
+        setLoading(false);
+        return;
+      }
+      const influencerById = new Map((influencers ?? []).map((influencer: InfluencerLookupRow) => [influencer.id, influencer]));
+      const mapped: Row[] = campaignRows.map((r) => {
+        const influencer = r.influencer_id ? influencerById.get(r.influencer_id) : undefined;
+        return {
         id: r.id,
         campaign: r.campaign_name ?? "",
         platform: normalizePlatform(r.platform),
@@ -102,9 +121,10 @@ const Analytics = () => {
         views: num(r.views),
         engagement: r.engagement_rate == null ? null : num(r.engagement_rate),
         revenue: num(r.purchase_revenue),
-        influencer: r.influencers?.name ?? "",
-        country: r.influencers?.country ?? "",
-      }));
+        influencer: influencer?.name ?? "",
+        country: influencer?.country ?? "",
+        };
+      });
       setRows(mapped);
       setLoading(false);
     };

@@ -43,7 +43,12 @@ interface CampaignRow {
   engagement_rate: number | string | null;
   purchase_revenue: number | string | null;
   conversion_rate: number | string | null;
-  influencers: { name: string; country: string } | null;
+}
+
+interface InfluencerLookupRow {
+  id: string;
+  name: string;
+  country: string;
 }
 
 const formatDate = (iso: string | null): string => {
@@ -53,11 +58,13 @@ const formatDate = (iso: string | null): string => {
   return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}`;
 };
 
-const mapRow = (r: CampaignRow): CampaignEntry => ({
+const mapRow = (r: CampaignRow, influencerById: Map<string, InfluencerLookupRow>): CampaignEntry => {
+  const influencer = r.influencer_id ? influencerById.get(r.influencer_id) : undefined;
+  return {
   id: r.id,
   influencerId: r.influencer_id,
-  country: r.influencers?.country ?? "",
-  influencer: r.influencers?.name ?? "",
+  country: influencer?.country ?? "",
+  influencer: influencer?.name ?? "",
   campaignName: r.campaign_name ?? "",
   platform: normalizePlatform(r.platform),
   publishDate: formatDate(r.publish_date),
@@ -75,7 +82,8 @@ const mapRow = (r: CampaignRow): CampaignEntry => ({
   engagementRate: num(r.engagement_rate),
   purchaseRevenue: num(r.purchase_revenue),
   conversionRate: num(r.conversion_rate),
-});
+  };
+};
 
 export const useSheetData = () => {
   const [data, setData] = useState<CampaignEntry[]>([]);
@@ -90,11 +98,17 @@ export const useSheetData = () => {
       const { data: rows, error: err } = await supabase
         .from("campaigns")
         .select(
-          "id, influencer_id, campaign_name, platform, publish_date, video_url, collaboration_type, currency, campaign_cost, utm_link, managed_by, views, likes, comments, sessions, engagement_rate, purchase_revenue, conversion_rate, influencers!inner(name, country)",
+          "id, influencer_id, campaign_name, platform, publish_date, video_url, collaboration_type, currency, campaign_cost, utm_link, managed_by, views, likes, comments, sessions, engagement_rate, purchase_revenue, conversion_rate",
         )
         .order("publish_date", { ascending: false, nullsFirst: false });
       if (err) throw err;
-      setData(((rows ?? []) as unknown as CampaignRow[]).map(mapRow));
+      const influencerIds = [...new Set(((rows ?? []) as CampaignRow[]).map((row) => row.influencer_id).filter(Boolean))] as string[];
+      const { data: influencers, error: influencerErr } = influencerIds.length
+        ? await supabase.from("influencers").select("id,name,country").in("id", influencerIds)
+        : { data: [], error: null };
+      if (influencerErr) throw influencerErr;
+      const influencerById = new Map((influencers ?? []).map((influencer) => [influencer.id, influencer]));
+      setData(((rows ?? []) as unknown as CampaignRow[]).map((row) => mapRow(row, influencerById)));
       setLastFetched(new Date());
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Unknown error";
