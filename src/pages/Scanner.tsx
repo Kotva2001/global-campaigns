@@ -22,6 +22,7 @@ import {
   CheckCircle2, Clock, Loader2, Eye, EyeOff, Info,
 } from "lucide-react";
 import { formatNumber, formatCompact } from "@/lib/formatters";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type ScanSettings = {
   id: string;
@@ -137,16 +138,16 @@ export default function Scanner() {
   const status: { color: string; label: string; sub: string } = useMemo(() => {
     if (!lastScan) return { color: "bg-muted-foreground", label: "Idle", sub: "No scans yet" };
     if (lastScan.status === "running" || lastScan.status === "pending") {
-      return { color: "bg-yellow-500 animate-pulse", label: "Running", sub: "Scan in progress" };
+      return { color: "bg-warning animate-pulse", label: "Running", sub: "Scan in progress" };
     }
     if (lastScan.status === "failed") {
-      return { color: "bg-red-500", label: "Error", sub: lastScan.error_message ?? "Last scan failed" };
+      return { color: "bg-destructive", label: "Error", sub: lastScan.error_message ?? "Last scan failed" };
     }
     const ageMin = lastScan.completed_at
       ? (Date.now() - new Date(lastScan.completed_at).getTime()) / 60000
       : 9999;
     const freq = settings?.scan_frequency_minutes ?? 60;
-    if (ageMin < freq * 1.2) return { color: "bg-emerald-500 animate-pulse", label: "Active", sub: "Scanner is running" };
+    if (ageMin < freq * 1.2) return { color: "bg-success animate-pulse", label: "Active", sub: "Scanner is running" };
     return { color: "bg-muted-foreground", label: "Idle", sub: "Waiting for next scan" };
   }, [lastScan, settings]);
 
@@ -173,6 +174,12 @@ export default function Scanner() {
     let videosFound = 0;
     let videosNew = 0;
     try {
+      if (logRow?.id) {
+        setLogs((current) => [
+          { id: logRow.id, scan_type: "YouTube", status: "running", videos_found: 0, videos_new: 0, stats_updated: 0, started_at: startedAt, completed_at: null, error_message: null },
+          ...current,
+        ]);
+      }
       if (!settings) throw new Error("Scan settings not configured");
       if (!settings.youtube_api_key) throw new Error("YouTube API key missing");
       const keywords = settings.brand_keywords ?? [];
@@ -239,11 +246,15 @@ export default function Scanner() {
           await supabase.from("alerts").insert({ alert_type: "new_detection", title: `New video from ${matched.name}`, message: snippet.title ?? "", campaign_id: null });
         }
       }
-      await supabase.from("scan_log").update({ status: "completed", completed_at: new Date().toISOString(), videos_found: videosFound, videos_new: videosNew }).eq("id", logRow?.id ?? "");
+      const completedAt = new Date().toISOString();
+      if (logRow?.id) await supabase.from("scan_log").update({ status: "completed", completed_at: completedAt, videos_found: videosFound, videos_new: videosNew }).eq("id", logRow.id);
+      if (logRow?.id) setLogs((current) => current.map((row) => row.id === logRow.id ? { ...row, status: "completed", completed_at: completedAt, videos_found: videosFound, videos_new: videosNew } : row));
       toast.success(`Scan complete — ${videosNew} new`);
     } catch (error) {
       const message = (error as Error).message;
-      if (logRow?.id) await supabase.from("scan_log").update({ status: "failed", completed_at: new Date().toISOString(), error_message: message, videos_found: videosFound, videos_new: videosNew }).eq("id", logRow.id);
+      const completedAt = new Date().toISOString();
+      if (logRow?.id) await supabase.from("scan_log").update({ status: "failed", completed_at: completedAt, error_message: message, videos_found: videosFound, videos_new: videosNew }).eq("id", logRow.id);
+      if (logRow?.id) setLogs((current) => current.map((row) => row.id === logRow.id ? { ...row, status: "failed", completed_at: completedAt, error_message: message, videos_found: videosFound, videos_new: videosNew } : row));
       toast.error(message);
     }
     await load();
@@ -266,21 +277,17 @@ export default function Scanner() {
         onRun={runScanNow}
       />
 
-      <DetectionQueue
-        detections={detections}
-        influencers={influencers}
-        onChange={load}
-      />
-
-      {settings && <SettingsForm settings={settings} onSaved={load} />}
-
-      <ScanHistory logs={logs} page={page} setPage={setPage} pageSize={PAGE} />
-
-      {loading && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading…
-        </div>
+      {loading ? <SectionSkeleton rows={3} /> : (
+        <DetectionQueue
+          detections={detections}
+          influencers={influencers}
+          onChange={load}
+        />
       )}
+
+      {loading ? <SectionSkeleton rows={4} /> : settings && <SettingsForm settings={settings} onSaved={load} />}
+
+      {loading ? <SectionSkeleton rows={5} /> : <ScanHistory logs={logs} page={page} setPage={setPage} pageSize={PAGE} />}
     </div>
   );
 }
@@ -331,6 +338,14 @@ const Stat = ({ label, value }: { label: string; value: string }) => (
     <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
     <div className="mt-1 font-medium">{value}</div>
   </div>
+);
+
+const SectionSkeleton = ({ rows }: { rows: number }) => (
+  <Card>
+    <CardContent className="space-y-3 p-6">
+      {Array.from({ length: rows }).map((_, i) => <Skeleton key={i} className="h-12 bg-card" />)}
+    </CardContent>
+  </Card>
 );
 
 const similarity = (a: string, b: string) => {
@@ -718,7 +733,7 @@ function SettingsForm({ settings, onSaved }: { settings: ScanSettings; onSaved: 
         </div>
 
         <div className="flex justify-end">
-          <Button onClick={save} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700">
+          <Button onClick={save} disabled={saving}>
             {saving && <Loader2 className="h-4 w-4 animate-spin" />} Save Settings
           </Button>
         </div>

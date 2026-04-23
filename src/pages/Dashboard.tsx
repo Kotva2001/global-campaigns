@@ -132,24 +132,30 @@ const Dashboard = () => {
         <KPISummary kpis={kpis} currency={displayCurrency} convertedSub={convertedSub} />
       )}
 
-      <FilterBar
-        search={filters.search}
-        setSearch={filters.setSearch}
-        platform={filters.platform}
-        setPlatform={filters.setPlatform}
-        hasActiveFilter={filters.hasActiveFilter}
-        clear={filters.clear}
-        resultCount={filtered.length}
-      />
+      {loading && data.length === 0 ? (
+        <DashboardBodySkeleton />
+      ) : (
+        <>
+          <FilterBar
+            search={filters.search}
+            setSearch={filters.setSearch}
+            platform={filters.platform}
+            setPlatform={filters.setPlatform}
+            hasActiveFilter={filters.hasActiveFilter}
+            clear={filters.clear}
+            resultCount={filtered.length}
+          />
 
-      <InfluencerCards influencers={influencers} currency={displayCurrency} onSelectInfluencer={openInfluencerDetail} />
-      <CampaignCharts rows={filtered} selectedCountry={selectedCountry} displayCurrency={displayCurrency} rates={rates} />
-      <DataTable
-        rows={filtered}
-        onChanged={refresh}
-        onAddCampaign={() => { setEditingCampaign(null); setCampaignInfluencerId(null); setCampaignOpen(true); }}
-        onEditCampaign={(campaign) => { setEditingCampaign(campaign); setCampaignOpen(true); }}
-      />
+          <InfluencerCards influencers={influencers} currency={displayCurrency} onSelectInfluencer={openInfluencerDetail} />
+          <CampaignCharts rows={filtered} selectedCountry={selectedCountry} displayCurrency={displayCurrency} rates={rates} />
+          <DataTable
+            rows={filtered}
+            onChanged={refresh}
+            onAddCampaign={() => { setEditingCampaign(null); setCampaignInfluencerId(null); setCampaignOpen(true); }}
+            onEditCampaign={(campaign) => { setEditingCampaign(campaign); setCampaignOpen(true); }}
+          />
+        </>
+      )}
       <CampaignDialog
         open={campaignOpen}
         onOpenChange={setCampaignOpen}
@@ -182,5 +188,16 @@ const Dashboard = () => {
     </div>
   );
 };
+
+const DashboardBodySkeleton = () => (
+  <div className="space-y-6 px-6 py-6">
+    <Skeleton className="h-11 bg-card" />
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-56 bg-card" />)}
+    </div>
+    <Skeleton className="h-80 bg-card" />
+    <Skeleton className="h-96 bg-card" />
+  </div>
+);
 
 export default Dashboard;
