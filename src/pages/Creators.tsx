@@ -16,6 +16,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
 import { COUNTRIES, COUNTRY_FLAGS, COUNTRY_NAMES } from "@/lib/countries";
 import { instagramHandlesFromValue } from "@/lib/instagram";
 import { computeKPIs } from "@/lib/calculations";
@@ -218,7 +219,7 @@ const Creators = () => {
       </header>
 
       <div className="px-6 py-6">
-        {loading ? <div className="text-sm text-muted-foreground">Loading…</div> : filtered.length === 0 ? <EmptyState country={country} onAdd={openCreate} /> : (
+        {loading ? <CreatorGridSkeleton /> : filtered.length === 0 ? <EmptyState country={country} onAdd={openCreate} /> : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filtered.map((creator) => <CreatorCard key={creator.id} creator={creator} campaigns={campaignGroups.get(creator.id) ?? []} selected={selectedCreators.includes(creator.id)} onSelect={(checked) => toggleSelectedCreator(creator.id, checked)} onOpen={() => setDetailCreator(creator)} onAddCampaign={() => openCampaign(creator.id)} onEdit={() => { setEditing(creator); setCreatorOpen(true); }} onTogglePause={() => togglePause(creator)} onDelete={() => setConfirmDelete(creator)} />)}
           </div>
@@ -243,6 +244,8 @@ const Creators = () => {
 const CountryTab = ({ active, onClick, flag, code }: { active: boolean; onClick: () => void; flag: string; code: string }) => <button onClick={onClick} className={cn("flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-colors", active ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground hover:text-foreground")}><span>{flag}</span><span className="font-medium">{code}</span></button>;
 
 const EmptyState = ({ country, onAdd }: { country: string; onAdd: () => void }) => <div className="flex min-h-[40vh] items-center justify-center"><Card className="border-dashed border-border bg-card/40 p-10 text-center"><div className="text-3xl">🌱</div><div className="mt-2 text-sm font-medium">No creators in {country === "All" ? "any market" : COUNTRY_NAMES[country]} yet</div><Button className="mt-4 gap-2" onClick={onAdd}><Plus className="h-4 w-4" /> Add your first creator</Button></Card></div>;
+
+const CreatorGridSkeleton = () => <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-52 bg-card" />)}</div>;
 
 const CreatorCard = ({ creator, campaigns, selected, onSelect, onOpen, onAddCampaign, onEdit, onTogglePause, onDelete }: { creator: InfluencerRecord; campaigns: CampaignEntry[]; selected: boolean; onSelect: (checked: boolean) => void; onOpen: () => void; onAddCampaign: () => void; onEdit: () => void; onTogglePause: () => void; onDelete: () => void }) => {
   const kpis = computeKPIs(campaigns);

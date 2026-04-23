@@ -733,7 +733,7 @@ function SettingsForm({ settings, onSaved }: { settings: ScanSettings; onSaved: 
         </div>
 
         <div className="flex justify-end">
-          <Button onClick={save} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700">
+          <Button onClick={save} disabled={saving}>
             {saving && <Loader2 className="h-4 w-4 animate-spin" />} Save Settings
           </Button>
         </div>
