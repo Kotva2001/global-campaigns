@@ -73,16 +73,6 @@ type Influencer = {
   status: string | null;
 };
 
-type AlertRule = {
-  id: string;
-  name: string;
-  metric: string;
-  condition: string;
-  threshold: number;
-  applies_to: string | null;
-  is_active: boolean | null;
-};
-
 const YT_SEARCH = "https://www.googleapis.com/youtube/v3/search";
 const YT_VIDEOS = "https://www.googleapis.com/youtube/v3/videos";
 
@@ -475,16 +465,36 @@ function ApproveDialog({
   const save = async () => {
     if (!detection) return;
     setSaving(true);
-    const { data, error } = await supabase.functions.invoke("process-detection", {
-      body: {
-        detected_video_id: detection.id,
-        campaign_name: name,
-        collaboration_type: collab,
-        campaign_cost: Number(cost) || 0,
-      },
+    const views = detection.views ?? 0;
+    const likes = detection.likes ?? 0;
+    const comments = detection.comments ?? 0;
+    const engagementRate = views > 0 ? ((likes + comments) / views) * 100 : null;
+    const influencerId = detection.influencer_id ?? matched?.id ?? null;
+    const { error: campaignError } = await supabase.from("campaigns").insert({
+      campaign_name: name || detection.video_title || null,
+      platform: detection.platform,
+      publish_date: detection.published_at ? detection.published_at.slice(0, 10) : null,
+      video_url: detection.video_url,
+      video_id: detection.video_id,
+      collaboration_type: collab,
+      campaign_cost: Number(cost) || 0,
+      views,
+      likes,
+      comments,
+      engagement_rate: engagementRate,
+      influencer_id: influencerId,
+      detected_automatically: true,
+      detection_source: "scanner",
+      last_stats_update: new Date().toISOString(),
     });
-    if (error || data?.ok === false) {
-      toast.error(error?.message ?? data?.error ?? "Failed");
+    if (campaignError) {
+      toast.error(campaignError.message);
+      setSaving(false);
+      return;
+    }
+    const { error: updateError } = await supabase.from("detected_videos").update({ status: "approved" }).eq("id", detection.id);
+    if (updateError) {
+      toast.error(updateError.message);
       setSaving(false);
       return;
     }
