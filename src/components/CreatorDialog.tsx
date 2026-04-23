@@ -99,7 +99,7 @@ export const CreatorDialog = ({ open, onOpenChange, editing, initialName, onSave
       platforms: value.platforms,
       youtube_channel_url: youtubeUrl || null,
       youtube_channel_id: youtubeUrl ? extractYouTubeChannelId(youtubeUrl) : null,
-      instagram_handle: instagramHandles.length ? instagramHandles : null,
+      instagram_handle: instagramHandles.length ? instagramHandles.join("\n") : null,
       contact_person: value.contact_person || null,
       contact_email: value.contact_email || null,
       notes: value.notes || null,

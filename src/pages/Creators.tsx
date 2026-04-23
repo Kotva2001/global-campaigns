@@ -7,6 +7,7 @@ import { CampaignDialog } from "@/components/CampaignDialog";
 import { InfluencerDetailPanel } from "@/components/InfluencerDetailPanel";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -246,12 +247,59 @@ const EmptyState = ({ country, onAdd }: { country: string; onAdd: () => void }) 
 const CreatorCard = ({ creator, campaigns, selected, onSelect, onOpen, onAddCampaign, onEdit, onTogglePause, onDelete }: { creator: InfluencerRecord; campaigns: CampaignEntry[]; selected: boolean; onSelect: (checked: boolean) => void; onOpen: () => void; onAddCampaign: () => void; onEdit: () => void; onTogglePause: () => void; onDelete: () => void }) => {
   const kpis = computeKPIs(campaigns);
   const meta = STATUS_META[creator.status];
-  return <Card onClick={onOpen} className="group cursor-pointer border-border bg-card p-4 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card-hover hover:shadow-lg"><div className="flex items-start justify-between gap-2"><Checkbox checked={selected} onCheckedChange={(checked) => onSelect(!!checked)} onClick={(event) => event.stopPropagation()} className="mt-1" aria-label={`Select ${creator.name} for merge`} /><button className="min-w-0 flex-1 text-left"><div className="truncate text-base font-bold">{creator.name}</div><div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground"><span>{COUNTRY_FLAGS[creator.country] ?? "🏳️"}</span><span>{creator.country}</span><span>·</span><span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", meta.cls)}>{meta.label}</span></div></button><Button variant="secondary" size="icon" className="h-8 w-8" onClick={(event) => { event.stopPropagation(); onAddCampaign(); }}><Plus className="h-4 w-4" /></Button><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" onClick={(event) => event.stopPropagation()}><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={(event) => { event.stopPropagation(); onEdit(); }}><Pencil className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem><DropdownMenuItem onClick={(event) => { event.stopPropagation(); onTogglePause(); }}>{creator.status === "active" ? <><PauseCircle className="mr-2 h-4 w-4" /> Pause</> : <><PlayCircle className="mr-2 h-4 w-4" /> Resume</>}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={(event) => { event.stopPropagation(); onDelete(); }} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div><CreatorLinks creator={creator} /><div className="mt-4 grid grid-cols-3 gap-2 border-t border-border pt-3 text-xs"><Stat label="Campaigns" value={String(campaigns.length)} /><Stat label="Views" value={formatCompact(kpis.totalViews)} /><Stat label="ROI" value={formatPercent(kpis.roi)} valueClass={kpis.roi && kpis.roi > 0 ? "text-success" : undefined} /></div><div className="mt-3 text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">View details →</div></Card>;
+  const hasCampaigns = campaigns.length > 0;
+  return (
+    <Card onClick={onOpen} className="group cursor-pointer border-border bg-card p-4 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card-hover hover:shadow-lg">
+      <div className="flex items-start justify-between gap-2">
+        <Checkbox checked={selected} onCheckedChange={(checked) => onSelect(!!checked)} onClick={(event) => event.stopPropagation()} className="mt-1" aria-label={`Select ${creator.name} for merge`} />
+        <button className="min-w-0 flex-1 text-left">
+          <div className="truncate text-base font-bold">{creator.name}</div>
+          <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground"><span>{COUNTRY_FLAGS[creator.country] ?? "🏳️"}</span><span>{creator.country}</span><span>·</span><span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", meta.cls)}>{meta.label}</span></div>
+        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="secondary" size="icon" className="h-8 w-8" onClick={(event) => { event.stopPropagation(); onAddCampaign(); }}><Plus className="h-4 w-4" /></Button>
+          </TooltipTrigger>
+          <TooltipContent>Add campaign</TooltipContent>
+        </Tooltip>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" onClick={(event) => event.stopPropagation()}><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={(event) => { event.stopPropagation(); onOpen(); }}><ExternalLink className="mr-2 h-4 w-4" /> View campaigns</DropdownMenuItem>
+            <DropdownMenuItem onClick={(event) => { event.stopPropagation(); onEdit(); }}><Pencil className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
+            <DropdownMenuItem onClick={(event) => { event.stopPropagation(); onTogglePause(); }}>{creator.status === "active" ? <><PauseCircle className="mr-2 h-4 w-4" /> Pause</> : <><PlayCircle className="mr-2 h-4 w-4" /> Resume</>}</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={(event) => { event.stopPropagation(); onDelete(); }} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <CreatorLinks creator={creator} />
+      {hasCampaigns ? (
+        <div className="mt-4 grid grid-cols-3 gap-2 border-t border-border pt-3 text-xs"><Stat label="Campaigns" value={String(campaigns.length)} /><Stat label="Views" value={formatCompact(kpis.totalViews)} /><Stat label="ROI" value={formatPercent(kpis.roi)} valueClass={kpis.roi && kpis.roi > 0 ? "text-success" : undefined} /></div>
+      ) : (
+        <div className="mt-4 border-t border-border pt-3 text-sm text-muted-foreground">No campaigns yet</div>
+      )}
+      <div className="mt-3 text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">View details →</div>
+    </Card>
+  );
 };
 
 const CreatorLinks = ({ creator }: { creator: InfluencerRecord }) => {
   const handles = instagramHandlesFromValue(creator.instagram_handle);
-  return <div className="mt-3 space-y-1 text-xs">{creator.youtube_channel_url && <a href={creator.youtube_channel_url} target="_blank" rel="noreferrer" className="flex items-center gap-1 truncate text-muted-foreground hover:text-foreground"><Youtube className="h-3 w-3" /><ExternalLink className="h-3 w-3" /><span className="truncate">{creator.youtube_channel_url.replace(/^https?:\/\//, "")}</span></a>}{handles.map((handle) => <a key={handle} href={`https://instagram.com/${handle}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-muted-foreground hover:text-foreground"><Instagram className="h-3 w-3" /><span>@{handle}</span></a>)}{(creator.contact_person || creator.contact_email) && <div className="flex items-center gap-1 text-muted-foreground"><Mail className="h-3 w-3" /><span className="truncate">{creator.contact_person}{creator.contact_person && creator.contact_email ? " · " : ""}{creator.contact_email}</span></div>}</div>;
+  const channelSnippet = creator.youtube_channel_url?.replace(/^https?:\/\/(www\.)?/, "").replace(/^youtube\.com\//, "");
+  return (
+    <div className="mt-3 space-y-2 text-xs">
+      <div className="flex flex-wrap gap-1.5">
+        {handles.map((handle) => (
+          <a key={handle} href={`https://instagram.com/${handle}`} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()} className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2 py-1 text-muted-foreground hover:text-foreground"><Instagram className="h-3 w-3" />@{handle}</a>
+        ))}
+        {creator.youtube_channel_url && (
+          <a href={creator.youtube_channel_url} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()} className="inline-flex max-w-full items-center gap-1 rounded-full bg-muted/60 px-2 py-1 text-muted-foreground hover:text-foreground"><Youtube className="h-3 w-3" /><span className="truncate">{channelSnippet}</span></a>
+        )}
+      </div>
+      {(creator.contact_person || creator.contact_email) && <div className="flex items-center gap-1 text-muted-foreground"><Mail className="h-3 w-3" /><span className="truncate">{creator.contact_person}{creator.contact_person && creator.contact_email ? " · " : ""}{creator.contact_email}</span></div>}
+    </div>
+  );
 };
 
 const Stat = ({ label, value, valueClass }: { label: string; value: string; valueClass?: string }) => <div className="rounded-md bg-muted/40 p-2"><div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div><div className={cn("text-sm font-bold", valueClass)}>{value}</div></div>;

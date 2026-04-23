@@ -26,16 +26,14 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type Metric = "views" | "likes" | "comments" | "engagement_rate" | "revenue" | "conversion_rate";
+type Metric = "views" | "spend" | "revenue" | "roi";
 type Condition = "gt" | "lt";
 
 const METRIC_LABEL: Record<Metric, string> = {
   views: "Views",
-  likes: "Likes",
-  comments: "Comments",
-  engagement_rate: "Engagement Rate",
+  spend: "Spend",
   revenue: "Revenue",
-  conversion_rate: "Conversion Rate",
+  roi: "ROI",
 };
 
 const CONDITION_LABEL: Record<Condition, string> = { gt: "greater than", lt: "less than" };
@@ -86,7 +84,7 @@ const notifyAlertsChanged = () => window.dispatchEvent(new Event("alerts:changed
 
 const ruleSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(120),
-  metric: z.enum(["views", "likes", "comments", "engagement_rate", "revenue", "conversion_rate"]),
+  metric: z.enum(["views", "spend", "revenue", "roi"]),
   condition: z.enum(["gt", "lt"]),
   threshold: z.number().finite("Must be a number"),
   applies_to: z.string().min(1),
@@ -470,7 +468,7 @@ const HistoryTab = () => {
     const unread = alerts.filter((a) => !a.is_read).map((a) => a.id);
     if (unread.length === 0) return;
     setAlerts((prev) => prev.map((a) => ({ ...a, is_read: true })));
-    const { error } = await supabase.from("alerts").update({ is_read: true }).in("id", unread);
+    const { error } = await supabase.from("alerts").update({ is_read: true }).eq("is_read", false);
     if (error) {
       toast.error(error.message);
       void load();
@@ -534,6 +532,7 @@ const HistoryTab = () => {
                     </span>
                   </div>
                   {a.message && <div className="mt-0.5 text-xs text-muted-foreground">{a.message}</div>}
+                  <div className="mt-1 text-[11px] text-muted-foreground">Related: {a.campaign_id ? `Campaign ${a.campaign_id.slice(0, 8)}` : "No linked campaign"}</div>
                 </div>
               </Card>
             );

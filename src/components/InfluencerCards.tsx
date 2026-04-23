@@ -1,4 +1,5 @@
 import { Card } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { COUNTRY_FLAGS } from "@/lib/countries";
 import type { InfluencerSummary } from "@/lib/calculations";
 import { formatCompact, formatCurrency, formatNumber } from "@/lib/formatters";
@@ -68,11 +69,20 @@ export const InfluencerCards = ({ influencers, currency = "CZK", onSelectInfluen
 
               <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
                 <Stat label="Views" value={formatCompact(inf.totalViews)} />
-                <Stat
-                  label="ROI"
-                  value={inf.roi == null ? "—" : `${roiPos ? "+" : ""}${inf.roi.toFixed(0)}%`}
-                  valueClass={inf.roi == null ? undefined : roiPos ? "text-success" : "text-destructive"}
-                />
+                {inf.roi == null ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div><Stat label="ROI" value="—" /></div>
+                    </TooltipTrigger>
+                    <TooltipContent>No spend data entered</TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <Stat
+                    label="ROI"
+                    value={`${roiPos ? "+" : ""}${inf.roi.toFixed(0)}%`}
+                    valueClass={roiPos ? "text-success" : "text-destructive"}
+                  />
+                )}
                 <Stat label="Spend" value={formatCurrency(inf.totalSpend, currency)} />
                 <Stat
                   label="Revenue"
@@ -82,8 +92,10 @@ export const InfluencerCards = ({ influencers, currency = "CZK", onSelectInfluen
               </div>
 
               {inf.topCampaign && (
-                <div className="mt-3 truncate border-t border-border pt-2 text-xs text-muted-foreground">
-                  Top: <span className="text-foreground">{inf.topCampaign}</span>
+                <div className="mt-3 border-t border-border pt-2">
+                  <span className="inline-flex max-w-full items-center rounded-full bg-muted/60 px-2 py-1 text-xs text-muted-foreground">
+                    <span className="shrink-0">Top:&nbsp;</span><span className="truncate text-foreground">{inf.topCampaign}</span>
+                  </span>
                 </div>
               )}
               <div className="mt-3 text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
