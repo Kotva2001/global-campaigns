@@ -194,7 +194,7 @@ const Analytics = () => {
       cur.revenue += r.revenue;
       m.set(key, cur);
     }
-    return Array.from(m.values()).sort((a, b) => b.revenue - a.revenue);
+    return Array.from(m.values()).sort((a, b) => b.cost - a.cost);
   }, [filtered]);
 
   const influencerData = showAllInfluencers ? byInfluencer : byInfluencer.slice(0, 10);
@@ -312,8 +312,8 @@ const Analytics = () => {
           />
           <KpiCard
             label="Avg ROI"
-            value={kpis.avgRoi == null ? "—" : `${kpis.avgRoi >= 0 ? "+" : ""}${kpis.avgRoi.toFixed(1)}%`}
-            valueClass={kpis.avgRoi == null ? undefined : kpis.avgRoi >= 0 ? "text-success" : "text-destructive"}
+            value={kpis.roi == null ? "—" : `${kpis.roi >= 0 ? "+" : ""}${kpis.roi.toFixed(1)}%`}
+            valueClass={kpis.roi == null ? undefined : kpis.roi >= 0 ? "text-success" : "text-destructive"}
           />
         </div>
 
@@ -342,8 +342,12 @@ const Analytics = () => {
                       <YAxis type="category" dataKey="name" width={120} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
                       <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))" }} formatter={(v: number) => formatCurrency(v)} />
                       <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Bar dataKey="cost" name="Cost" fill="hsl(25 95% 53%)" radius={[0, 4, 4, 0]} />
-                      <Bar dataKey="revenue" name="Revenue" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                      <Bar dataKey="cost" name="Cost" fill="hsl(var(--collab-barter))" radius={[0, 4, 4, 0]}>
+                        <LabelList dataKey="cost" position="right" formatter={(v: number) => formatCurrency(v)} style={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} />
+                      </Bar>
+                      <Bar dataKey="revenue" name="Revenue" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]}>
+                        <LabelList dataKey="revenue" position="right" formatter={(v: number) => formatCurrency(v)} style={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} />
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 )}
@@ -428,6 +432,7 @@ const Analytics = () => {
                         formatter={(v: number) => [`${v.toFixed(1)}%`, "ROI"]}
                       />
                       <Bar dataKey="roi" radius={[4, 4, 0, 0]}>
+                        <LabelList dataKey="roi" position="top" formatter={(v: number) => `${v.toFixed(0)}%`} style={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} />
                         {roiByMarket.map((d) => (
                           <Cell key={d.country} fill={d.roi >= 0 ? "hsl(var(--primary))" : "hsl(var(--destructive))"} />
                         ))}
