@@ -99,7 +99,7 @@ export const CreatorDialog = ({ open, onOpenChange, editing, initialName, onSave
       platforms: value.platforms,
       youtube_channel_url: youtubeUrl || null,
       youtube_channel_id: youtubeUrl ? extractYouTubeChannelId(youtubeUrl) : null,
-      instagram_handle: instagramHandles.length ? instagramHandles : null,
+      instagram_handle: instagramHandles.length ? instagramHandles.join("\n") : null,
       contact_person: value.contact_person || null,
       contact_email: value.contact_email || null,
       notes: value.notes || null,
@@ -108,8 +108,8 @@ export const CreatorDialog = ({ open, onOpenChange, editing, initialName, onSave
 
     setSaving(true);
     const result = editing
-      ? await supabase.from("influencers").update(payload as never).eq("id", editing.id).select("*").single()
-      : await supabase.from("influencers").insert(payload as never).select("*").single();
+      ? await supabase.from("influencers").update(payload).eq("id", editing.id).select("*").single()
+      : await supabase.from("influencers").insert(payload).select("*").single();
     setSaving(false);
 
     if (result.error) {
