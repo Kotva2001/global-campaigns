@@ -25,6 +25,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type Metric = "views" | "spend" | "revenue" | "roi";
 type Condition = "gt" | "lt";
@@ -192,7 +193,9 @@ const RulesTab = () => {
       </div>
 
       {loading ? (
-        <div className="text-sm text-muted-foreground">Loading…</div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-32 bg-card" />)}
+        </div>
       ) : rules.length === 0 ? (
         <Card className="border-dashed border-border bg-card/40 p-10 text-center">
           <Bell className="mx-auto h-8 w-8 text-muted-foreground" />
@@ -496,7 +499,9 @@ const HistoryTab = () => {
       </div>
 
       {loading ? (
-        <div className="text-sm text-muted-foreground">Loading…</div>
+        <div className="space-y-2">
+          {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-20 bg-card" />)}
+        </div>
       ) : filtered.length === 0 ? (
         <Card className="border-dashed border-border bg-card/40 p-10 text-center">
           <Bell className="mx-auto h-8 w-8 text-muted-foreground" />
