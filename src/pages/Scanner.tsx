@@ -19,7 +19,7 @@ import {
 import { toast } from "sonner";
 import {
   Play, ExternalLink, X, Plus, Youtube, Instagram, AlertCircle,
-  CheckCircle2, Clock, Loader2,
+  CheckCircle2, Clock, Loader2, Eye, EyeOff, Info,
 } from "lucide-react";
 import { formatNumber, formatCompact } from "@/lib/formatters";
 
@@ -308,7 +308,7 @@ function StatusCard({
               <div className="text-sm text-muted-foreground">{status.sub}</div>
             </div>
           </div>
-          <Button onClick={onRun} disabled={running} className="bg-emerald-600 hover:bg-emerald-700">
+          <Button onClick={onRun} disabled={running} className="gap-2">
             {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
             Run Scan Now
           </Button>
@@ -332,6 +332,21 @@ const Stat = ({ label, value }: { label: string; value: string }) => (
     <div className="mt-1 font-medium">{value}</div>
   </div>
 );
+
+const similarity = (a: string, b: string) => {
+  const wordsA = new Set(a.toLowerCase().split(/\W+/).filter(Boolean));
+  const wordsB = new Set(b.toLowerCase().split(/\W+/).filter(Boolean));
+  const union = new Set([...wordsA, ...wordsB]);
+  if (!union.size) return 0;
+  return [...wordsA].filter((word) => wordsB.has(word)).length / union.size;
+};
+
+const MatchBadge = ({ label }: { label: string }) => {
+  const lower = label.toLowerCase();
+  if (lower.includes("tag") || lower.includes("hashtag")) return <Badge className="bg-info/15 text-info hover:bg-info/20">Hashtag: #{label.replace(/^#/, "")}</Badge>;
+  if (lower.includes("description") || lower.includes("caption") || lower.includes("title")) return <Badge className="bg-success/15 text-success hover:bg-success/20">Keyword: regals</Badge>;
+  return <Badge variant="outline">{label}</Badge>;
+};
 
 /* ---------- Detection Queue ---------- */
 function DetectionQueue({
@@ -368,7 +383,9 @@ function DetectionQueue({
         {detections.map((d) => {
           const matched = matchInfluencer(d);
           const PlatIcon = d.platform.toLowerCase().includes("you") ? Youtube : Instagram;
-          const platColor = d.platform.toLowerCase().includes("you") ? "text-red-500" : "text-pink-500";
+          const platColor = d.platform.toLowerCase().includes("you") ? "text-destructive" : "text-primary";
+          const previous = detections[detections.indexOf(d) - 1];
+          const similar = previous?.video_title && d.video_title ? similarity(previous.video_title, d.video_title) > 0.8 : false;
           return (
             <div key={d.id} className="rounded-lg border p-4">
               <div className="flex flex-col gap-4 md:flex-row">
@@ -389,13 +406,14 @@ function DetectionQueue({
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {(d.mention_locations ?? []).map((m) => (
-                      <Badge key={m} variant="outline">{m}</Badge>
+                      <MatchBadge key={m} label={m} />
                     ))}
                     {matched ? (
-                      <Badge className="bg-emerald-600 hover:bg-emerald-700">Matched: {matched.name}</Badge>
+                      <Badge className="bg-primary/15 text-primary hover:bg-primary/20">Creator: {matched.name}</Badge>
                     ) : (
-                      <Badge className="bg-orange-500 hover:bg-orange-600">Unknown Creator</Badge>
+                      <Badge className="bg-warning/15 text-warning hover:bg-warning/20">Unknown Creator</Badge>
                     )}
+                    {similar && <Badge variant="outline" className="text-muted-foreground">Similar to above</Badge>}
                   </div>
                 </div>
 
@@ -407,7 +425,7 @@ function DetectionQueue({
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
-                <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setApprove(d)}>
+                <Button size="sm" onClick={() => setApprove(d)}>
                   <CheckCircle2 className="h-4 w-4" /> Approve & Add
                 </Button>
                 <Button size="sm" variant="secondary" onClick={() => dismiss(d.id)}>
@@ -537,7 +555,7 @@ function ApproveDialog({
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button onClick={save} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700">
+          <Button onClick={save} disabled={saving}>
             {saving && <Loader2 className="h-4 w-4 animate-spin" />} Create campaign
           </Button>
         </DialogFooter>
@@ -557,6 +575,7 @@ function SettingsForm({ settings, onSaved }: { settings: ScanSettings; onSaved: 
   const [autoApprove, setAutoApprove] = useState(!!settings.auto_add_known_influencers);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [showKey, setShowKey] = useState(false);
 
   const addKw = () => {
     const v = kwInput.trim();
@@ -631,12 +650,15 @@ function SettingsForm({ settings, onSaved }: { settings: ScanSettings; onSaved: 
           <Label>YouTube API key</Label>
           <div className="mt-2 flex gap-2">
             <Input
-              type="password"
+              type={showKey ? "text" : "password"}
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="AIza…"
               maxLength={200}
             />
+            <Button type="button" variant="secondary" size="icon" onClick={() => setShowKey((v) => !v)} aria-label={showKey ? "Hide API key" : "Show API key"}>
+              {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </Button>
             <Button type="button" variant="secondary" onClick={testKey} disabled={testing}>
               {testing && <Loader2 className="h-4 w-4 animate-spin" />} Test
             </Button>
@@ -678,6 +700,11 @@ function SettingsForm({ settings, onSaved }: { settings: ScanSettings; onSaved: 
               </label>
             ))}
           </div>
+          {platforms.includes("Instagram") && (
+            <div className="mt-2 flex items-start gap-2 text-xs text-muted-foreground">
+              <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Instagram scanning runs via external Python script. The in-app scanner handles YouTube only.
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-between rounded-lg border p-4">
@@ -722,9 +749,9 @@ function ScanHistory({
   };
 
   const statusBadge = (s: string) => {
-    if (s === "completed") return <Badge className="bg-emerald-600 hover:bg-emerald-700">Completed</Badge>;
-    if (s === "failed") return <Badge className="bg-red-600 hover:bg-red-700">Failed</Badge>;
-    return <Badge className="bg-yellow-600 hover:bg-yellow-700"><Clock className="h-3 w-3" />Running</Badge>;
+    if (s === "completed") return <Badge className="bg-success/15 text-success hover:bg-success/20">Completed</Badge>;
+    if (s === "failed") return <Badge className="bg-destructive/15 text-destructive hover:bg-destructive/20">Failed</Badge>;
+    return <Badge className="bg-warning/15 text-warning hover:bg-warning/20"><Clock className="h-3 w-3" />Running</Badge>;
   };
 
   return (
@@ -745,7 +772,7 @@ function ScanHistory({
           </TableHeader>
           <TableBody>
             {slice.length === 0 && (
-              <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">No scans yet.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">No scans yet. Click 'Run Scan Now' to start.</TableCell></TableRow>
             )}
             {slice.map((l) => (
               <>
@@ -764,7 +791,7 @@ function ScanHistory({
                 </TableRow>
                 {expanded === l.id && l.error_message && (
                   <TableRow key={`${l.id}-err`}>
-                    <TableCell colSpan={7} className="bg-red-500/10 text-sm text-red-500">
+                    <TableCell colSpan={7} className="bg-destructive/10 text-sm text-destructive">
                       {l.error_message}
                     </TableCell>
                   </TableRow>
