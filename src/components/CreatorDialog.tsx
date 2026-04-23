@@ -3,6 +3,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { COUNTRIES, COUNTRY_FLAGS, COUNTRY_NAMES } from "@/lib/countries";
+import { parseInstagramHandles, formatInstagramHandles } from "@/lib/instagram";
 import { extractYouTubeChannelId } from "@/lib/youtube";
 import type { InfluencerRecord } from "@/types/campaign";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,7 @@ const creatorSchema = z.object({
   country: z.enum(COUNTRIES),
   platforms: z.array(z.enum(["YouTube", "Instagram"])),
   youtube_channel_url: z.string().trim().max(500).optional().or(z.literal("")),
-  instagram_handle: z.string().trim().max(80).optional().or(z.literal("")),
+  instagram_handle: z.string().trim().max(500).optional().or(z.literal("")),
   contact_person: z.string().trim().max(120).optional().or(z.literal("")),
   contact_email: z.string().trim().max(255).email("Invalid email").optional().or(z.literal("")),
   notes: z.string().trim().max(2000).optional().or(z.literal("")),
@@ -61,7 +62,7 @@ export const CreatorDialog = ({ open, onOpenChange, editing, initialName, onSave
         country: (COUNTRIES.includes(editing.country as typeof COUNTRIES[number]) ? editing.country : "CZ") as typeof COUNTRIES[number],
         platforms: ((editing.platforms ?? []) as ("YouTube" | "Instagram")[]).filter((p) => p === "YouTube" || p === "Instagram"),
         youtube_channel_url: editing.youtube_channel_url ?? "",
-        instagram_handle: editing.instagram_handle ?? "",
+        instagram_handle: formatInstagramHandles(editing.instagram_handle),
         contact_person: editing.contact_person ?? "",
         contact_email: editing.contact_email ?? "",
         notes: editing.notes ?? "",
@@ -91,14 +92,14 @@ export const CreatorDialog = ({ open, onOpenChange, editing, initialName, onSave
 
     const value = parsed.data;
     const youtubeUrl = value.platforms.includes("YouTube") ? value.youtube_channel_url || "" : "";
-    const instagramHandle = value.platforms.includes("Instagram") ? (value.instagram_handle || "").replace(/^@/, "") : "";
+    const instagramHandles = value.platforms.includes("Instagram") ? parseInstagramHandles(value.instagram_handle || "") : [];
     const payload = {
       name: value.name,
       country: value.country,
       platforms: value.platforms,
       youtube_channel_url: youtubeUrl || null,
       youtube_channel_id: youtubeUrl ? extractYouTubeChannelId(youtubeUrl) : null,
-      instagram_handle: instagramHandle || null,
+      instagram_handle: instagramHandles.length ? instagramHandles : null,
       contact_person: value.contact_person || null,
       contact_email: value.contact_email || null,
       notes: value.notes || null,
@@ -154,7 +155,7 @@ export const CreatorDialog = ({ open, onOpenChange, editing, initialName, onSave
           </Field>
 
           {showYouTube && <Field label="YouTube channel URL"><Input value={values.youtube_channel_url} onChange={(event) => setValues({ ...values, youtube_channel_url: event.target.value })} maxLength={500} /></Field>}
-          {showInstagram && <Field label="Instagram handle"><Input value={values.instagram_handle.replace(/^@/, "")} onChange={(event) => setValues({ ...values, instagram_handle: event.target.value.replace(/^@/, "") })} maxLength={80} /></Field>}
+          {showInstagram && <Field label="Instagram handles"><Textarea value={values.instagram_handle} onChange={(event) => setValues({ ...values, instagram_handle: event.target.value })} rows={3} maxLength={500} placeholder="one handle per line or separated by commas" /></Field>}
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Contact person"><Input value={values.contact_person} onChange={(event) => setValues({ ...values, contact_person: event.target.value })} maxLength={120} /></Field>

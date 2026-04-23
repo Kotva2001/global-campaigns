@@ -33,7 +33,12 @@ Deno.serve(async (req) => {
     });
   }
 
-  return new Response(JSON.stringify({ influencers: data ?? [] }), {
+  const influencers = (data ?? []).filter((influencer) => {
+    const value = influencer.instagram_handle;
+    return Array.isArray(value) ? value.length > 0 : typeof value === "string" && value.trim().length > 0;
+  });
+
+  return new Response(JSON.stringify({ influencers }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 });

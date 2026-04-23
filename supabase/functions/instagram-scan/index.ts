@@ -24,7 +24,12 @@ const BodySchema = z.object({
   detections: z.array(DetectionSchema).min(1).max(500),
 });
 
-const normalizeHandle = (handle: string) => handle.trim().replace(/^@/, "").toLowerCase();
+const normalizeHandle = (handle: string) => handle.trim().replace(/^@+/, "").toLowerCase();
+const handlesFromValue = (value: unknown): string[] => {
+  if (Array.isArray(value)) return value.map((handle) => normalizeHandle(String(handle))).filter(Boolean);
+  if (typeof value === "string") return value.split(/[\s,;]+/).map(normalizeHandle).filter(Boolean);
+  return [];
+};
 const externalSupabaseUrl = "https://vnggokmmxkiazkgkrdqs.supabase.co";
 const externalSupabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZuZ2dva21teGtpYXprZ2tyZHFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4NTYzMDQsImV4cCI6MjA5MjQzMjMwNH0.Nur-y2ERqUbkO--ZuEJ6McbbjWmB38Z-zYhlQ71VIp4";
 
@@ -60,11 +65,12 @@ Deno.serve(async (req) => {
     });
   }
 
-  const influencerByHandle = new Map(
-    (influencers ?? [])
-      .filter((influencer) => handles.includes(normalizeHandle(influencer.instagram_handle ?? "")))
-      .map((influencer) => [normalizeHandle(influencer.instagram_handle ?? ""), influencer]),
-  );
+  const influencerByHandle = new Map();
+  for (const influencer of influencers ?? []) {
+    for (const handle of handlesFromValue(influencer.instagram_handle)) {
+      if (handles.includes(handle)) influencerByHandle.set(handle, influencer);
+    }
+  }
 
   let saved = 0;
 
