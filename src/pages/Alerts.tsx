@@ -82,6 +82,8 @@ const ALERT_TYPE_LABEL: Record<string, string> = {
   engagement_spike: "Engagement Spike",
 };
 
+const notifyAlertsChanged = () => window.dispatchEvent(new Event("alerts:changed"));
+
 const ruleSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(120),
   metric: z.enum(["views", "likes", "comments", "engagement_rate", "revenue", "conversion_rate"]),
@@ -456,7 +458,12 @@ const HistoryTab = () => {
     if (a.is_read) return;
     setAlerts((prev) => prev.map((x) => x.id === a.id ? { ...x, is_read: true } : x));
     const { error } = await supabase.from("alerts").update({ is_read: true }).eq("id", a.id);
-    if (error) toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      void load();
+    } else {
+      notifyAlertsChanged();
+    }
   };
 
   const markAll = async () => {
@@ -468,6 +475,7 @@ const HistoryTab = () => {
       toast.error(error.message);
       void load();
     } else {
+      notifyAlertsChanged();
       toast.success(`Marked ${unread.length} as read`);
     }
   };
