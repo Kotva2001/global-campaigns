@@ -82,21 +82,27 @@ const Index = () => {
             <KPISummary kpis={kpis} />
           )}
 
-          <FilterBar
-            search={filters.search}
-            setSearch={filters.setSearch}
-            platform={filters.platform}
-            setPlatform={filters.setPlatform}
-            hasActiveFilter={filters.hasActiveFilter}
-            clear={filters.clear}
-            resultCount={filtered.length}
-          />
+          {loading && data.length === 0 ? (
+            <IndexBodySkeleton />
+          ) : (
+            <>
+              <FilterBar
+                search={filters.search}
+                setSearch={filters.setSearch}
+                platform={filters.platform}
+                setPlatform={filters.setPlatform}
+                hasActiveFilter={filters.hasActiveFilter}
+                clear={filters.clear}
+                resultCount={filtered.length}
+              />
 
-          <InfluencerCards influencers={influencers} />
+              <InfluencerCards influencers={influencers} />
 
-          <CampaignCharts rows={filtered} selectedCountry={selectedCountry} />
+              <CampaignCharts rows={filtered} selectedCountry={selectedCountry} />
 
-          <DataTable rows={filtered} />
+              <DataTable rows={filtered} />
+            </>
+          )}
 
           <div className="h-12" />
         </>
@@ -111,5 +117,16 @@ const Index = () => {
     </div>
   );
 };
+
+const IndexBodySkeleton = () => (
+  <div className="space-y-6 px-6 py-6">
+    <Skeleton className="h-11 bg-card" />
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-56 bg-card" />)}
+    </div>
+    <Skeleton className="h-80 bg-card" />
+    <Skeleton className="h-96 bg-card" />
+  </div>
+);
 
 export default Index;

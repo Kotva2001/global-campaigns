@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface CampaignRow {
   id: string;
@@ -318,7 +319,12 @@ const Analytics = () => {
         </div>
 
         {loading ? (
-          <Card className="border-border bg-card p-12 text-center text-sm text-muted-foreground">Loading…</Card>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+              {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-80 bg-card" />)}
+            </div>
+            <Skeleton className="h-96 bg-card" />
+          </div>
         ) : (
           <>
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
