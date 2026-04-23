@@ -69,6 +69,37 @@ type Influencer = {
   name: string;
   country: string;
   youtube_channel_id: string | null;
+  youtube_channel_url: string | null;
+  status: string | null;
+};
+
+type AlertRule = {
+  id: string;
+  name: string;
+  metric: string;
+  condition: string;
+  threshold: number;
+  applies_to: string | null;
+  is_active: boolean | null;
+};
+
+const YT_SEARCH = "https://www.googleapis.com/youtube/v3/search";
+const YT_VIDEOS = "https://www.googleapis.com/youtube/v3/videos";
+
+const extractYouTubeChannelId = (url: string | null): string | null => {
+  if (!url) return null;
+  const match = url.match(/youtube\.com\/channel\/([A-Za-z0-9_-]+)/i);
+  return match?.[1] ?? null;
+};
+
+const findMentions = (title: string, description: string, tags: string[], keywords: string[]) => {
+  const locs = new Set<string>();
+  const lowered = keywords.map((keyword) => keyword.toLowerCase());
+  const hasKeyword = (value: string) => lowered.some((keyword) => value.toLowerCase().includes(keyword));
+  if (hasKeyword(title)) locs.add("Title");
+  if (hasKeyword(description)) locs.add("Description");
+  if (tags.some((tag) => hasKeyword(tag))) locs.add("Tags");
+  return [...locs];
 };
 
 const SCAN_FREQ_OPTIONS = [
