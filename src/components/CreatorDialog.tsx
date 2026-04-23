@@ -108,8 +108,8 @@ export const CreatorDialog = ({ open, onOpenChange, editing, initialName, onSave
 
     setSaving(true);
     const result = editing
-      ? await supabase.from("influencers").update(payload).eq("id", editing.id).select("*").single()
-      : await supabase.from("influencers").insert(payload).select("*").single();
+      ? await supabase.from("influencers").update(payload as never).eq("id", editing.id).select("*").single()
+      : await supabase.from("influencers").insert(payload as never).select("*").single();
     setSaving(false);
 
     if (result.error) {

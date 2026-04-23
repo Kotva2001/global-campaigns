@@ -29,7 +29,7 @@ export const MarketSelector = ({
         </h2>
         <span className="text-xs text-muted-foreground">{COUNTRIES.length} countries</span>
       </div>
-      <div className="flex gap-3 overflow-x-auto pb-3 scrollbar-thin">
+      <div className="no-scrollbar flex flex-wrap gap-3 overflow-x-auto pb-3">
         <MarketCard
           active={selected === "All"}
           onClick={() => onSelect("All")}

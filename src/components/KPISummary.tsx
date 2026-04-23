@@ -77,6 +77,6 @@ const KPI = ({
     <div className={cn("mt-2 text-2xl font-bold tracking-tight text-foreground", valueClass)}>
       {value}
     </div>
-    {sub && <div className="mt-0.5 text-xs text-muted-foreground">{sub}</div>}
+    {sub && <div className="mt-1.5 text-[11px] leading-snug text-muted-foreground">{sub}</div>}
   </Card>
 );
