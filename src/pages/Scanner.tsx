@@ -132,7 +132,7 @@ export default function Scanner() {
       supabase.from("scan_settings").select("*").limit(1).maybeSingle(),
       supabase.from("detected_videos").select("*").eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("scan_log").select("*").order("started_at", { ascending: false }).limit(200),
-      supabase.from("influencers").select("id,name,country,youtube_channel_id"),
+      supabase.from("influencers").select("id,name,country,youtube_channel_id,youtube_channel_url,status"),
     ]);
     if (s.data) setSettings(s.data as ScanSettings);
     setDetections((d.data ?? []) as DetectedVideo[]);
@@ -178,10 +178,84 @@ export default function Scanner() {
 
   const runScanNow = async () => {
     setRunning(true);
-    const { data, error } = await supabase.functions.invoke("scan-youtube");
-    if (error) toast.error(error.message);
-    else if (data?.ok === false) toast.error(data.error ?? "Scan failed");
-    else toast.success(`Scan complete — ${data?.new ?? 0} new`);
+    const startedAt = new Date().toISOString();
+    const { data: logRow } = await supabase.from("scan_log").insert({ scan_type: "YouTube", status: "running", started_at: startedAt }).select("id").single();
+    let videosFound = 0;
+    let videosNew = 0;
+    try {
+      if (!settings) throw new Error("Scan settings not configured");
+      if (!settings.youtube_api_key) throw new Error("YouTube API key missing");
+      const keywords = settings.brand_keywords ?? [];
+      if (!keywords.length) throw new Error("No brand keywords configured");
+
+      const tracked = influencers
+        .filter((influencer) => influencer.status !== "inactive")
+        .map((influencer) => ({ ...influencer, youtube_channel_id: influencer.youtube_channel_id ?? extractYouTubeChannelId(influencer.youtube_channel_url) }))
+        .filter((influencer): influencer is Influencer & { youtube_channel_id: string } => !!influencer.youtube_channel_id);
+      const { data: lastSuccess } = await supabase.from("scan_log").select("completed_at").eq("scan_type", "YouTube").eq("status", "completed").order("completed_at", { ascending: false }).limit(1).maybeSingle();
+      const cutoff = lastSuccess?.completed_at ? new Date(lastSuccess.completed_at).toISOString() : new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+      const candidates = new Map<string, { influencer: typeof tracked[number] }>();
+
+      for (const influencer of tracked) {
+        const url = `${YT_SEARCH}?part=snippet&channelId=${influencer.youtube_channel_id}&order=date&type=video&maxResults=10&publishedAfter=${cutoff}&key=${encodeURIComponent(settings.youtube_api_key)}`;
+        const response = await fetch(url);
+        if (!response.ok) continue;
+        const json = await response.json();
+        for (const item of json.items ?? []) if (item?.id?.videoId) candidates.set(item.id.videoId, { influencer });
+      }
+
+      videosFound = candidates.size;
+      const ids = [...candidates.keys()];
+      const [{ data: existingDetections }, { data: existingCampaigns }] = ids.length ? await Promise.all([
+        supabase.from("detected_videos").select("video_id").in("video_id", ids),
+        supabase.from("campaigns").select("video_id").in("video_id", ids),
+      ]) : [{ data: [] }, { data: [] }];
+      const known = new Set([...(existingDetections ?? []).map((row) => row.video_id), ...(existingCampaigns ?? []).map((row) => row.video_id).filter(Boolean)]);
+      const newIds = ids.filter((id) => !known.has(id));
+
+      for (let i = 0; i < newIds.length; i += 50) {
+        const batch = newIds.slice(i, i + 50);
+        const response = await fetch(`${YT_VIDEOS}?part=snippet,statistics&id=${batch.join(",")}&key=${encodeURIComponent(settings.youtube_api_key)}`);
+        if (!response.ok) continue;
+        const json = await response.json();
+        for (const video of json.items ?? []) {
+          const snippet = video.snippet ?? {};
+          const stats = video.statistics ?? {};
+          const mentions = findMentions(snippet.title ?? "", snippet.description ?? "", snippet.tags ?? [], keywords);
+          const matched = candidates.get(video.id)?.influencer;
+          if (!mentions.length || !matched) continue;
+          const views = Number(stats.viewCount ?? 0);
+          const likes = Number(stats.likeCount ?? 0);
+          const comments = Number(stats.commentCount ?? 0);
+          const publishedAt = snippet.publishedAt ?? null;
+          const { error } = await supabase.from("detected_videos").insert({
+            video_id: video.id,
+            video_url: `https://www.youtube.com/watch?v=${video.id}`,
+            platform: "YouTube",
+            video_title: snippet.title ?? "",
+            channel_name: snippet.channelTitle ?? "",
+            channel_id: snippet.channelId ?? matched.youtube_channel_id,
+            thumbnail_url: snippet.thumbnails?.high?.url ?? snippet.thumbnails?.default?.url ?? null,
+            influencer_id: matched.id,
+            published_at: publishedAt,
+            views,
+            likes,
+            comments,
+            mention_locations: mentions,
+            status: "pending",
+          });
+          if (error) throw error;
+          videosNew += 1;
+          await supabase.from("alerts").insert({ alert_type: "new_detection", title: `New video from ${matched.name}`, message: snippet.title ?? "", campaign_id: null });
+        }
+      }
+      await supabase.from("scan_log").update({ status: "completed", completed_at: new Date().toISOString(), videos_found: videosFound, videos_new: videosNew }).eq("id", logRow?.id ?? "");
+      toast.success(`Scan complete — ${videosNew} new`);
+    } catch (error) {
+      const message = (error as Error).message;
+      if (logRow?.id) await supabase.from("scan_log").update({ status: "failed", completed_at: new Date().toISOString(), error_message: message, videos_found: videosFound, videos_new: videosNew }).eq("id", logRow.id);
+      toast.error(message);
+    }
     await load();
     setRunning(false);
   };
