@@ -138,16 +138,16 @@ export default function Scanner() {
   const status: { color: string; label: string; sub: string } = useMemo(() => {
     if (!lastScan) return { color: "bg-muted-foreground", label: "Idle", sub: "No scans yet" };
     if (lastScan.status === "running" || lastScan.status === "pending") {
-      return { color: "bg-yellow-500 animate-pulse", label: "Running", sub: "Scan in progress" };
+      return { color: "bg-warning animate-pulse", label: "Running", sub: "Scan in progress" };
     }
     if (lastScan.status === "failed") {
-      return { color: "bg-red-500", label: "Error", sub: lastScan.error_message ?? "Last scan failed" };
+      return { color: "bg-destructive", label: "Error", sub: lastScan.error_message ?? "Last scan failed" };
     }
     const ageMin = lastScan.completed_at
       ? (Date.now() - new Date(lastScan.completed_at).getTime()) / 60000
       : 9999;
     const freq = settings?.scan_frequency_minutes ?? 60;
-    if (ageMin < freq * 1.2) return { color: "bg-emerald-500 animate-pulse", label: "Active", sub: "Scanner is running" };
+    if (ageMin < freq * 1.2) return { color: "bg-success animate-pulse", label: "Active", sub: "Scanner is running" };
     return { color: "bg-muted-foreground", label: "Idle", sub: "Waiting for next scan" };
   }, [lastScan, settings]);
 
