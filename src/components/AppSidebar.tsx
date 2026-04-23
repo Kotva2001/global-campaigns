@@ -41,12 +41,15 @@ const useBadgeCounts = () => {
     };
     void load();
 
+    window.addEventListener("alerts:changed", load);
+
     const ch = supabase
       .channel("sidebar-counts")
       .on("postgres_changes", { event: "*", schema: "public", table: "alerts" }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "detected_videos" }, load)
       .subscribe();
     return () => {
+      window.removeEventListener("alerts:changed", load);
       void supabase.removeChannel(ch);
     };
   }, []);
