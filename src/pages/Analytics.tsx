@@ -9,8 +9,11 @@ import {
 
 import { supabase } from "@/integrations/supabase/client";
 import { COUNTRIES, COUNTRY_FLAGS, COUNTRY_NAMES } from "@/lib/countries";
+import { computeKPIs } from "@/lib/calculations";
+import { convertCurrency, normalizeCurrency, type CurrencyCode } from "@/lib/currency";
 import { formatCompact, formatCurrency, formatNumber, formatPercent } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
+import { useCurrencySettings } from "@/hooks/useCurrencySettings";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -28,6 +31,7 @@ interface CampaignRow {
   platform: string;
   publish_date: string | null;
   campaign_cost: number | string | null;
+  currency: string | null;
   views: number | null;
   engagement_rate: number | string | null;
   purchase_revenue: number | string | null;
@@ -44,7 +48,9 @@ interface Row {
   campaign: string;
   platform: "YouTube" | "Instagram" | "YB Shorts";
   date: Date | null;
+  dateIso: string | null;
   cost: number;
+  currency: CurrencyCode;
   views: number;
   engagement: number | null;
   revenue: number;
@@ -78,6 +84,7 @@ const normalizePlatform = (p: string): Row["platform"] => {
 };
 
 const Analytics = () => {
+  const { eurCzkRate } = useCurrencySettings();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [from, setFrom] = useState<Date | undefined>();
@@ -93,7 +100,7 @@ const Analytics = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from("campaigns")
-        .select("id, influencer_id, campaign_name, platform, publish_date, campaign_cost, views, engagement_rate, purchase_revenue");
+        .select("id, influencer_id, campaign_name, platform, publish_date, campaign_cost, currency, views, engagement_rate, purchase_revenue");
       if (error) {
         toast.error(error.message);
         setLoading(false);
@@ -112,24 +119,32 @@ const Analytics = () => {
       const influencerById = new Map((influencers ?? []).map((influencer: InfluencerLookupRow) => [influencer.id, influencer]));
       const mapped: Row[] = campaignRows.map((r) => {
         const influencer = r.influencer_id ? influencerById.get(r.influencer_id) : undefined;
+        const currency = normalizeCurrency(r.currency);
         return {
         id: r.id,
         campaign: r.campaign_name ?? "",
         platform: normalizePlatform(r.platform),
         date: r.publish_date ? parseISO(r.publish_date) : null,
-        cost: num(r.campaign_cost),
+        dateIso: r.publish_date,
+        cost: convertCurrency(num(r.campaign_cost), currency, "CZK", { EUR_CZK: eurCzkRate }),
+        currency,
         views: num(r.views),
         engagement: r.engagement_rate == null ? null : num(r.engagement_rate),
-        revenue: num(r.purchase_revenue),
+        revenue: convertCurrency(num(r.purchase_revenue), currency, "CZK", { EUR_CZK: eurCzkRate }),
         influencer: influencer?.name ?? "",
         country: influencer?.country ?? "",
         };
       });
       setRows(mapped);
+      const dated = mapped.map((row) => row.date).filter((date): date is Date => !!date).sort((a, b) => a.getTime() - b.getTime());
+      if (dated.length) {
+        setFrom((current) => current ?? dated[0]);
+        setTo((current) => current ?? new Date());
+      }
       setLoading(false);
     };
     void load();
-  }, []);
+  }, [eurCzkRate]);
 
   const filtered = useMemo(() => {
     return rows.filter((r) => {
@@ -142,13 +157,30 @@ const Analytics = () => {
   }, [rows, country, platform, from, to]);
 
   const kpis = useMemo(() => {
-    const spend = filtered.reduce((a, r) => a + r.cost, 0);
-    const revenue = filtered.reduce((a, r) => a + r.revenue, 0);
-    const withCost = filtered.filter((r) => r.cost > 0);
-    const avgRoi = withCost.length
-      ? withCost.reduce((a, r) => a + ((r.revenue - r.cost) / r.cost) * 100, 0) / withCost.length
-      : null;
-    return { campaigns: filtered.length, spend, revenue, profit: revenue - spend, avgRoi };
+    const summary = computeKPIs(filtered.map((r) => ({
+      id: r.id,
+      influencerId: r.id,
+      country: r.country,
+      influencer: r.influencer,
+      campaignName: r.campaign,
+      platform: r.platform,
+      publishDate: r.dateIso ?? "",
+      publishDateIso: r.dateIso,
+      videoLink: "",
+      collaborationType: "",
+      currency: "CZK",
+      campaignCost: r.cost,
+      utmLink: "",
+      managedBy: "",
+      views: r.views,
+      likes: null,
+      comments: null,
+      sessions: null,
+      engagementRate: r.engagement,
+      purchaseRevenue: r.revenue,
+      conversionRate: null,
+    })), "CZK", { EUR_CZK: eurCzkRate });
+    return { campaigns: summary.campaigns, spend: summary.totalSpend, revenue: summary.totalRevenue, profit: summary.totalRevenue - summary.totalSpend, roi: summary.roi };
   }, [filtered]);
 
   // Chart 1: Revenue vs Cost by influencer
