@@ -329,9 +329,10 @@ export const EuropeMap = ({ rows, selected, onSelect, displayCurrency, rates }: 
               {/* Labels — sized inversely to zoom so they stay readable */}
               <g pointerEvents="none">
                 {(() => {
-                  const ru = europeGeo.features.find((f) => f.properties.iso === "RU");
-                  if (!ru) return null;
-                  const [cx, cy] = pathGen.centroid(ru);
+                  // Hardcoded to ~Moscow so it lands on the visible European part of Russia.
+                  const projected = projection([37.62, 55.75]);
+                  if (!projected) return null;
+                  const [cx, cy] = projected;
                   if (!Number.isFinite(cx) || !Number.isFinite(cy)) return null;
                   const size = Math.max(10, 18 / zoomK);
                   return (
