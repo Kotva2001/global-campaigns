@@ -386,6 +386,7 @@ export default function Scanner() {
 /* ---------- Status Card ---------- */
 function StatusCard({
   status, lastScan, nextScanAt, totals, running, onRun,
+  refreshing, refreshProgress, onRefreshStats,
 }: {
   status: { color: string; label: string; sub: string };
   lastScan?: ScanLogRow;
@@ -393,6 +394,9 @@ function StatusCard({
   totals: { scanned: number; nw: number; stats: number };
   running: boolean;
   onRun: () => void;
+  refreshing: boolean;
+  refreshProgress: { done: number; total: number } | null;
+  onRefreshStats: () => void;
 }) {
   const fmt = (d?: string | null) => (d ? new Date(d).toLocaleString("cs-CZ") : "—");
   return (
@@ -406,10 +410,18 @@ function StatusCard({
               <div className="text-sm text-muted-foreground">{status.sub}</div>
             </div>
           </div>
-          <Button onClick={onRun} disabled={running} className="gap-2">
-            {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-            Run Scan Now
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button onClick={onRun} disabled={running || refreshing} className="gap-2">
+              {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+              Run Scan Now
+            </Button>
+            <Button onClick={onRefreshStats} disabled={running || refreshing} variant="outline" className="gap-2">
+              {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              {refreshing && refreshProgress
+                ? `Refreshing stats… ${refreshProgress.done}/${refreshProgress.total} campaigns`
+                : "Refresh YouTube Stats"}
+            </Button>
+          </div>
         </div>
 
         <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-5">
