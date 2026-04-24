@@ -283,7 +283,7 @@ export default function Scanner() {
       const { data: campaigns, error } = await supabase
         .from("campaigns")
         .select("video_id")
-        .eq("platform", "YouTube")
+        .in("platform", ["YouTube", "YB Shorts"])
         .not("video_id", "is", null);
       if (error) throw error;
 
