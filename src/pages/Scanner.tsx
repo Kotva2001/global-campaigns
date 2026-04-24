@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { toastError } from "@/lib/toast-helpers";
 import {
   Play, ExternalLink, X, Plus, Youtube, Instagram, AlertCircle,
-  CheckCircle2, Clock, Loader2, Eye, EyeOff, Info,
+  CheckCircle2, Clock, Loader2, Eye, EyeOff, Info, RefreshCw,
 } from "lucide-react";
 import { formatNumber, formatCompact } from "@/lib/formatters";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -115,6 +115,8 @@ export default function Scanner() {
   const [influencers, setInfluencers] = useState<Influencer[]>([]);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshProgress, setRefreshProgress] = useState<{ done: number; total: number } | null>(null);
   const [page, setPage] = useState(1);
   const PAGE = 10;
 
@@ -262,6 +264,91 @@ export default function Scanner() {
     setRunning(false);
   };
 
+  const refreshYouTubeStats = async () => {
+    if (!settings?.youtube_api_key) {
+      toastError("YouTube API key missing", "Please configure it in scan settings.");
+      return;
+    }
+    setRefreshing(true);
+    const startedAt = new Date().toISOString();
+    const apiKey = settings.youtube_api_key;
+    const { data: logRow } = await supabase
+      .from("scan_log")
+      .insert({ scan_type: "YouTube Stats", status: "running", started_at: startedAt })
+      .select("id")
+      .single();
+
+    let updatedCount = 0;
+    try {
+      const { data: campaigns, error } = await supabase
+        .from("campaigns")
+        .select("video_id")
+        .eq("platform", "YouTube")
+        .not("video_id", "is", null);
+      if (error) throw error;
+
+      const videoIds = Array.from(new Set((campaigns ?? []).map((c) => c.video_id).filter(Boolean) as string[]));
+      setRefreshProgress({ done: 0, total: videoIds.length });
+
+      if (!videoIds.length) {
+        toast.info("No YouTube campaigns with video IDs to refresh");
+      } else {
+        for (let i = 0; i < videoIds.length; i += 50) {
+          const batch = videoIds.slice(i, i + 50);
+          const response = await fetch(
+            `${YT_VIDEOS}?part=statistics&id=${batch.join(",")}&key=${encodeURIComponent(apiKey)}`,
+          );
+          if (!response.ok) {
+            setRefreshProgress({ done: Math.min(i + batch.length, videoIds.length), total: videoIds.length });
+            continue;
+          }
+          const json = await response.json();
+          const nowIso = new Date().toISOString();
+          for (const video of json.items ?? []) {
+            const stats = video.statistics ?? {};
+            const payload = {
+              views: Number(stats.viewCount ?? 0),
+              likes: Number(stats.likeCount ?? 0),
+              comments: Number(stats.commentCount ?? 0),
+              last_stats_update: nowIso,
+            };
+            const [{ error: cErr }] = await Promise.all([
+              supabase.from("campaigns").update(payload).eq("video_id", video.id),
+              supabase
+                .from("detected_videos")
+                .update({ views: payload.views, likes: payload.likes, comments: payload.comments })
+                .eq("video_id", video.id),
+            ]);
+            if (!cErr) updatedCount += 1;
+          }
+          setRefreshProgress({ done: Math.min(i + batch.length, videoIds.length), total: videoIds.length });
+        }
+        toast.success(`Updated stats for ${updatedCount} campaigns`);
+      }
+
+      const completedAt = new Date().toISOString();
+      if (logRow?.id) {
+        await supabase
+          .from("scan_log")
+          .update({ status: "completed", completed_at: completedAt, stats_updated: updatedCount, videos_found: videoIds.length })
+          .eq("id", logRow.id);
+      }
+    } catch (err) {
+      const message = (err as Error).message;
+      const completedAt = new Date().toISOString();
+      if (logRow?.id) {
+        await supabase
+          .from("scan_log")
+          .update({ status: "failed", completed_at: completedAt, error_message: message, stats_updated: updatedCount })
+          .eq("id", logRow.id);
+      }
+      toastError("Refresh failed", message);
+    }
+    await load();
+    setRefreshing(false);
+    setRefreshProgress(null);
+  };
+
   return (
     <div className="space-y-6 p-6">
       <div>
@@ -276,6 +363,9 @@ export default function Scanner() {
         totals={totals}
         running={running}
         onRun={runScanNow}
+        refreshing={refreshing}
+        refreshProgress={refreshProgress}
+        onRefreshStats={refreshYouTubeStats}
       />
 
       {loading ? <SectionSkeleton rows={3} /> : (
@@ -296,6 +386,7 @@ export default function Scanner() {
 /* ---------- Status Card ---------- */
 function StatusCard({
   status, lastScan, nextScanAt, totals, running, onRun,
+  refreshing, refreshProgress, onRefreshStats,
 }: {
   status: { color: string; label: string; sub: string };
   lastScan?: ScanLogRow;
@@ -303,6 +394,9 @@ function StatusCard({
   totals: { scanned: number; nw: number; stats: number };
   running: boolean;
   onRun: () => void;
+  refreshing: boolean;
+  refreshProgress: { done: number; total: number } | null;
+  onRefreshStats: () => void;
 }) {
   const fmt = (d?: string | null) => (d ? new Date(d).toLocaleString("cs-CZ") : "—");
   return (
@@ -316,10 +410,18 @@ function StatusCard({
               <div className="text-sm text-muted-foreground">{status.sub}</div>
             </div>
           </div>
-          <Button onClick={onRun} disabled={running} className="gap-2">
-            {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-            Run Scan Now
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button onClick={onRun} disabled={running || refreshing} className="gap-2">
+              {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+              Run Scan Now
+            </Button>
+            <Button onClick={onRefreshStats} disabled={running || refreshing} variant="outline" className="gap-2">
+              {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              {refreshing && refreshProgress
+                ? `Refreshing stats… ${refreshProgress.done}/${refreshProgress.total} campaigns`
+                : "Refresh YouTube Stats"}
+            </Button>
+          </div>
         </div>
 
         <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-5">
