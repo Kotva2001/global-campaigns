@@ -145,7 +145,7 @@ const EditableNumberCell = ({
     }
     setEditing(false);
     if (next === (value ?? 0)) return;
-    await updateCampaign(campaignId, { [FIELD_TO_COLUMN[field]]: next }, cellKey, flash, onChanged);
+    await updateCampaign(campaignId, { [FIELD_TO_COLUMN[field]]: next } as TablesUpdate<"campaigns">, cellKey, flash, onChanged);
   };
 
   if (editing) {
@@ -205,7 +205,7 @@ const EditableSelectCell = ({
   const cellKey = `${campaignId}:${column}`;
   const onChange = async (next: string) => {
     if (next === value) return;
-    await updateCampaign(campaignId, { [column]: next }, cellKey, flash, onChanged);
+    await updateCampaign(campaignId, { [column]: next } as TablesUpdate<"campaigns">, cellKey, flash, onChanged);
   };
   return (
     <div className="relative inline-block">
