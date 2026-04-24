@@ -10,6 +10,7 @@ import Scanner from "./pages/Scanner";
 import Creators from "./pages/Creators";
 import Analytics from "./pages/Analytics";
 import Alerts from "./pages/Alerts";
+import Products from "./pages/Products";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/creators" element={<Creators />} />
+            <Route path="/products" element={<Products />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/alerts" element={<Alerts />} />
             <Route path="/scanner" element={<Scanner />} />

@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Edit3, Pencil, Plus, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Check, Edit3, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { toastError } from "@/lib/toast-helpers";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PlatformLinkIcon } from "@/components/PlatformLinkIcon";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,6 +31,8 @@ import { formatCompact, formatCurrency, formatNumber, formatPercent } from "@/li
 import type { CurrencyCode, ExchangeRates } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import type { CampaignEntry, InfluencerRecord } from "@/types/campaign";
+import type { TablesUpdate } from "@/integrations/supabase/types";
+import type { ProductRecord } from "@/types/product";
 
 interface Props {
   creator: InfluencerRecord | null;
@@ -62,22 +71,81 @@ const collabBadge = (collab: string) => {
   return collab ? <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", cls)}>{collab}</span> : <span className="text-muted-foreground">—</span>;
 };
 
-const EditableNumber = ({ value, campaignId, field, onChanged }: { value: number | null; campaignId: string; field: "views" | "likes" | "comments"; onChanged?: () => void }) => {
+type SavedFlash = string;
+
+const PLATFORM_OPTIONS = ["YouTube", "Instagram", "YB Shorts", "TikTok", "Other"] as const;
+const COLLAB_OPTIONS = ["Paid", "Barter", "Hybrid", "Other"] as const;
+
+type EditableNumberField = "views" | "likes" | "comments" | "campaignCost" | "purchaseRevenue";
+
+const FIELD_TO_COLUMN: Record<EditableNumberField, "views" | "likes" | "comments" | "campaign_cost" | "purchase_revenue"> = {
+  views: "views",
+  likes: "likes",
+  comments: "comments",
+  campaignCost: "campaign_cost",
+  purchaseRevenue: "purchase_revenue",
+};
+
+const updateCampaign = async (
+  campaignId: string,
+  payload: TablesUpdate<"campaigns">,
+  cellKey: string,
+  flash: (key: string) => void,
+  onChanged?: () => void,
+) => {
+  const { error } = await supabase.from("campaigns").update(payload).eq("id", campaignId);
+  if (error) return toastError("Could not save change", error);
+  flash(cellKey);
+  onChanged?.();
+};
+
+const SavedCheck = ({ show }: { show: boolean }) => (
+  <span
+    className={cn(
+      "pointer-events-none absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-success text-[hsl(var(--success-foreground,0_0%_100%))] transition-opacity",
+      show ? "opacity-100" : "opacity-0",
+    )}
+  >
+    <Check className="h-3 w-3" />
+  </span>
+);
+
+const EditableNumberCell = ({
+  value,
+  campaignId,
+  field,
+  currency,
+  flashed,
+  flash,
+  onChanged,
+  formatAs,
+}: {
+  value: number | null;
+  campaignId: string;
+  field: EditableNumberField;
+  currency?: CurrencyCode;
+  flashed: boolean;
+  flash: (key: string) => void;
+  onChanged?: () => void;
+  formatAs: "number" | "currency";
+}) => {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(String(value ?? 0));
+  const cellKey = `${campaignId}:${field}`;
+
+  useEffect(() => { if (!editing) setDraft(String(value ?? 0)); }, [value, editing]);
 
   const save = async () => {
     const next = Number(draft);
     if (!Number.isFinite(next) || next < 0) {
       toast.error("Enter a valid number");
+      setEditing(false);
+      setDraft(String(value ?? 0));
       return;
     }
-    const payload = field === "views" ? { views: next } : field === "likes" ? { likes: next } : { comments: next };
-    const { error } = await supabase.from("campaigns").update(payload).eq("id", campaignId);
-    if (error) return toastError("Action failed", error);
     setEditing(false);
-    toast.success("Stat updated");
-    onChanged?.();
+    if (next === (value ?? 0)) return;
+    await updateCampaign(campaignId, { [FIELD_TO_COLUMN[field]]: next } as TablesUpdate<"campaigns">, cellKey, flash, onChanged);
   };
 
   if (editing) {
@@ -86,27 +154,193 @@ const EditableNumber = ({ value, campaignId, field, onChanged }: { value: number
         autoFocus
         type="number"
         min="0"
+        step={formatAs === "currency" ? "0.01" : "1"}
         value={draft}
         onChange={(event) => setDraft(event.target.value)}
         onBlur={save}
         onKeyDown={(event) => {
           if (event.key === "Enter") void save();
-          if (event.key === "Escape") setEditing(false);
+          if (event.key === "Escape") { setEditing(false); setDraft(String(value ?? 0)); }
         }}
-        className="h-8 w-24 text-right"
+        className="h-8 w-28 text-right"
+      />
+    );
+  }
+
+  const display = formatAs === "currency"
+    ? formatCurrency(value, currency ?? "CZK")
+    : formatNumber(value);
+
+  return (
+    <button
+      onClick={() => setEditing(true)}
+      className="group relative ml-auto flex items-center gap-1 tabular-nums text-muted-foreground hover:text-foreground"
+    >
+      {display}
+      <Pencil className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-60" />
+      <SavedCheck show={flashed} />
+    </button>
+  );
+};
+
+const EditableSelectCell = ({
+  value,
+  options,
+  campaignId,
+  column,
+  flashed,
+  flash,
+  onChanged,
+  renderDisplay,
+}: {
+  value: string;
+  options: readonly string[];
+  campaignId: string;
+  column: "platform" | "collaboration_type";
+  flashed: boolean;
+  flash: (key: string) => void;
+  onChanged?: () => void;
+  renderDisplay: (value: string) => React.ReactNode;
+}) => {
+  const cellKey = `${campaignId}:${column}`;
+  const onChange = async (next: string) => {
+    if (next === value) return;
+    await updateCampaign(campaignId, { [column]: next } as TablesUpdate<"campaigns">, cellKey, flash, onChanged);
+  };
+  return (
+    <div className="relative inline-block">
+      <Select value={value || undefined} onValueChange={onChange}>
+        <SelectTrigger className="h-7 w-auto border-none bg-transparent px-2 py-0 text-xs font-semibold shadow-none hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 [&>svg]:hidden">
+          <SelectValue>{renderDisplay(value)}</SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      <SavedCheck show={flashed} />
+    </div>
+  );
+};
+
+const CampaignNameCell = ({
+  value,
+  campaignId,
+  products,
+  flashed,
+  flash,
+  onChanged,
+}: {
+  value: string;
+  campaignId: string;
+  products: ProductRecord[];
+  flashed: boolean;
+  flash: (key: string) => void;
+  onChanged?: () => void;
+}) => {
+  const [editing, setEditing] = useState(false);
+  const [customMode, setCustomMode] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const cellKey = `${campaignId}:campaign_name`;
+
+  useEffect(() => { if (!editing) setDraft(value); }, [value, editing]);
+
+  const matchingProduct = products.find((p) => p.name.toLowerCase() === value.toLowerCase());
+
+  const pickProduct = async (productId: string) => {
+    if (productId === "__custom__") {
+      setCustomMode(true);
+      setEditing(true);
+      setDraft(value);
+      return;
+    }
+    const product = products.find((p) => p.id === productId);
+    if (!product) return;
+    setEditing(false);
+    setCustomMode(false);
+    await updateCampaign(
+      campaignId,
+      { campaign_name: product.name, campaign_cost: product.cost, currency: product.currency },
+      cellKey,
+      flash,
+      onChanged,
+    );
+  };
+
+  const saveCustom = async () => {
+    const next = draft.trim();
+    setEditing(false);
+    setCustomMode(false);
+    if (next === value) return;
+    await updateCampaign(campaignId, { campaign_name: next || null }, cellKey, flash, onChanged);
+  };
+
+  if (editing && customMode) {
+    return (
+      <Input
+        autoFocus
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={saveCustom}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") void saveCustom();
+          if (event.key === "Escape") { setEditing(false); setCustomMode(false); setDraft(value); }
+        }}
+        className="h-8 w-full"
+        placeholder="Custom campaign name"
       />
     );
   }
 
   return (
-    <button onClick={() => setEditing(true)} className="group ml-auto flex items-center gap-1 tabular-nums text-muted-foreground hover:text-foreground">
-      {formatNumber(value)} <Pencil className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-60" />
-    </button>
+    <div className="relative inline-block max-w-[220px]">
+      <Select value={matchingProduct?.id ?? "__custom_current__"} onValueChange={pickProduct}>
+        <SelectTrigger className="h-7 w-full max-w-[220px] truncate border-none bg-transparent px-2 py-0 text-sm font-medium shadow-none hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 [&>svg]:hidden">
+          <SelectValue>
+            <span className="truncate">{value || <span className="text-muted-foreground">— select —</span>}</span>
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent className="max-h-[280px]">
+          {!matchingProduct && value && (
+            <SelectItem value="__custom_current__">{value} (custom)</SelectItem>
+          )}
+          {products.map((product) => (
+            <SelectItem key={product.id} value={product.id}>
+              {product.name}
+              {product.sku ? <span className="ml-2 text-xs text-muted-foreground">({product.sku})</span> : null}
+            </SelectItem>
+          ))}
+          <SelectItem value="__custom__">✏️ Custom…</SelectItem>
+        </SelectContent>
+      </Select>
+      <SavedCheck show={flashed} />
+    </div>
   );
 };
 
 export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInfluencer, onAddCampaign, onEditCampaign, onChanged, displayCurrency = "CZK", rates }: Props) => {
   const [deleteCampaign, setDeleteCampaign] = useState<CampaignEntry | null>(null);
+  const [products, setProducts] = useState<ProductRecord[]>([]);
+  const [flashedCells, setFlashedCells] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (!creator) return;
+    let active = true;
+    void supabase
+      .from("products")
+      .select("*")
+      .order("name")
+      .then(({ data }) => { if (active) setProducts((data ?? []) as ProductRecord[]); });
+    return () => { active = false; };
+  }, [creator]);
+
+  const flash = (key: string) => {
+    const ts = Date.now();
+    setFlashedCells((prev) => ({ ...prev, [key]: ts }));
+    setTimeout(() => {
+      setFlashedCells((prev) => (prev[key] === ts ? (() => { const next = { ...prev }; delete next[key]; return next; })() : prev));
+    }, 1200);
+  };
+
   const kpis = useMemo(() => computeKPIs(campaigns, displayCurrency, rates), [campaigns, displayCurrency, rates]);
   const platforms = useMemo(() => {
     const fromCreator = creator?.platforms?.filter(Boolean) ?? [];
@@ -168,17 +402,48 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
                         {campaigns.map((campaign) => (
                           <tr key={campaign.id} className="border-b border-border/60 transition-colors hover:bg-card-hover">
                             <td className="whitespace-nowrap px-3 py-2.5 text-muted-foreground">{campaign.publishDate || "—"}</td>
-                            <td className="max-w-[220px] truncate px-3 py-2.5 font-medium">{campaign.campaignName || "—"}</td>
-                            <td className="whitespace-nowrap px-3 py-2.5">{platformBadge(campaign.platform)}</td>
-                            <td className="whitespace-nowrap px-3 py-2.5">{collabBadge(campaign.collaborationType)}</td>
+                            <td className="px-3 py-2.5 font-medium">
+                              <CampaignNameCell
+                                value={campaign.campaignName}
+                                campaignId={campaign.id}
+                                products={products}
+                                flashed={!!flashedCells[`${campaign.id}:campaign_name`]}
+                                flash={flash}
+                                onChanged={onChanged}
+                              />
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-2.5">
+                              <EditableSelectCell
+                                value={campaign.platform}
+                                options={PLATFORM_OPTIONS}
+                                campaignId={campaign.id}
+                                column="platform"
+                                flashed={!!flashedCells[`${campaign.id}:platform`]}
+                                flash={flash}
+                                onChanged={onChanged}
+                                renderDisplay={(v) => platformBadge(v)}
+                              />
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-2.5">
+                              <EditableSelectCell
+                                value={campaign.collaborationType}
+                                options={COLLAB_OPTIONS}
+                                campaignId={campaign.id}
+                                column="collaboration_type"
+                                flashed={!!flashedCells[`${campaign.id}:collaboration_type`]}
+                                flash={flash}
+                                onChanged={onChanged}
+                                renderDisplay={(v) => collabBadge(v)}
+                              />
+                            </td>
                             <td className="px-3 py-2.5">
                               <PlatformLinkIcon platform={campaign.platform} url={campaign.videoLink} />
                             </td>
-                            <td className="whitespace-nowrap px-3 py-2.5 text-right"><EditableNumber value={campaign.views} campaignId={campaign.id} field="views" onChanged={onChanged} /></td>
-                            <td className="whitespace-nowrap px-3 py-2.5 text-right"><EditableNumber value={campaign.likes} campaignId={campaign.id} field="likes" onChanged={onChanged} /></td>
-                            <td className="whitespace-nowrap px-3 py-2.5 text-right"><EditableNumber value={campaign.comments} campaignId={campaign.id} field="comments" onChanged={onChanged} /></td>
-                            <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">{formatCurrency(campaign.campaignCost, campaign.currency)}</td>
-                            <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">{formatCurrency(campaign.purchaseRevenue, campaign.currency)}</td>
+                            <td className="whitespace-nowrap px-3 py-2.5 text-right"><EditableNumberCell value={campaign.views} campaignId={campaign.id} field="views" formatAs="number" flashed={!!flashedCells[`${campaign.id}:views`]} flash={flash} onChanged={onChanged} /></td>
+                            <td className="whitespace-nowrap px-3 py-2.5 text-right"><EditableNumberCell value={campaign.likes} campaignId={campaign.id} field="likes" formatAs="number" flashed={!!flashedCells[`${campaign.id}:likes`]} flash={flash} onChanged={onChanged} /></td>
+                            <td className="whitespace-nowrap px-3 py-2.5 text-right"><EditableNumberCell value={campaign.comments} campaignId={campaign.id} field="comments" formatAs="number" flashed={!!flashedCells[`${campaign.id}:comments`]} flash={flash} onChanged={onChanged} /></td>
+                            <td className="whitespace-nowrap px-3 py-2.5 text-right"><EditableNumberCell value={campaign.campaignCost} campaignId={campaign.id} field="campaignCost" currency={campaign.currency} formatAs="currency" flashed={!!flashedCells[`${campaign.id}:campaignCost`]} flash={flash} onChanged={onChanged} /></td>
+                            <td className="whitespace-nowrap px-3 py-2.5 text-right"><EditableNumberCell value={campaign.purchaseRevenue} campaignId={campaign.id} field="purchaseRevenue" currency={campaign.currency} formatAs="currency" flashed={!!flashedCells[`${campaign.id}:purchaseRevenue`]} flash={flash} onChanged={onChanged} /></td>
                             <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-muted-foreground">{formatPercent(campaign.engagementRate)}</td>
                             <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-muted-foreground">{formatPercent(campaign.conversionRate)}</td>
                             <td className="whitespace-nowrap px-3 py-2.5">
