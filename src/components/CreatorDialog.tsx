@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
+import { toastError } from "@/lib/toast-helpers";
 import { supabase } from "@/integrations/supabase/client";
 import { COUNTRIES, COUNTRY_FLAGS, COUNTRY_NAMES } from "@/lib/countries";
 import { parseInstagramHandles, formatInstagramHandles } from "@/lib/instagram";
@@ -113,7 +114,7 @@ export const CreatorDialog = ({ open, onOpenChange, editing, initialName, onSave
     setSaving(false);
 
     if (result.error) {
-      toast.error(result.error.message);
+      toastError("Could not save creator", result.error);
       return;
     }
     toast.success(editing ? "Creator updated" : "Creator added");

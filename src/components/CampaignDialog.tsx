@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { CalendarIcon, Plus } from "lucide-react";
 import { z } from "zod";
 import { toast } from "sonner";
+import { toastError } from "@/lib/toast-helpers";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { COUNTRIES, COUNTRY_FLAGS } from "@/lib/countries";
@@ -94,7 +95,7 @@ export const CampaignDialog = ({ open, onOpenChange, editing, initialInfluencerI
   useEffect(() => {
     if (!open) return;
     void supabase.from("influencers").select("*").order("country").order("name").then(({ data, error }) => {
-      if (error) toast.error(error.message);
+      if (error) toastError("Could not save campaign", error);
       setInfluencers((data ?? []) as InfluencerRecord[]);
     });
   }, [open]);
@@ -171,7 +172,7 @@ export const CampaignDialog = ({ open, onOpenChange, editing, initialInfluencerI
     setSaving(false);
 
     if (result.error) {
-      toast.error(result.error.message);
+      toastError("Could not save campaign", result.error);
       return;
     }
     toast.success(editing ? "Campaign updated" : "Campaign added");

@@ -17,6 +17,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { toastError } from "@/lib/toast-helpers";
 import {
   Play, ExternalLink, X, Plus, Youtube, Instagram, AlertCircle,
   CheckCircle2, Clock, Loader2, Eye, EyeOff, Info,
@@ -255,7 +256,7 @@ export default function Scanner() {
       const completedAt = new Date().toISOString();
       if (logRow?.id) await supabase.from("scan_log").update({ status: "failed", completed_at: completedAt, error_message: message, videos_found: videosFound, videos_new: videosNew }).eq("id", logRow.id);
       if (logRow?.id) setLogs((current) => current.map((row) => row.id === logRow.id ? { ...row, status: "failed", completed_at: completedAt, error_message: message, videos_found: videosFound, videos_new: videosNew } : row));
-      toast.error(message);
+      toastError("Scan failed", message);
     }
     await load();
     setRunning(false);
@@ -380,7 +381,7 @@ function DetectionQueue({
 
   const dismiss = async (id: string) => {
     const { error } = await supabase.from("detected_videos").update({ status: "dismissed" }).eq("id", id);
-    if (error) toast.error(error.message); else { toast.success("Dismissed"); onChange(); }
+    if (error) toastError("Could not dismiss detection", error); else { toast.success("Dismissed"); onChange(); }
   };
 
   return (
@@ -521,13 +522,13 @@ function ApproveDialog({
       last_stats_update: new Date().toISOString(),
     });
     if (campaignError) {
-      toast.error(campaignError.message);
+      toastError("Could not create campaign", campaignError);
       setSaving(false);
       return;
     }
     const { error: updateError } = await supabase.from("detected_videos").update({ status: "approved" }).eq("id", detection.id);
     if (updateError) {
-      toast.error(updateError.message);
+      toastError("Could not update detection", updateError);
       setSaving(false);
       return;
     }
@@ -613,7 +614,7 @@ function SettingsForm({ settings, onSaved }: { settings: ScanSettings; onSaved: 
       auto_add_known_influencers: autoApprove,
     }).eq("id", settings.id);
     setSaving(false);
-    if (error) toast.error(error.message);
+    if (error) toastError("Could not save settings", error);
     else { toast.success("Settings saved"); onSaved(); }
   };
 
@@ -626,9 +627,9 @@ function SettingsForm({ settings, onSaved }: { settings: ScanSettings; onSaved: 
       );
       const j = await r.json();
       if (r.ok) toast.success("API key is valid");
-      else toast.error(j.error?.message ?? "Invalid API key");
+      else toastError("Invalid API key", j.error?.message ?? "");
     } catch (e) {
-      toast.error((e as Error).message);
+      toastError("Could not test API key", e);
     }
     setTesting(false);
   };

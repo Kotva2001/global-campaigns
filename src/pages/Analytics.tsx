@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { format, parseISO, startOfMonth } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
+import { toastError } from "@/lib/toast-helpers";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
   AreaChart, Area, PieChart, Pie, Cell, LabelList,
@@ -103,7 +104,7 @@ const Analytics = () => {
         .from("campaigns")
         .select("id, influencer_id, campaign_name, platform, publish_date, campaign_cost, currency, views, engagement_rate, purchase_revenue");
       if (error) {
-        toast.error(error.message);
+        toastError("Could not load campaigns", error);
         setLoading(false);
         return;
       }
@@ -113,7 +114,7 @@ const Analytics = () => {
         ? await supabase.from("influencers").select("id,name,country").in("id", influencerIds)
         : { data: [], error: null };
       if (influencerError) {
-        toast.error(influencerError.message);
+        toastError("Could not load creators", influencerError);
         setLoading(false);
         return;
       }

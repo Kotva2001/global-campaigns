@@ -5,6 +5,7 @@ import {
   Plus, Pencil, Trash2, Eye, TrendingUp, DollarSign, BellPlus, Bell, CheckCheck,
 } from "lucide-react";
 import { toast } from "sonner";
+import { toastError } from "@/lib/toast-helpers";
 
 import { supabase } from "@/integrations/supabase/client";
 import { COUNTRIES, COUNTRY_FLAGS, COUNTRY_NAMES } from "@/lib/countries";
@@ -138,8 +139,8 @@ const RulesTab = () => {
       supabase.from("alert_rules").select("*").order("created_at", { ascending: false }),
       supabase.from("influencers").select("id, name, country").order("name"),
     ]);
-    if (e1) toast.error(e1.message);
-    if (e2) toast.error(e2.message);
+    if (e1) toastError("Could not load alert rules", e1);
+    if (e2) toastError("Could not load creators", e2);
     setRules((r ?? []) as Rule[]);
     setInfluencers((inf ?? []) as InfluencerLite[]);
     setLoading(false);
@@ -150,14 +151,14 @@ const RulesTab = () => {
     setRules((prev) => prev.map((x) => x.id === rule.id ? { ...x, is_active: v } : x));
     const { error } = await supabase.from("alert_rules").update({ is_active: v }).eq("id", rule.id);
     if (error) {
-      toast.error(error.message);
+      toastError("Could not update rule", error);
       void load();
     }
   };
 
   const remove = async (rule: Rule) => {
     const { error } = await supabase.from("alert_rules").delete().eq("id", rule.id);
-    if (error) return toast.error(error.message);
+    if (error) return toastError("Could not delete rule", error);
     toast.success("Rule deleted");
     setConfirmDelete(null);
     void load();
@@ -319,7 +320,7 @@ const RuleFormDialog = ({
       ? await supabase.from("alert_rules").update(payload).eq("id", editing.id)
       : await supabase.from("alert_rules").insert([payload]);
     setSaving(false);
-    if (error) return toast.error(error.message);
+    if (error) return toastError(editing ? "Could not update rule" : "Could not create rule", error);
     toast.success(editing ? "Rule updated" : "Rule created");
     onSaved();
   };
@@ -436,7 +437,7 @@ const HistoryTab = () => {
       .select("*")
       .order("created_at", { ascending: false })
       .limit(200);
-    if (error) toast.error(error.message);
+    if (error) toastError("Could not load alert history", error);
     setAlerts((data ?? []) as Alert[]);
     setLoading(false);
   };
@@ -460,7 +461,7 @@ const HistoryTab = () => {
     setAlerts((prev) => prev.map((x) => x.id === a.id ? { ...x, is_read: true } : x));
     const { error } = await supabase.from("alerts").update({ is_read: true }).eq("id", a.id);
     if (error) {
-      toast.error(error.message);
+      toastError("Could not mark alert as read", error);
       void load();
     } else {
       notifyAlertsChanged();
@@ -473,7 +474,7 @@ const HistoryTab = () => {
     setAlerts((prev) => prev.map((a) => ({ ...a, is_read: true })));
     const { error } = await supabase.from("alerts").update({ is_read: true }).eq("is_read", false);
     if (error) {
-      toast.error(error.message);
+      toastError("Could not mark all as read", error);
       void load();
     } else {
       notifyAlertsChanged();
