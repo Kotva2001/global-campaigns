@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "./components/AppLayout";
+import { LoginGate } from "./components/LoginGate";
 import Dashboard from "./pages/Dashboard";
 import Scanner from "./pages/Scanner";
 import Creators from "./pages/Creators";
@@ -19,6 +20,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <LoginGate>
         <Routes>
           <Route element={<AppLayout />}>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -30,6 +32,7 @@ const App = () => (
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </LoginGate>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
