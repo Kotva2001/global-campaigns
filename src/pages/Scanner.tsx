@@ -264,6 +264,91 @@ export default function Scanner() {
     setRunning(false);
   };
 
+  const refreshYouTubeStats = async () => {
+    if (!settings?.youtube_api_key) {
+      toastError("YouTube API key missing", "Please configure it in scan settings.");
+      return;
+    }
+    setRefreshing(true);
+    const startedAt = new Date().toISOString();
+    const apiKey = settings.youtube_api_key;
+    const { data: logRow } = await supabase
+      .from("scan_log")
+      .insert({ scan_type: "YouTube Stats", status: "running", started_at: startedAt })
+      .select("id")
+      .single();
+
+    let updatedCount = 0;
+    try {
+      const { data: campaigns, error } = await supabase
+        .from("campaigns")
+        .select("video_id")
+        .eq("platform", "YouTube")
+        .not("video_id", "is", null);
+      if (error) throw error;
+
+      const videoIds = Array.from(new Set((campaigns ?? []).map((c) => c.video_id).filter(Boolean) as string[]));
+      setRefreshProgress({ done: 0, total: videoIds.length });
+
+      if (!videoIds.length) {
+        toast.info("No YouTube campaigns with video IDs to refresh");
+      } else {
+        for (let i = 0; i < videoIds.length; i += 50) {
+          const batch = videoIds.slice(i, i + 50);
+          const response = await fetch(
+            `${YT_VIDEOS}?part=statistics&id=${batch.join(",")}&key=${encodeURIComponent(apiKey)}`,
+          );
+          if (!response.ok) {
+            setRefreshProgress({ done: Math.min(i + batch.length, videoIds.length), total: videoIds.length });
+            continue;
+          }
+          const json = await response.json();
+          const nowIso = new Date().toISOString();
+          for (const video of json.items ?? []) {
+            const stats = video.statistics ?? {};
+            const payload = {
+              views: Number(stats.viewCount ?? 0),
+              likes: Number(stats.likeCount ?? 0),
+              comments: Number(stats.commentCount ?? 0),
+              last_stats_update: nowIso,
+            };
+            const [{ error: cErr }] = await Promise.all([
+              supabase.from("campaigns").update(payload).eq("video_id", video.id),
+              supabase
+                .from("detected_videos")
+                .update({ views: payload.views, likes: payload.likes, comments: payload.comments })
+                .eq("video_id", video.id),
+            ]);
+            if (!cErr) updatedCount += 1;
+          }
+          setRefreshProgress({ done: Math.min(i + batch.length, videoIds.length), total: videoIds.length });
+        }
+        toast.success(`Updated stats for ${updatedCount} campaigns`);
+      }
+
+      const completedAt = new Date().toISOString();
+      if (logRow?.id) {
+        await supabase
+          .from("scan_log")
+          .update({ status: "completed", completed_at: completedAt, stats_updated: updatedCount, videos_found: videoIds.length })
+          .eq("id", logRow.id);
+      }
+    } catch (err) {
+      const message = (err as Error).message;
+      const completedAt = new Date().toISOString();
+      if (logRow?.id) {
+        await supabase
+          .from("scan_log")
+          .update({ status: "failed", completed_at: completedAt, error_message: message, stats_updated: updatedCount })
+          .eq("id", logRow.id);
+      }
+      toastError("Refresh failed", message);
+    }
+    await load();
+    setRefreshing(false);
+    setRefreshProgress(null);
+  };
+
   return (
     <div className="space-y-6 p-6">
       <div>
@@ -278,6 +363,9 @@ export default function Scanner() {
         totals={totals}
         running={running}
         onRun={runScanNow}
+        refreshing={refreshing}
+        refreshProgress={refreshProgress}
+        onRefreshStats={refreshYouTubeStats}
       />
 
       {loading ? <SectionSkeleton rows={3} /> : (
