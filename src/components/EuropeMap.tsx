@@ -328,6 +328,25 @@ export const EuropeMap = ({ rows, selected, onSelect, displayCurrency, rates }: 
               </g>
               {/* Labels — sized inversely to zoom so they stay readable */}
               <g pointerEvents="none">
+                {(() => {
+                  const ru = europeGeo.features.find((f) => f.properties.iso === "RU");
+                  if (!ru) return null;
+                  const [cx, cy] = pathGen.centroid(ru);
+                  if (!Number.isFinite(cx) || !Number.isFinite(cy)) return null;
+                  const size = Math.max(10, 18 / zoomK);
+                  return (
+                    <text
+                      x={cx}
+                      y={cy}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      style={{ fontSize: size, fontWeight: 600 }}
+                      fill="#3a3a4a"
+                    >
+                      ☹
+                    </text>
+                  );
+                })()}
                 {europeGeo.features
                   .filter((f) => ACTIVE_SET.has(f.properties.iso))
                   .map((f) => {
