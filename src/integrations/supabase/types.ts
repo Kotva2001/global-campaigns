@@ -255,7 +255,7 @@ export type Database = {
           country: string
           created_at: string | null
           id: string
-          instagram_handle: string | null
+          instagram_handle: string[] | null
           name: string
           notes: string | null
           platforms: string[] | null
@@ -270,7 +270,7 @@ export type Database = {
           country: string
           created_at?: string | null
           id?: string
-          instagram_handle?: string | null
+          instagram_handle?: string[] | null
           name: string
           notes?: string | null
           platforms?: string[] | null
@@ -285,7 +285,7 @@ export type Database = {
           country?: string
           created_at?: string | null
           id?: string
-          instagram_handle?: string | null
+          instagram_handle?: string[] | null
           name?: string
           notes?: string | null
           platforms?: string[] | null
