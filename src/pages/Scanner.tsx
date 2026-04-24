@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { toastError } from "@/lib/toast-helpers";
 import {
   Play, ExternalLink, X, Plus, Youtube, Instagram, AlertCircle,
-  CheckCircle2, Clock, Loader2, Eye, EyeOff, Info,
+  CheckCircle2, Clock, Loader2, Eye, EyeOff, Info, RefreshCw,
 } from "lucide-react";
 import { formatNumber, formatCompact } from "@/lib/formatters";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -115,6 +115,8 @@ export default function Scanner() {
   const [influencers, setInfluencers] = useState<Influencer[]>([]);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshProgress, setRefreshProgress] = useState<{ done: number; total: number } | null>(null);
   const [page, setPage] = useState(1);
   const PAGE = 10;
 
