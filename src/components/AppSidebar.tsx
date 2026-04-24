@@ -9,6 +9,7 @@ import {
   Settings as SettingsIcon,
   Menu,
   LogOut,
+  Package,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ interface Props {
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, badgeKey: null as null | "alerts" | "scanner" },
   { to: "/creators", label: "Creators", icon: Users, badgeKey: null },
+  { to: "/products", label: "Products", icon: Package, badgeKey: null },
   { to: "/analytics", label: "Analytics", icon: BarChart3, badgeKey: null },
   { to: "/alerts", label: "Alerts", icon: Bell, badgeKey: "alerts" as const },
   { to: "/scanner", label: "Scanner", icon: Radar, badgeKey: "scanner" as const },
