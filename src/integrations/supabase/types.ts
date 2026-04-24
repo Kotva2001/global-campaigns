@@ -296,6 +296,39 @@ export type Database = {
         }
         Relationships: []
       }
+      products: {
+        Row: {
+          category: string | null
+          cost: number
+          created_at: string
+          currency: string
+          id: string
+          name: string
+          sku: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          cost?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          name: string
+          sku?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          cost?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          name?: string
+          sku?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       scan_log: {
         Row: {
           completed_at: string | null
