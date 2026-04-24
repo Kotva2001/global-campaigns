@@ -1,5 +1,7 @@
-import { useMemo, useState } from "react";
-import { Globe2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import * as d3 from "d3";
+import type { Feature, FeatureCollection, Geometry } from "geojson";
+import { Globe2, Plus, Minus } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { COUNTRIES, COUNTRY_FLAGS, COUNTRY_NAMES } from "@/lib/countries";
@@ -7,23 +9,11 @@ import { formatCompact, formatCurrency, formatPercent } from "@/lib/formatters";
 import { convertCurrency, type CurrencyCode, type ExchangeRates } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import type { CampaignEntry } from "@/types/campaign";
-import europePaths from "@/data/europe-paths.json";
+import europeGeoRaw from "@/data/europe.geo.json";
 
-/**
- * Real (simplified) European country geometries projected onto a 1000x600
- * viewBox. Generated from a public-domain Europe GeoJSON via Douglas–Peucker
- * simplification — see /tmp/convert.mjs in the repo history.
- */
-type CountryPath = { d: string; cx: number | null; cy: number | null; name: string };
-const COUNTRY_PATHS = europePaths as Record<string, CountryPath>;
+type CountryProps = { iso: string; name: string };
+const europeGeo = europeGeoRaw as unknown as FeatureCollection<Geometry, CountryProps>;
 const ACTIVE_SET = new Set<string>(COUNTRIES);
-/** Active markets get an inline label nudged into the country body. */
-const LABEL_NUDGE: Partial<Record<string, { x: number; y: number }>> = {
-  IT: { x: -10, y: -40 }, // skip Sicily, label the boot
-  GR: { x: -30, y: -20 }, // mainland, not islands
-  ES: { x: 10, y: -10 },
-  RO: { x: 0, y: -5 },
-};
 
 interface CountryStat {
   country: string;
@@ -43,10 +33,20 @@ interface Props {
   rates: ExchangeRates;
 }
 
+const WIDTH = 1000;
+const HEIGHT = 450;
+
 export const EuropeMap = ({ rows, selected, onSelect, displayCurrency, rates }: Props) => {
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const gRef = useRef<SVGGElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
+
   const [hovered, setHovered] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<{ x: number; y: number } | null>(null);
+  const [zoomK, setZoomK] = useState(1);
 
+  // ----- Stats per country -----
   const stats = useMemo(() => {
     const map = new Map<string, CountryStat>();
     const inflSets = new Map<string, Set<string>>();
@@ -75,25 +75,7 @@ export const EuropeMap = ({ rows, selected, onSelect, displayCurrency, rates }: 
     return map;
   }, [rows, displayCurrency, rates]);
 
-  const maxViews = useMemo(() => {
-    let m = 0;
-    for (const s of stats.values()) if (s.views > m) m = s.views;
-    return m;
-  }, [stats]);
-
-  const getHeatColor = (views: number): string => {
-    if (!views || maxViews === 0) return "hsl(var(--muted))";
-    // 0..1 normalized intensity (sqrt for better mid-range spread)
-    const t = Math.sqrt(views / maxViews);
-    // hue: 210 (cool blue) -> 18 (warm orange/red)
-    const hue = 210 - t * 192;
-    const sat = 70 + t * 20;
-    const light = 45 + (1 - t) * 8;
-    return `hsl(${hue}, ${sat}%, ${light}%)`;
-  };
-
   const totals = useMemo(() => {
-    let influencers = 0;
     let campaigns = 0;
     let views = 0;
     const inflKeys = new Set<string>();
@@ -102,18 +84,121 @@ export const EuropeMap = ({ rows, selected, onSelect, displayCurrency, rates }: 
       views += r.views ?? 0;
       if (r.influencer) inflKeys.add(`${r.country}|${r.influencer}`);
     }
-    influencers = inflKeys.size;
-    return { influencers, campaigns, views };
+    return { influencers: inflKeys.size, campaigns, views };
   }, [rows]);
+
+  // ----- Heat color scale -----
+  const heatScale = useMemo(() => {
+    let max = 0;
+    for (const s of stats.values()) if (s.views > max) max = s.views;
+    return d3.scaleSequential((t) => d3.interpolateRgbBasis([
+      "hsl(210, 75%, 48%)", // blue
+      "hsl(165, 70%, 45%)", // teal
+      "hsl(58, 90%, 52%)",  // yellow
+      "hsl(28, 92%, 54%)",  // orange
+      "hsl(0, 80%, 52%)",   // red
+    ])(t)).domain([0, Math.sqrt(Math.max(max, 1))]);
+  }, [stats]);
+
+  const heatColor = (views: number) =>
+    views > 0 ? heatScale(Math.sqrt(views)) : "hsl(225, 16%, 22%)";
+
+  // ----- Mercator projection fitted to active countries -----
+  const { projection, pathGen, activeBounds } = useMemo(() => {
+    const proj = d3.geoMercator();
+    const activeFeatures = europeGeo.features.filter((f) => ACTIVE_SET.has(f.properties.iso));
+    const initialFC: FeatureCollection<Geometry, CountryProps> = {
+      type: "FeatureCollection",
+      features: activeFeatures,
+    };
+    proj.fitExtent([[20, 20], [WIDTH - 20, HEIGHT - 20]], initialFC);
+    const path = d3.geoPath(proj);
+    // Bounds of active countries (in projected px) for "All markets" reset
+    const bounds = path.bounds(initialFC);
+    return { projection: proj, pathGen: path, activeBounds: bounds };
+  }, []);
+
+  // ----- D3 zoom wiring -----
+  useEffect(() => {
+    if (!svgRef.current || !gRef.current) return;
+    const svg = d3.select(svgRef.current);
+    const g = d3.select(gRef.current);
+    const zoom = d3
+      .zoom<SVGSVGElement, unknown>()
+      .scaleExtent([0.6, 12])
+      .translateExtent([[-200, -200], [WIDTH + 200, HEIGHT + 200]])
+      .on("zoom", (event) => {
+        g.attr("transform", event.transform.toString());
+        setZoomK(event.transform.k);
+      });
+    zoomRef.current = zoom;
+    svg.call(zoom);
+    // Disable D3 default double-click zoom (we use dblclick for country focus)
+    svg.on("dblclick.zoom", null);
+    return () => {
+      svg.on(".zoom", null);
+    };
+  }, []);
+
+  const zoomTo = (transform: d3.ZoomTransform, duration = 700) => {
+    if (!svgRef.current || !zoomRef.current) return;
+    d3.select(svgRef.current)
+      .transition()
+      .duration(duration)
+      .call(zoomRef.current.transform, transform);
+  };
+
+  const resetView = () => {
+    const [[x0, y0], [x1, y1]] = activeBounds;
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    const cx = (x0 + x1) / 2;
+    const cy = (y0 + y1) / 2;
+    const scale = Math.min(8, 0.9 / Math.max(dx / WIDTH, dy / HEIGHT));
+    const t = d3.zoomIdentity.translate(WIDTH / 2 - scale * cx, HEIGHT / 2 - scale * cy).scale(scale);
+    zoomTo(t);
+  };
+
+  const focusCountry = (feature: Feature<Geometry, CountryProps>) => {
+    const [[x0, y0], [x1, y1]] = pathGen.bounds(feature);
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    const cx = (x0 + x1) / 2;
+    const cy = (y0 + y1) / 2;
+    const scale = Math.min(8, 0.7 / Math.max(dx / WIDTH, dy / HEIGHT));
+    const t = d3.zoomIdentity.translate(WIDTH / 2 - scale * cx, HEIGHT / 2 - scale * cy).scale(scale);
+    zoomTo(t);
+  };
+
+  const zoomBy = (factor: number) => {
+    if (!svgRef.current || !zoomRef.current) return;
+    d3.select(svgRef.current).transition().duration(250).call(zoomRef.current.scaleBy, factor);
+  };
+
+  // ----- Tooltip positioning (clamped to container) -----
+  const handleMove = (e: React.MouseEvent) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const clampedX = Math.min(rect.width - 250, Math.max(8, x + 14));
+    const clampedY = Math.min(rect.height - 200, Math.max(8, y - 10));
+    setTooltip({ x: clampedX, y: clampedY });
+  };
 
   const hoveredStat = hovered ? stats.get(hovered) : null;
 
-  const allCodes = useMemo(() => Object.keys(COUNTRY_PATHS), []);
+  // Initial fit-to-active on mount and when bounds change
+  useEffect(() => {
+    // Defer one tick so the svg is mounted
+    const id = requestAnimationFrame(() => resetView());
+    return () => cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBounds]);
 
   return (
     <div className="px-6 pt-6">
       <Card className="relative overflow-hidden border-border bg-card">
-        {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 px-5 py-3">
           <div>
             <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -128,7 +213,10 @@ export const EuropeMap = ({ rows, selected, onSelect, displayCurrency, rates }: 
           <Button
             size="sm"
             variant={selected === "All" ? "default" : "secondary"}
-            onClick={() => onSelect("All")}
+            onClick={() => {
+              onSelect("All");
+              resetView();
+            }}
             className="gap-2"
           >
             <Globe2 className="h-4 w-4" />
@@ -136,22 +224,21 @@ export const EuropeMap = ({ rows, selected, onSelect, displayCurrency, rates }: 
           </Button>
         </div>
 
-        {/* Map */}
         <div
-          className="relative h-[400px] w-full"
+          ref={containerRef}
+          className="relative h-[450px] w-full"
+          style={{ background: "#0a1628" }}
           onMouseLeave={() => {
             setHovered(null);
             setTooltip(null);
           }}
-          onMouseMove={(e) => {
-            const rect = e.currentTarget.getBoundingClientRect();
-            setTooltip({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-          }}
+          onMouseMove={handleMove}
         >
           <svg
-            viewBox="0 0 1000 600"
+            ref={svgRef}
+            viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
             preserveAspectRatio="xMidYMid meet"
-            className="absolute inset-0 h-full w-full"
+            className="absolute inset-0 h-full w-full cursor-grab active:cursor-grabbing"
           >
             <defs>
               <pattern id="europe-grid" width="50" height="50" patternUnits="userSpaceOnUse">
@@ -160,129 +247,130 @@ export const EuropeMap = ({ rows, selected, onSelect, displayCurrency, rates }: 
                   fill="none"
                   stroke="hsl(var(--border))"
                   strokeWidth="0.5"
-                  opacity="0.18"
+                  opacity="0.15"
                 />
               </pattern>
-              <radialGradient id="europe-sea" cx="50%" cy="50%" r="75%">
-                <stop offset="0%" stopColor="hsl(220, 35%, 10%)" stopOpacity="1" />
-                <stop offset="100%" stopColor="hsl(225, 40%, 6%)" stopOpacity="1" />
-              </radialGradient>
               <filter id="country-glow" x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur stdDeviation="6" result="blur" />
+                <feGaussianBlur stdDeviation="5" result="blur" />
                 <feMerge>
                   <feMergeNode in="blur" />
                   <feMergeNode in="SourceGraphic" />
                 </feMerge>
               </filter>
             </defs>
-            {/* Sea background */}
-            <rect width="1000" height="600" fill="url(#europe-sea)" />
-            <rect width="1000" height="600" fill="url(#europe-grid)" />
 
-            {/* Render every country path: inactive first (background), active on top. */}
-            <g>
-              {allCodes
-                .filter((code) => !ACTIVE_SET.has(code))
-                .map((code) => {
-                  const path = COUNTRY_PATHS[code];
-                  return (
+            <rect width={WIDTH} height={HEIGHT} fill="#0a1628" />
+            <rect width={WIDTH} height={HEIGHT} fill="url(#europe-grid)" />
+
+            <g ref={gRef}>
+              {/* Inactive countries */}
+              <g>
+                {europeGeo.features
+                  .filter((f) => !ACTIVE_SET.has(f.properties.iso))
+                  .map((f) => (
                     <path
-                      key={code}
-                      d={path.d}
-                      fill="hsl(225, 18%, 16%)"
-                      stroke="hsl(225, 20%, 22%)"
-                      strokeWidth={0.6}
+                      key={f.properties.iso}
+                      d={pathGen(f) ?? ""}
+                      fill="#1e2a3a"
+                      stroke="#2d3f54"
+                      strokeWidth={0.6 / zoomK}
                       strokeLinejoin="round"
                     />
-                  );
-                })}
-            </g>
-            <g>
-              {COUNTRIES.map((code) => {
-                const path = COUNTRY_PATHS[code];
-                if (!path) return null;
-                const s = stats.get(code);
-                const isActive = (s?.campaigns ?? 0) > 0;
-                const isSelected = selected === code;
-                const fill = isActive ? getHeatColor(s!.views) : "hsl(225, 16%, 22%)";
-                const stroke = isSelected
-                  ? "hsl(var(--primary))"
-                  : isActive
-                  ? "hsl(0, 0%, 100%)"
-                  : "hsl(225, 20%, 28%)";
-                const strokeOpacity = isSelected ? 1 : isActive ? 0.35 : 1;
-                return (
-                  <g key={code}>
-                    {isSelected && (
-                      <path
-                        d={path.d}
-                        fill={fill}
-                        opacity="0.55"
-                        filter="url(#country-glow)"
-                        className="animate-pulse"
-                        pointerEvents="none"
-                      />
-                    )}
-                    <path
-                      d={path.d}
-                      fill={fill}
-                      stroke={stroke}
-                      strokeOpacity={strokeOpacity}
-                      strokeWidth={isSelected ? 2 : 0.8}
-                      strokeLinejoin="round"
-                      className={cn(
-                        "cursor-pointer transition-[opacity] duration-200",
-                        hovered === code && "opacity-90",
-                      )}
-                      onMouseEnter={() => setHovered(code)}
-                      onClick={() => onSelect(code)}
-                    />
-                  </g>
-                );
-              })}
-            </g>
-            {/* Labels last so they sit above all countries. */}
-            <g pointerEvents="none">
-              {COUNTRIES.map((code) => {
-                const path = COUNTRY_PATHS[code];
-                const s = stats.get(code);
-                if (!path || !path.cx || !path.cy || !s || s.campaigns === 0) return null;
-                const nudge = LABEL_NUDGE[code] ?? { x: 0, y: 0 };
-                return (
-                  <g key={code} transform={`translate(${path.cx + nudge.x}, ${path.cy + nudge.y})`}>
-                    <text
-                      textAnchor="middle"
-                      style={{ fontSize: 12, fontWeight: 700, paintOrder: "stroke" }}
-                      stroke="hsl(225, 40%, 6%)"
-                      strokeWidth="3"
-                      className="fill-foreground"
-                    >
-                      {code}
-                    </text>
-                    <text
-                      y="13"
-                      textAnchor="middle"
-                      style={{ fontSize: 9, paintOrder: "stroke" }}
-                      stroke="hsl(225, 40%, 6%)"
-                      strokeWidth="2.5"
-                      className="fill-foreground/85"
-                    >
-                      {s.influencers}i · {s.campaigns}c · {formatCompact(s.views)}
-                    </text>
-                  </g>
-                );
-              })}
+                  ))}
+              </g>
+              {/* Active countries */}
+              <g>
+                {europeGeo.features
+                  .filter((f) => ACTIVE_SET.has(f.properties.iso))
+                  .map((f) => {
+                    const code = f.properties.iso;
+                    const s = stats.get(code);
+                    const isSelected = selected === code;
+                    const fill = s && s.views > 0 ? heatColor(s.views) : "hsl(225, 16%, 28%)";
+                    const isHovered = hovered === code;
+                    const d = pathGen(f) ?? "";
+                    return (
+                      <g key={code}>
+                        {isSelected && (
+                          <path
+                            d={d}
+                            fill={fill}
+                            opacity="0.55"
+                            filter="url(#country-glow)"
+                            className="animate-pulse"
+                            pointerEvents="none"
+                          />
+                        )}
+                        <path
+                          d={d}
+                          fill={fill}
+                          stroke={
+                            isSelected
+                              ? "hsl(var(--primary))"
+                              : isHovered
+                              ? "#ffffff"
+                              : "rgba(255,255,255,0.55)"
+                          }
+                          strokeWidth={(isSelected ? 2 : isHovered ? 1.5 : 0.8) / zoomK}
+                          strokeLinejoin="round"
+                          className="cursor-pointer transition-[opacity] duration-200"
+                          style={{ opacity: isHovered ? 0.9 : 1 }}
+                          onMouseEnter={() => setHovered(code)}
+                          onClick={() => onSelect(code)}
+                          onDoubleClick={() => {
+                            onSelect(code);
+                            focusCountry(f);
+                          }}
+                        />
+                      </g>
+                    );
+                  })}
+              </g>
+              {/* Labels — sized inversely to zoom so they stay readable */}
+              <g pointerEvents="none">
+                {europeGeo.features
+                  .filter((f) => ACTIVE_SET.has(f.properties.iso))
+                  .map((f) => {
+                    const code = f.properties.iso;
+                    const s = stats.get(code);
+                    if (!s || s.campaigns === 0) return null;
+                    const [cx, cy] = pathGen.centroid(f);
+                    if (!Number.isFinite(cx) || !Number.isFinite(cy)) return null;
+                    const fontSize = Math.max(7, 11 / zoomK);
+                    const subSize = Math.max(6, 8 / zoomK);
+                    return (
+                      <g key={code} transform={`translate(${cx}, ${cy})`}>
+                        <text
+                          textAnchor="middle"
+                          style={{ fontSize, fontWeight: 700, paintOrder: "stroke" }}
+                          stroke="#0a1628"
+                          strokeWidth={3 / zoomK}
+                          className="fill-foreground"
+                        >
+                          {code} {formatCompact(s.views)}
+                        </text>
+                        <text
+                          y={fontSize + 1}
+                          textAnchor="middle"
+                          style={{ fontSize: subSize, paintOrder: "stroke" }}
+                          stroke="#0a1628"
+                          strokeWidth={2.5 / zoomK}
+                          className="fill-foreground/80"
+                        >
+                          {s.influencers}i · {s.campaigns}c
+                        </text>
+                      </g>
+                    );
+                  })}
+              </g>
             </g>
           </svg>
 
           {/* Hover tooltip */}
           {hovered && hoveredStat && tooltip && (
             <div
-              className="pointer-events-none absolute z-10 min-w-[220px] rounded-lg border border-border bg-popover/95 p-3 text-xs shadow-xl backdrop-blur"
-              style={{
-                left: Math.min(tooltip.x + 14, 1000),
-                top: Math.max(tooltip.y - 10, 0),
-              }}
+              className="pointer-events-none absolute z-10 min-w-[230px] rounded-lg border border-border bg-popover/95 p-3 text-xs shadow-xl backdrop-blur"
+              style={{ left: tooltip.x, top: tooltip.y }}
             >
               <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
                 <span className="text-lg leading-none">{COUNTRY_FLAGS[hovered]}</span>
@@ -320,14 +408,24 @@ export const EuropeMap = ({ rows, selected, onSelect, displayCurrency, rates }: 
             </div>
           )}
 
+          {/* Zoom controls */}
+          <div className="absolute right-3 top-3 flex flex-col gap-1 rounded-md border border-border/60 bg-background/70 p-1 backdrop-blur">
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => zoomBy(1.5)}>
+              <Plus className="h-4 w-4" />
+            </Button>
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => zoomBy(1 / 1.5)}>
+              <Minus className="h-4 w-4" />
+            </Button>
+          </div>
+
           {/* Legend */}
           <div className="absolute bottom-3 left-4 flex items-center gap-2 rounded-md border border-border/60 bg-background/70 px-2.5 py-1.5 text-[10px] text-muted-foreground backdrop-blur">
             <span>Low</span>
             <span
-              className="h-2 w-24 rounded-full"
+              className="h-2 w-28 rounded-full"
               style={{
                 background:
-                  "linear-gradient(to right, hsl(210,70%,50%), hsl(150,75%,48%), hsl(60,85%,50%), hsl(18,90%,52%))",
+                  "linear-gradient(to right, hsl(210,75%,48%), hsl(165,70%,45%), hsl(58,90%,52%), hsl(28,92%,54%), hsl(0,80%,52%))",
               }}
             />
             <span>High views</span>
