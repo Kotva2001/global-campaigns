@@ -31,6 +31,7 @@ import { formatCompact, formatCurrency, formatNumber, formatPercent } from "@/li
 import type { CurrencyCode, ExchangeRates } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import type { CampaignEntry, InfluencerRecord } from "@/types/campaign";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 import type { ProductRecord } from "@/types/product";
 
 interface Props {
@@ -87,7 +88,7 @@ const FIELD_TO_COLUMN: Record<EditableNumberField, "views" | "likes" | "comments
 
 const updateCampaign = async (
   campaignId: string,
-  payload: Record<string, unknown>,
+  payload: TablesUpdate<"campaigns">,
   cellKey: string,
   flash: (key: string) => void,
   onChanged?: () => void,
