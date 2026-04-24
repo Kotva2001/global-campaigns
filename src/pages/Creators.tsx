@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ExternalLink, Instagram, Mail, Merge, MoreVertical, PauseCircle, Pencil, PlayCircle, Plus, Trash2, Youtube } from "lucide-react";
 import { toast } from "sonner";
+import { toastError } from "@/lib/toast-helpers";
 import { supabase } from "@/integrations/supabase/client";
 import { CreatorDialog } from "@/components/CreatorDialog";
 import { CampaignDialog } from "@/components/CampaignDialog";
@@ -119,8 +120,8 @@ const Creators = () => {
       supabase.from("influencers").select("*").order("name"),
       supabase.from("campaigns").select("*").order("publish_date", { ascending: false, nullsFirst: false }),
     ]);
-    if (inflError) toast.error(inflError.message);
-    if (campError) toast.error(campError.message);
+    if (inflError) toastError("Could not load creators", inflError);
+    if (campError) toastError("Could not load campaigns", campError);
     const creatorRows = (infl ?? []) as InfluencerRecord[];
     const byId = new Map(creatorRows.map((creator) => [creator.id, creator]));
     setInfluencers(creatorRows);
@@ -172,9 +173,9 @@ const Creators = () => {
     const kept = influencers.find((creator) => creator.id === keepCreatorId);
     const deleted = influencers.find((creator) => creator.id === deleteId);
     const { error: campaignError } = await supabase.from("campaigns").update({ influencer_id: keepCreatorId }).eq("influencer_id", deleteId);
-    if (campaignError) return toast.error(campaignError.message);
+    if (campaignError) return toastError("Could not reassign campaigns", campaignError);
     const { error: deleteError } = await supabase.from("influencers").delete().eq("id", deleteId);
-    if (deleteError) return toast.error(deleteError.message);
+    if (deleteError) return toastError("Could not delete duplicate creator", deleteError);
     toast.success(`Merged ${deleted?.name ?? "creator"} into ${kept?.name ?? "selected creator"}`);
     setMergeOpen(false);
     setSelectedCreators([]);
@@ -185,7 +186,7 @@ const Creators = () => {
   const togglePause = async (creator: InfluencerRecord) => {
     const next = creator.status === "active" ? "paused" : "active";
     const { error } = await supabase.from("influencers").update({ status: next }).eq("id", creator.id);
-    if (error) return toast.error(error.message);
+    if (error) return toastError("Could not update creator", error);
     toast.success(next === "paused" ? "Creator paused" : "Creator resumed");
     void load();
   };
@@ -193,7 +194,7 @@ const Creators = () => {
   const deleteCreator = async () => {
     if (!confirmDelete) return;
     const { error } = await supabase.from("influencers").delete().eq("id", confirmDelete.id);
-    if (error) return toast.error(error.message);
+    if (error) return toastError("Could not delete creator", error);
     toast.success("Creator deleted");
     setConfirmDelete(null);
     setDetailCreator(null);

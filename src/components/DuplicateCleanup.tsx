@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { toastError } from "@/lib/toast-helpers";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -42,7 +43,7 @@ export const DuplicateCleanup = () => {
     ]);
     setLoading(false);
     if (campaignError || influencerError) {
-      toast.error(campaignError?.message ?? influencerError?.message ?? "Could not check duplicates");
+      toastError("Could not check duplicates", campaignError ?? influencerError ?? "");
       return;
     }
     setDuplicateCampaigns(countDuplicateCampaigns((campaigns ?? []) as CampaignRow[]));
@@ -53,7 +54,7 @@ export const DuplicateCleanup = () => {
     setCleaning(true);
     const { data, error } = await (supabase as unknown as { rpc: (fn: string) => Promise<{ data: { removed_campaigns: number; merged_influencers: number }[] | null; error: { message: string } | null }> }).rpc("remove_duplicate_import_data");
     setCleaning(false);
-    if (error) return toast.error(error.message);
+    if (error) return toastError("Could not clean up duplicates", error);
     const result = data?.[0];
     toast.success(`Removed ${result?.removed_campaigns ?? 0} duplicate campaigns`);
     window.dispatchEvent(new Event("campaign-data-changed"));

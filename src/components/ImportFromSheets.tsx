@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { toastError } from "@/lib/toast-helpers";
 import { Loader2, Download, Eye, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { COUNTRIES, COUNTRY_FLAGS } from "@/lib/countries";
@@ -328,7 +329,7 @@ export const ImportFromSheets = () => {
   const onImport = async () => {
     if (!preview) return;
     const { count, error } = await supabase.from("campaigns").select("*", { count: "exact", head: true });
-    if (error) return toast.error(error.message);
+    if (error) return toastError("Import failed", error);
     if ((count ?? 0) > 0) {
       setExistingCount(count ?? 0);
       setConfirmImportOpen(true);

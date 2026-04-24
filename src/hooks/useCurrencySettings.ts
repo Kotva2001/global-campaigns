@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { toastError } from "@/lib/toast-helpers";
 import { supabase } from "@/integrations/supabase/client";
 import { DEFAULT_RATES, type CurrencyCode } from "@/lib/currency";
 
@@ -46,7 +47,7 @@ export const useCurrencySettings = () => {
       ? await supabase.from("scan_settings").update(payload).eq("id", row.id)
       : await supabase.from("scan_settings").insert(payload);
     setLoadingRate(false);
-    if (result.error) return toast.error(result.error.message);
+    if (result.error) return toastError("Could not save currency settings", result.error);
     setEurCzkRate(rate);
     setRateUpdatedAt(new Date().toISOString());
     window.dispatchEvent(new Event("currency-settings-changed"));

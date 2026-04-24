@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Download, Edit3, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { toastError } from "@/lib/toast-helpers";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -86,7 +87,7 @@ const EditableNumber = ({ value, campaignId, field, onChanged }: { value: number
     }
     const payload = field === "views" ? { views: next } : field === "likes" ? { likes: next } : { comments: next };
     const { error } = await supabase.from("campaigns").update(payload).eq("id", campaignId);
-    if (error) return toast.error(error.message);
+    if (error) return toastError("Action failed", error);
     setEditing(false);
     toast.success("Stat updated");
     onChanged?.();
