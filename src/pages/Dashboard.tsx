@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Plus, RefreshCw } from "lucide-react";
-import { MarketSelector } from "@/components/MarketSelector";
+import { EuropeMap } from "@/components/EuropeMap";
 import { KPISummary } from "@/components/KPISummary";
 import { FilterBar } from "@/components/FilterBar";
 import { InfluencerCards } from "@/components/InfluencerCards";
@@ -20,7 +20,6 @@ import {
   computeKPIs,
   type InfluencerSummary,
   summarizeInfluencers,
-  summarizeMarkets,
 } from "@/lib/calculations";
 import { COUNTRY_FLAGS, COUNTRY_NAMES } from "@/lib/countries";
 import type { InfluencerRecord } from "@/types/campaign";
@@ -36,12 +35,6 @@ const Dashboard = () => {
   const filters = useFilters(data);
   const { selectedCountry, filtered } = filters;
 
-  const marketStats = useMemo(() => summarizeMarkets(data), [data]);
-  const totalInfluencers = useMemo(
-    () => new Set(data.filter((r) => r.influencer).map((r) => `${r.country}|${r.influencer}`)).size,
-    [data],
-  );
-  const totalViews = useMemo(() => data.reduce((a, r) => a + (r.views ?? 0), 0), [data]);
   const rates = useMemo(() => ({ EUR_CZK: eurCzkRate }), [eurCzkRate]);
   const kpis = useMemo(() => computeKPIs(filtered, displayCurrency, rates), [displayCurrency, filtered, rates]);
   const influencers = useMemo(() => summarizeInfluencers(filtered, displayCurrency, rates), [displayCurrency, filtered, rates]);
@@ -113,13 +106,12 @@ const Dashboard = () => {
         </div>
       </header>
 
-      <MarketSelector
+      <EuropeMap
+        rows={data}
         selected={selectedCountry}
         onSelect={filters.setSelectedCountry}
-        stats={marketStats}
-        totalInfluencers={totalInfluencers}
-        totalCampaigns={data.length}
-        totalViews={totalViews}
+        displayCurrency={displayCurrency}
+        rates={rates}
       />
 
       {loading && data.length === 0 ? (
