@@ -1,3 +1,4 @@
+import { Eye } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { COUNTRY_FLAGS } from "@/lib/countries";
@@ -14,6 +15,7 @@ interface Props {
 const platformClass = (p: string) => {
   if (p === "YouTube") return "bg-[hsl(var(--platform-youtube)/0.15)] text-[hsl(var(--platform-youtube))]";
   if (p === "Instagram") return "bg-[hsl(var(--platform-instagram)/0.15)] text-[hsl(var(--platform-instagram))]";
+  if (p === "Story") return "bg-[hsl(var(--platform-story)/0.18)] text-[hsl(var(--platform-story))]";
   return "bg-[hsl(var(--platform-shorts)/0.15)] text-[hsl(var(--platform-shorts))]";
 };
 
@@ -60,8 +62,9 @@ export const InfluencerCards = ({ influencers, currency = "CZK", onSelectInfluen
                 {inf.platforms.map((p) => (
                   <span
                     key={p}
-                    className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", platformClass(p))}
+                    className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold", platformClass(p))}
                   >
+                    {p === "Story" && <Eye className="h-3 w-3" />}
                     {p}
                   </span>
                 ))}
