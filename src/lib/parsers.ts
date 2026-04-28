@@ -52,6 +52,7 @@ export const parseRow = (
   return {
     id: `${country}-${rowIndex}`,
     influencerId: null,
+    dealId: null,
     country,
     influencer: c(0),
     campaignName: c(1),
