@@ -443,6 +443,9 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
                             <td className="px-3 py-2.5">
                               <PlatformLinkIcon platform={campaign.platform} url={campaign.videoLink} />
                             </td>
+                            <td className="px-3 py-2.5">
+                              <DealCell campaignId={campaign.id} influencerId={creator.id} dealId={campaign.dealId} onChanged={onChanged} />
+                            </td>
                             <td className="whitespace-nowrap px-3 py-2.5 text-right"><EditableNumberCell value={campaign.views} campaignId={campaign.id} field="views" formatAs="number" flashed={!!flashedCells[`${campaign.id}:views`]} flash={flash} onChanged={onChanged} /></td>
                             <td className="whitespace-nowrap px-3 py-2.5 text-right"><EditableNumberCell value={campaign.likes} campaignId={campaign.id} field="likes" formatAs="number" flashed={!!flashedCells[`${campaign.id}:likes`]} flash={flash} onChanged={onChanged} /></td>
                             <td className="whitespace-nowrap px-3 py-2.5 text-right"><EditableNumberCell value={campaign.comments} campaignId={campaign.id} field="comments" formatAs="number" flashed={!!flashedCells[`${campaign.id}:comments`]} flash={flash} onChanged={onChanged} /></td>
@@ -458,7 +461,7 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
                             </td>
                           </tr>
                         ))}
-                        {!campaigns.length && <tr><td colSpan={13} className="px-3 py-10 text-center text-muted-foreground">No campaigns yet.</td></tr>}
+                        {!campaigns.length && <tr><td colSpan={14} className="px-3 py-10 text-center text-muted-foreground">No campaigns yet.</td></tr>}
                       </tbody>
                     </table>
                   </div>
