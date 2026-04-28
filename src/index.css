@@ -8,65 +8,65 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Dark theme by default — single power-user dashboard */
-    --background: 220 26% 6%;            /* deeper blue-tinted dark (#0B0E14) */
+    /* Synthwave dark theme — deep navy/purple base with neon accents */
+    --background: 240 45% 6%;            /* deep navy/purple #0a0a1a */
     --foreground: 0 0% 98%;
 
-    --card: 222 22% 10%;                 /* glassy slate */
+    --card: 240 40% 12%;                 /* dark with subtle purple tint #12122a */
     --card-foreground: 0 0% 98%;
-    --card-hover: 222 22% 13%;
+    --card-hover: 240 40% 16%;
 
-    --popover: 222 22% 10%;
+    --popover: 240 42% 9%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 160 84% 39%;              /* emerald-500 */
-    --primary-foreground: 0 0% 100%;
-    --primary-glow: 160 84% 50%;
+    --primary: 186 100% 50%;             /* neon cyan #00f0ff */
+    --primary-foreground: 240 45% 6%;
+    --primary-glow: 186 100% 60%;
 
-    --secondary: 222 18% 16%;
+    --secondary: 240 30% 16%;
     --secondary-foreground: 0 0% 98%;
 
-    --muted: 222 18% 15%;
-    --muted-foreground: 220 12% 68%;
+    --muted: 240 30% 14%;
+    --muted-foreground: 240 20% 66%;     /* soft lavender gray #8888aa */
 
-    --accent: 160 84% 39%;
+    --accent: 326 100% 59%;              /* hot pink #ff2d95 */
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;            /* warm coral red (#EF4444) */
-    --destructive-foreground: 0 0% 98%;
+    --tertiary: 273 100% 65%;            /* electric purple #b44dff */
 
-    --success: 142 71% 45%;
-    --warning: 38 92% 50%;
-    --info: 217 91% 60%;
+    --destructive: 348 100% 60%;         /* neon red/coral #ff3366 */
+    --destructive-foreground: 0 0% 100%;
 
-    --platform-youtube: 0 84% 60%;
-    --platform-instagram: 330 81% 60%;
-    --platform-shorts: 217 91% 60%;
-    --platform-story: 280 80% 62%;
-    --collab-barter: 25 95% 53%;
-    --collab-paid: 142 71% 45%;
+    --success: 111 100% 54%;             /* neon green #39ff14 */
+    --warning: 18 100% 58%;              /* neon orange #ff6b2b */
+    --info: 273 100% 65%;
 
-    --border: 220 14% 18%;
-    --input: 222 18% 16%;
-    --ring: 160 84% 39%;
+    --platform-youtube: 348 100% 60%;    /* neon red */
+    --platform-instagram: 326 100% 59%;  /* hot pink */
+    --platform-shorts: 224 100% 65%;     /* electric blue #4d7dff */
+    --platform-story: 273 100% 65%;      /* electric purple */
+    --collab-barter: 18 100% 58%;
+    --collab-paid: 111 80% 50%;
+
+    --border: 240 35% 22%;               /* subtle purple #2a2a4a */
+    --input: 240 30% 16%;
+    --ring: 186 100% 50%;
+
+    /* Neon glow tints (rgba-style with hue/sat/light + alpha when used) */
+    --glow-cyan: 186 100% 50%;
+    --glow-pink: 326 100% 59%;
+    --glow-purple: 273 100% 65%;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 240 50% 5%;    /* darker than main #08081a */
+    --sidebar-foreground: 240 20% 80%;
+    --sidebar-primary: 186 100% 50%;
+    --sidebar-primary-foreground: 240 45% 6%;
+    --sidebar-accent: 240 35% 14%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 240 35% 18%;
+    --sidebar-ring: 186 100% 50%;
   }
 
   .dark {
@@ -119,11 +119,37 @@ All colors MUST be HSL.
     font-feature-settings: "cv11", "ss01", "ss03";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background-color: hsl(var(--background));
+    background-image:
+      linear-gradient(hsl(var(--glow-purple) / 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--glow-purple) / 0.05) 1px, transparent 1px),
+      radial-gradient(ellipse at 50% 0%, hsl(var(--glow-purple) / 0.10), transparent 60%);
+    background-size: 48px 48px, 48px 48px, 100% 100%;
+    background-attachment: fixed;
   }
 
   /* Tabular figures for any numeric content */
   .tabular-nums, .font-bold, .font-semibold {
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Custom thin scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--glow-purple) / 0.4);
+    border-radius: 3px;
+    transition: background 150ms ease;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--glow-purple) / 0.75);
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--glow-purple) / 0.4) transparent;
   }
 }
 
@@ -140,9 +166,37 @@ All colors MUST be HSL.
 
   /* Glass card with subtle inner glow */
   .glass-card {
-    background: linear-gradient(180deg, hsl(var(--card) / 0.85), hsl(var(--card) / 0.65));
-    border: 1px solid hsl(0 0% 100% / 0.06);
+    position: relative;
+    background: linear-gradient(180deg, hsl(var(--card) / 0.92), hsl(var(--card) / 0.72));
+    border: 1px solid hsl(var(--glow-purple) / 0.18);
     backdrop-filter: blur(8px);
+    box-shadow:
+      0 0 0 1px hsl(var(--glow-purple) / 0.04) inset,
+      0 8px 24px -12px hsl(240 60% 2% / 0.7);
+    transition: border-color 200ms ease, box-shadow 200ms ease, transform 150ms ease;
+  }
+  .glass-card:hover {
+    border-color: hsl(var(--glow-cyan) / 0.45);
+    box-shadow:
+      0 0 0 1px hsl(var(--glow-cyan) / 0.10) inset,
+      0 0 24px -4px hsl(var(--glow-cyan) / 0.25),
+      0 12px 32px -12px hsl(240 60% 2% / 0.8);
+  }
+
+  /* KPI cards: faint diagonal circuit-style overlay */
+  .glass-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: repeating-linear-gradient(
+      45deg,
+      hsl(var(--glow-cyan) / 0.03) 0,
+      hsl(var(--glow-cyan) / 0.03) 1px,
+      transparent 1px,
+      transparent 8px
+    );
+    border-radius: inherit;
   }
 
   .lift-hover {
@@ -150,8 +204,11 @@ All colors MUST be HSL.
   }
   .lift-hover:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 30px -12px hsl(220 50% 2% / 0.6), 0 2px 6px -2px hsl(220 50% 2% / 0.4);
-    border-color: hsl(var(--primary) / 0.35);
+    box-shadow:
+      0 0 0 1px hsl(var(--glow-cyan) / 0.20) inset,
+      0 0 28px -4px hsl(var(--glow-cyan) / 0.30),
+      0 12px 30px -12px hsl(240 60% 2% / 0.75);
+    border-color: hsl(var(--glow-cyan) / 0.55);
   }
 
   .section-heading {
@@ -164,6 +221,7 @@ All colors MUST be HSL.
     font-weight: 700;
     letter-spacing: -0.02em;
     line-height: 1.15;
+    text-shadow: 0 0 18px hsl(var(--glow-cyan) / 0.30);
   }
 
   .kpi-number {
@@ -172,6 +230,8 @@ All colors MUST be HSL.
     letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
     line-height: 1.1;
+    color: hsl(var(--primary));
+    text-shadow: 0 0 12px hsl(var(--glow-cyan) / 0.35);
   }
 
   .kpi-label {
@@ -182,12 +242,50 @@ All colors MUST be HSL.
     color: hsl(var(--muted-foreground));
   }
 
+  /* Synthwave grid background utility for content surfaces / map */
+  .synthwave-grid {
+    background-image:
+      linear-gradient(hsl(var(--glow-purple) / 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--glow-purple) / 0.06) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* Gradient text — cyan → pink */
+  .gradient-text {
+    background: linear-gradient(90deg, hsl(var(--glow-cyan)), hsl(var(--glow-pink)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Neon glow helpers per accent */
+  .glow-cyan { box-shadow: 0 0 18px hsl(var(--glow-cyan) / 0.35); }
+  .glow-pink { box-shadow: 0 0 18px hsl(var(--glow-pink) / 0.35); }
+  .glow-purple { box-shadow: 0 0 18px hsl(var(--glow-purple) / 0.35); }
+  .glow-success { box-shadow: 0 0 18px hsl(var(--success) / 0.35); }
+  .glow-destructive { box-shadow: 0 0 18px hsl(var(--destructive) / 0.35); }
+
+  /* Subtle breathing glow for cards/panels (4s cycle) */
+  @keyframes breathe-glow {
+    0%, 100% { box-shadow: 0 0 0 1px hsl(var(--glow-purple) / 0.10) inset, 0 0 18px -8px hsl(var(--glow-purple) / 0.20); }
+    50%      { box-shadow: 0 0 0 1px hsl(var(--glow-cyan) / 0.18) inset,  0 0 26px -6px hsl(var(--glow-cyan) / 0.32); }
+  }
+  .breathe { animation: breathe-glow 4s ease-in-out infinite; }
+
+  /* Cyan flash used by CountUp on completion */
+  @keyframes cyan-flash {
+    0%   { text-shadow: 0 0 12px hsl(var(--glow-cyan) / 0.35); }
+    50%  { text-shadow: 0 0 22px hsl(var(--glow-cyan) / 0.95), 0 0 6px hsl(var(--glow-cyan)); }
+    100% { text-shadow: 0 0 12px hsl(var(--glow-cyan) / 0.35); }
+  }
+  .cyan-flash { animation: cyan-flash 0.6s ease-out; }
+
   /* Skeleton shimmer */
   .shimmer {
     background: linear-gradient(
       90deg,
       hsl(var(--muted) / 0.4) 0%,
-      hsl(var(--muted) / 0.7) 50%,
+      hsl(var(--glow-purple) / 0.25) 50%,
       hsl(var(--muted) / 0.4) 100%
     );
     background-size: 200% 100%;
