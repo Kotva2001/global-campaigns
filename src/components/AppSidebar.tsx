@@ -76,7 +76,7 @@ const useTickerStats = () => {
   useEffect(() => {
     const load = async () => {
       const [{ count: c }, { count: k }] = await Promise.all([
-        supabase.from("creators").select("*", { count: "exact", head: true }),
+        supabase.from("influencers").select("*", { count: "exact", head: true }),
         supabase.from("campaigns").select("*", { count: "exact", head: true }),
       ]);
       setStats({ creators: c ?? 0, campaigns: k ?? 0 });

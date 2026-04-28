@@ -1,0 +1,36 @@
+/**
+ * Open an external URL in a new tab without leaking the referrer.
+ *
+ * Some platforms (notably Instagram) block navigations whose referrer matches
+ * a third-party app domain. Even with rel="noopener noreferrer", certain
+ * browsers still send a referrer on direct anchor clicks. To work around
+ * this, we open about:blank first (which has no referrer), then navigate
+ * that new window to the target URL.
+ */
+export const openExternal = (url: string | null | undefined) => {
+  if (!url) return;
+  const w = window.open("about:blank", "_blank", "noopener,noreferrer");
+  if (w) {
+    try {
+      w.opener = null;
+    } catch {
+      // ignore
+    }
+    w.location.href = url;
+  } else {
+    // Popup blocked — fall back to a same-tab navigation that still strips referrer.
+    window.location.href = url;
+  }
+};
+
+/**
+ * Convenience onClick handler for <a> tags. Prevents the default navigation
+ * (which would send a referrer) and routes through openExternal instead.
+ */
+export const handleExternalClick =
+  (url: string | null | undefined) =>
+  (event: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openExternal(url);
+  };
