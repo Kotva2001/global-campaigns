@@ -402,6 +402,11 @@ const CreatorCard = ({
   }, [campaigns]);
 
   const initial = (creator.name?.trim()?.[0] ?? "?").toUpperCase();
+  const FLAGS: Record<string, string> = {
+    CZ: "🇨🇿", SK: "🇸🇰", HU: "🇭🇺", DE: "🇩🇪", AT: "🇦🇹",
+    NL: "🇳🇱", RO: "🇷🇴", SI: "🇸🇮", IT: "🇮🇹", GR: "🇬🇷", ES: "🇪🇸",
+  };
+  const avatarFlag = FLAGS[creator.country];
 
   return (
     <Card
@@ -427,13 +432,17 @@ const CreatorCard = ({
         {/* Avatar */}
         <div className="relative shrink-0">
           <div
-            className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white transition-all group-hover:animate-pulse"
+            className="flex h-10 w-10 items-center justify-center rounded-full font-bold text-white transition-all group-hover:animate-pulse"
             style={{
               background: `linear-gradient(135deg, ${accentVar}, ${accentVar.replace(")", " / 0.55)").replace("hsl(", "hsla(")})`,
               boxShadow: `0 0 12px ${accentVar.replace(")", " / 0.45)").replace("hsl(", "hsla(")}`,
             }}
           >
-            {initial}
+            {avatarFlag ? (
+              <span style={{ fontSize: "28px", lineHeight: 1 }}>{avatarFlag}</span>
+            ) : (
+              <span className="text-sm">{initial}</span>
+            )}
           </div>
           {/* Merge selection: subtle, only on hover (or when selected) */}
           <div
