@@ -1,6 +1,6 @@
 import { useId } from "react";
 import { Play } from "lucide-react";
-import { copyExternalLinkToClipboard } from "@/lib/external-link-copy";
+import { copyExternalLinkToClipboard, wrapExternalUrl } from "@/lib/external-link-copy";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -63,7 +63,7 @@ export const PlatformLinkIcon = ({ platform, url, className }: Props) => {
 
   return (
     <a
-      href={url}
+      href={wrapExternalUrl(url)}
       target="_blank"
       rel="noopener noreferrer"
       onClick={() => copyExternalLinkToClipboard(url)}
