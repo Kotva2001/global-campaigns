@@ -457,8 +457,8 @@ const CreatorCard = ({
               boxShadow: `0 0 12px ${accentVar.replace(")", " / 0.45)").replace("hsl(", "hsla(")}`,
             }}
           >
-            {avatarFlag ? (
-              <span style={{ fontSize: "28px", lineHeight: 1 }}>{avatarFlag}</span>
+            {FLAG_COMPONENTS[creator.country] ? (
+              <FlagIcon code={creator.country} width={28} height={19} />
             ) : (
               <span className="text-sm">{initial}</span>
             )}
@@ -483,9 +483,9 @@ const CreatorCard = ({
         {/* Identity */}
         <button className="min-w-0 flex-1 text-left">
           <div className="flex items-center gap-2">
-            <span className="text-[24px] leading-none shrink-0" title={creator.country}>
-              {COUNTRY_FLAGS[creator.country] ?? "🏳️"}
-            </span>
+            {FLAG_COMPONENTS[creator.country]
+              ? <FlagIcon code={creator.country} width={24} height={16} />
+              : <span className="text-[24px] leading-none shrink-0">{COUNTRY_FLAGS[creator.country] ?? "🏳️"}</span>}
             <div className="truncate text-base font-bold text-white">{creator.name}</div>
             {recentlyActive && (
               <span
