@@ -83,7 +83,7 @@ const collabBadge = (collab: string) => {
 
 type SavedFlash = string;
 
-const PLATFORM_OPTIONS = ["YouTube", "Instagram", "YB Shorts", "Story", "TikTok", "Other"] as const;
+const PLATFORM_OPTIONS = ["YouTube", "Instagram", "YB Shorts", "Story"] as const;
 const COLLAB_OPTIONS = ["Paid", "Barter", "Hybrid", "Other"] as const;
 
 type EditableNumberField = "views" | "likes" | "comments" | "campaignCost" | "purchaseRevenue";

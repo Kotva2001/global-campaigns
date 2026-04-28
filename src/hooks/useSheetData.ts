@@ -14,9 +14,7 @@ const normalizePlatform = (raw: string | null | undefined): Platform => {
   if (v === "story" || v.includes("storie")) return "Story";
   if (v.includes("short")) return "YB Shorts";
   if (v.includes("insta")) return "Instagram";
-  if (v.includes("tik")) return "TikTok";
-  if (v.includes("you") || v.includes("yt")) return "YouTube";
-  return "Other";
+  return "YouTube";
 };
 
 const num = (v: unknown): number | null => {
