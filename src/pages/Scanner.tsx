@@ -605,7 +605,7 @@ function DetectionQueue({
                         <a
                           href={d.video_url}
                           target="_blank"
-                          rel="noreferrer"
+                          rel="noopener noreferrer"
                           className="block font-semibold hover:underline"
                           style={{
                             display: "-webkit-box",
@@ -669,7 +669,7 @@ function DetectionQueue({
                   <span style={{ color: "hsl(348 100% 60%)" }}>Dismiss</span>
                 </Button>
                 <Button size="sm" asChild className="btn-neon-cyan">
-                  <a href={d.video_url} target="_blank" rel="noreferrer">
+                  <a href={d.video_url} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="h-4 w-4" /> View Original
                   </a>
                 </Button>

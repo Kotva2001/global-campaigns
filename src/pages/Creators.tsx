@@ -649,7 +649,7 @@ const CreatorLinks = ({ creator }: { creator: InfluencerRecord }) => {
             key={handle}
             href={`https://instagram.com/${handle}`}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             onClick={(event) => event.stopPropagation()}
             className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[hsl(var(--glow-cyan)/0.85)] transition-all hover:text-[hsl(var(--glow-cyan))]"
             style={{ background: "hsl(var(--glow-cyan) / 0.08)", border: "1px solid hsl(var(--glow-cyan) / 0.25)" }}
@@ -661,7 +661,7 @@ const CreatorLinks = ({ creator }: { creator: InfluencerRecord }) => {
           <a
             href={creator.youtube_channel_url}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             onClick={(event) => event.stopPropagation()}
             className="inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-[hsl(var(--platform-youtube)/0.95)] transition-all hover:text-[hsl(var(--platform-youtube))]"
             style={{ background: "hsl(var(--platform-youtube) / 0.10)", border: "1px solid hsl(var(--platform-youtube) / 0.35)" }}
