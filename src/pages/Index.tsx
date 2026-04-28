@@ -96,7 +96,7 @@ const Index = () => {
                 resultCount={filtered.length}
               />
 
-              <InfluencerCards influencers={influencers} />
+              <InfluencerCards influencers={influencers} rows={filtered} />
 
               <CampaignCharts rows={filtered} selectedCountry={selectedCountry} />
 
