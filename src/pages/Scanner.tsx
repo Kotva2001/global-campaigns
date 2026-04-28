@@ -401,23 +401,36 @@ function StatusCard({
   onRefreshStats: () => void;
 }) {
   const fmt = (d?: string | null) => (d ? new Date(d).toLocaleString("cs-CZ") : "—");
+  const isActive = status.label === "Active";
+  const isIdle = status.label === "Idle";
+  const dotStyle: React.CSSProperties = isActive
+    ? { background: "hsl(var(--success))", boxShadow: "0 0 14px hsl(var(--success) / 0.85)" }
+    : isIdle
+      ? { background: "hsl(240 18% 55%)", boxShadow: "0 0 6px hsl(240 18% 55% / 0.5)" }
+      : {};
   return (
     <Card>
       <CardContent className="p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">
-            <span className={`inline-block h-4 w-4 rounded-full ${status.color}`} />
+            {isActive || isIdle ? (
+              <span className="inline-block h-4 w-4 animate-pulse rounded-full" style={dotStyle} />
+            ) : (
+              <span className={`inline-block h-4 w-4 rounded-full ${status.color}`} />
+            )}
             <div>
-              <div className="text-xl font-semibold">{status.label}</div>
+              <div className="text-xl font-semibold" style={isActive ? { color: "hsl(var(--success))", textShadow: "0 0 10px hsl(var(--success) / 0.5)" } : undefined}>
+                {status.label}
+              </div>
               <div className="text-sm text-muted-foreground">{status.sub}</div>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button onClick={onRun} disabled={running || refreshing} className="gap-2">
+            <Button onClick={onRun} disabled={running || refreshing} className="btn-neon-cyan gap-2">
               {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
               Run Scan Now
             </Button>
-            <Button onClick={onRefreshStats} disabled={running || refreshing} variant="outline" className="gap-2">
+            <Button onClick={onRefreshStats} disabled={running || refreshing} className="btn-neon-purple gap-2">
               {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               {refreshing && refreshProgress
                 ? `Refreshing stats… ${refreshProgress.done}/${refreshProgress.total} campaigns`
@@ -426,7 +439,7 @@ function StatusCard({
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-5">
+        <div className="mt-6 grid grid-cols-2 divide-x divide-border md:grid-cols-5">
           <Stat label="Last scan" value={fmt(lastScan?.completed_at ?? lastScan?.started_at)} />
           <Stat label="Next scan" value={nextScanAt ? fmt(nextScanAt.toISOString()) : "—"} />
           <Stat label="Videos scanned" value={formatNumber(totals.scanned)} />
@@ -439,9 +452,14 @@ function StatusCard({
 }
 
 const Stat = ({ label, value }: { label: string; value: string }) => (
-  <div>
-    <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
-    <div className="mt-1 font-medium">{value}</div>
+  <div className="px-4 first:pl-0">
+    <div className="kpi-label">{label}</div>
+    <div
+      className="mt-1 text-base font-bold tabular-nums"
+      style={{ color: "hsl(var(--glow-cyan))", textShadow: "0 0 8px hsl(var(--glow-cyan) / 0.35)" }}
+    >
+      {value}
+    </div>
   </div>
 );
 
