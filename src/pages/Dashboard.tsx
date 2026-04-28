@@ -140,7 +140,7 @@ const Dashboard = () => {
             resultCount={filtered.length}
           />
 
-          <InfluencerCards influencers={influencers} currency={displayCurrency} onSelectInfluencer={openInfluencerDetail} />
+          <InfluencerCards influencers={influencers} rows={filtered} currency={displayCurrency} onSelectInfluencer={openInfluencerDetail} />
           <CampaignCharts rows={filtered} selectedCountry={selectedCountry} displayCurrency={displayCurrency} rates={rates} />
           <DataTable
             rows={filtered}
