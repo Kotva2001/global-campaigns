@@ -455,6 +455,9 @@ const CreatorCard = ({
         {/* Identity */}
         <button className="min-w-0 flex-1 text-left">
           <div className="flex items-center gap-2">
+            <span className="text-[24px] leading-none shrink-0" title={creator.country}>
+              {COUNTRY_FLAGS[creator.country] ?? "🏳️"}
+            </span>
             <div className="truncate text-base font-bold text-white">{creator.name}</div>
             {recentlyActive && (
               <span
@@ -473,7 +476,6 @@ const CreatorCard = ({
             )}
           </div>
           <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="text-[18px] leading-none">{COUNTRY_FLAGS[creator.country] ?? "🏳️"}</span>
             <span className="font-medium tracking-wider">{creator.country}</span>
             <span className="text-muted-foreground/40">·</span>
             <span
