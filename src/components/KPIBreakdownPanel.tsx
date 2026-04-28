@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { COUNTRY_FLAGS } from "@/lib/countries";
+import { FlagIcon, hasFlag } from "@/components/FlagIcon";
 import { formatCurrency, formatNumber, formatCompact, formatPercent } from "@/lib/formatters";
 import type { CampaignEntry } from "@/types/campaign";
 import { convertCurrency, type CurrencyCode, type ExchangeRates } from "@/lib/currency";
@@ -247,7 +248,9 @@ export const KPIBreakdownPanel = ({ metric, rows, displayCurrency, rates, onClos
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-base">{COUNTRY_FLAGS[a.country] ?? ""}</span>
+                        {hasFlag(a.country)
+                          ? <FlagIcon code={a.country} width={16} height={11} />
+                          : <span className="text-base">{COUNTRY_FLAGS[a.country] ?? ""}</span>}
                         <span className="truncate text-sm font-semibold text-foreground">{a.influencer}</span>
                       </div>
                       <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
