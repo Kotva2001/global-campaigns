@@ -23,7 +23,7 @@ import { FlagIcon, FLAG_COMPONENTS, hasFlag } from "@/components/FlagIcon";
 import { instagramHandlesFromValue } from "@/lib/instagram";
 import { computeKPIs } from "@/lib/calculations";
 import { formatCompact, formatPercent } from "@/lib/formatters";
-import { copyExternalLinkToClipboard } from "@/lib/external-link-copy";
+import { copyExternalLinkToClipboard, wrapExternalUrl } from "@/lib/external-link-copy";
 import { cn } from "@/lib/utils";
 import type { CampaignEntry, InfluencerRecord, Platform } from "@/types/campaign";
 
@@ -648,7 +648,7 @@ const CreatorLinks = ({ creator }: { creator: InfluencerRecord }) => {
         {handles.map((handle) => (
           <a
             key={handle}
-            href={`https://instagram.com/${handle}`}
+            href={wrapExternalUrl(`https://instagram.com/${handle}`)}
             target="_blank"
             rel="noopener noreferrer"
             onClick={(event) => {
