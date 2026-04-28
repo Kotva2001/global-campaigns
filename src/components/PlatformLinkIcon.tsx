@@ -1,7 +1,6 @@
 import { useId } from "react";
 import { Play } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { handleExternalClick } from "@/lib/external-link";
 
 interface Props {
   platform: string;
@@ -66,7 +65,6 @@ export const PlatformLinkIcon = ({ platform, url, className }: Props) => {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      onClick={handleExternalClick(url)}
       title={`Open on ${label}`}
       aria-label={`Open on ${label}`}
       className={cn("inline-flex h-8 w-8 items-center justify-center opacity-70 transition-opacity hover:opacity-100", className)}
