@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import { formatNumber, formatCompact } from "@/lib/formatters";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { FlagIcon, hasFlag } from "@/components/FlagIcon";
 
 type ScanSettings = {
   id: string;
@@ -399,23 +401,36 @@ function StatusCard({
   onRefreshStats: () => void;
 }) {
   const fmt = (d?: string | null) => (d ? new Date(d).toLocaleString("cs-CZ") : "—");
+  const isActive = status.label === "Active";
+  const isIdle = status.label === "Idle";
+  const dotStyle: React.CSSProperties = isActive
+    ? { background: "hsl(var(--success))", boxShadow: "0 0 14px hsl(var(--success) / 0.85)" }
+    : isIdle
+      ? { background: "hsl(240 18% 55%)", boxShadow: "0 0 6px hsl(240 18% 55% / 0.5)" }
+      : {};
   return (
     <Card>
       <CardContent className="p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">
-            <span className={`inline-block h-4 w-4 rounded-full ${status.color}`} />
+            {isActive || isIdle ? (
+              <span className="inline-block h-4 w-4 animate-pulse rounded-full" style={dotStyle} />
+            ) : (
+              <span className={`inline-block h-4 w-4 rounded-full ${status.color}`} />
+            )}
             <div>
-              <div className="text-xl font-semibold">{status.label}</div>
+              <div className="text-xl font-semibold" style={isActive ? { color: "hsl(var(--success))", textShadow: "0 0 10px hsl(var(--success) / 0.5)" } : undefined}>
+                {status.label}
+              </div>
               <div className="text-sm text-muted-foreground">{status.sub}</div>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button onClick={onRun} disabled={running || refreshing} className="gap-2">
+            <Button onClick={onRun} disabled={running || refreshing} className="btn-neon-cyan gap-2">
               {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
               Run Scan Now
             </Button>
-            <Button onClick={onRefreshStats} disabled={running || refreshing} variant="outline" className="gap-2">
+            <Button onClick={onRefreshStats} disabled={running || refreshing} className="btn-neon-purple gap-2">
               {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               {refreshing && refreshProgress
                 ? `Refreshing stats… ${refreshProgress.done}/${refreshProgress.total} campaigns`
@@ -424,7 +439,7 @@ function StatusCard({
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-5">
+        <div className="mt-6 grid grid-cols-2 divide-x divide-border md:grid-cols-5">
           <Stat label="Last scan" value={fmt(lastScan?.completed_at ?? lastScan?.started_at)} />
           <Stat label="Next scan" value={nextScanAt ? fmt(nextScanAt.toISOString()) : "—"} />
           <Stat label="Videos scanned" value={formatNumber(totals.scanned)} />
@@ -437,9 +452,14 @@ function StatusCard({
 }
 
 const Stat = ({ label, value }: { label: string; value: string }) => (
-  <div>
-    <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
-    <div className="mt-1 font-medium">{value}</div>
+  <div className="px-4 first:pl-0">
+    <div className="kpi-label">{label}</div>
+    <div
+      className="mt-1 text-base font-bold tabular-nums"
+      style={{ color: "hsl(var(--glow-cyan))", textShadow: "0 0 8px hsl(var(--glow-cyan) / 0.35)" }}
+    >
+      {value}
+    </div>
   </div>
 );
 
@@ -461,8 +481,20 @@ const similarity = (a: string, b: string) => {
 
 const MatchBadge = ({ label }: { label: string }) => {
   const lower = label.toLowerCase();
-  if (lower.includes("tag") || lower.includes("hashtag")) return <Badge className="bg-info/15 text-info hover:bg-info/20">Hashtag: #{label.replace(/^#/, "")}</Badge>;
-  if (lower.includes("description") || lower.includes("caption") || lower.includes("title")) return <Badge className="bg-success/15 text-success hover:bg-success/20">Keyword: regals</Badge>;
+  if (lower.includes("tag") || lower.includes("hashtag")) {
+    return (
+      <Badge className="border bg-[hsl(var(--glow-cyan)/0.15)] text-[hsl(var(--glow-cyan))] border-[hsl(var(--glow-cyan)/0.5)] hover:bg-[hsl(var(--glow-cyan)/0.22)]">
+        Hashtag: #{label.replace(/^#/, "")}
+      </Badge>
+    );
+  }
+  if (lower.includes("description") || lower.includes("caption") || lower.includes("title")) {
+    return (
+      <Badge className="border bg-[hsl(var(--success)/0.15)] text-[hsl(var(--success))] border-[hsl(var(--success)/0.5)] hover:bg-[hsl(var(--success)/0.22)]">
+        Keyword: regals
+      </Badge>
+    );
+  }
   return <Badge variant="outline">{label}</Badge>;
 };
 
@@ -475,6 +507,7 @@ function DetectionQueue({
   onChange: () => void;
 }) {
   const [approve, setApprove] = useState<DetectedVideo | null>(null);
+  const [platformFilter, setPlatformFilter] = useState<"all" | "youtube" | "instagram">("all");
   const matchInfluencer = (d: DetectedVideo): Influencer | undefined => {
     if (d.influencer_id) return influencers.find((i) => i.id === d.influencer_id);
     if (d.channel_id) return influencers.find((i) => i.youtube_channel_id === d.channel_id);
@@ -486,76 +519,152 @@ function DetectionQueue({
     if (error) toastError("Could not dismiss detection", error); else { toast.success("Dismissed"); onChange(); }
   };
 
+  const filtered = detections.filter((d) => {
+    if (platformFilter === "all") return true;
+    const p = d.platform.toLowerCase();
+    if (platformFilter === "youtube") return p.includes("you");
+    if (platformFilter === "instagram") return p.includes("insta");
+    return true;
+  });
+
+  const FilterPill = ({ value, label }: { value: typeof platformFilter; label: string }) => (
+    <button
+      type="button"
+      onClick={() => setPlatformFilter(value)}
+      className={`rounded-full border px-3 py-1 text-xs font-medium transition-all ${
+        platformFilter === value
+          ? "border-[hsl(var(--glow-cyan))] bg-[hsl(var(--glow-cyan)/0.15)] text-[hsl(var(--glow-cyan))] shadow-[0_0_10px_hsl(var(--glow-cyan)/0.4)]"
+          : "border-border text-muted-foreground hover:text-foreground hover:border-[hsl(var(--glow-cyan)/0.4)]"
+      }`}
+    >
+      {label}
+    </button>
+  );
+
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0">
-        <CardTitle className="flex items-center gap-2">
-          Pending Detections
-          <Badge variant="secondary">{detections.length}</Badge>
-        </CardTitle>
+        <div className="flex items-center gap-3">
+          <CardTitle className="flex items-center gap-2">
+            Pending Detections
+            <span
+              className="inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-[hsl(var(--glow-pink))] px-2 text-xs font-bold text-white"
+              style={{ boxShadow: "0 0 12px hsl(var(--glow-pink) / 0.7)" }}
+            >
+              {detections.length}
+            </span>
+          </CardTitle>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <FilterPill value="all" label="All" />
+          <FilterPill value="instagram" label="Instagram" />
+          <FilterPill value="youtube" label="YouTube" />
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        {detections.length === 0 && (
+        {filtered.length === 0 && (
           <div className="py-12 text-center text-sm text-muted-foreground">No pending detections.</div>
         )}
-        {detections.map((d) => {
+        {filtered.map((d) => {
           const matched = matchInfluencer(d);
-          const PlatIcon = d.platform.toLowerCase().includes("you") ? Youtube : Instagram;
-          const platColor = d.platform.toLowerCase().includes("you") ? "text-destructive" : "text-primary";
-          const previous = detections[detections.indexOf(d) - 1];
+          const isYouTube = d.platform.toLowerCase().includes("you");
+          const PlatIcon = isYouTube ? Youtube : Instagram;
+          const platHsl = isYouTube ? "var(--platform-youtube)" : "var(--platform-instagram)";
+          const previous = filtered[filtered.indexOf(d) - 1];
           const similar = previous?.video_title && d.video_title ? similarity(previous.video_title, d.video_title) > 0.8 : false;
           return (
-            <div key={d.id} className="rounded-lg border p-4">
+            <div
+              key={d.id}
+              className="rounded-lg border p-4 transition-all hover:border-[hsl(var(--glow-cyan)/0.4)]"
+              style={{
+                borderLeft: `4px solid hsl(${platHsl})`,
+                background: `linear-gradient(90deg, hsl(${platHsl} / 0.08) 0%, hsl(${platHsl} / 0.02) 30%, transparent 70%)`,
+              }}
+            >
               <div className="flex flex-col gap-4 md:flex-row">
                 <div className="flex items-start gap-3">
-                  <PlatIcon className={`h-6 w-6 shrink-0 ${platColor}`} />
+                  <div
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                    style={{
+                      background: `hsl(${platHsl} / 0.18)`,
+                      border: `1px solid hsl(${platHsl} / 0.55)`,
+                      boxShadow: `0 0 12px hsl(${platHsl} / 0.4)`,
+                    }}
+                  >
+                    <PlatIcon className="h-5 w-5" style={{ color: `hsl(${platHsl})` }} />
+                  </div>
                   {d.thumbnail_url && (
                     <img src={d.thumbnail_url} alt="" className="h-20 w-32 shrink-0 rounded object-cover" />
                   )}
                 </div>
 
                 <div className="flex-1 space-y-2">
-                  <a href={d.video_url} target="_blank" rel="noreferrer" className="block font-semibold hover:underline">
-                    {d.video_title ?? d.video_url}
-                  </a>
-                  <div className="text-sm text-muted-foreground">
-                    {d.channel_name ?? "Unknown channel"} ·{" "}
-                    {d.published_at ? new Date(d.published_at).toLocaleDateString("cs-CZ") : "—"}
+                  <TooltipProvider delayDuration={300}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <a
+                          href={d.video_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block font-semibold hover:underline"
+                          style={{
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {d.video_title ?? d.video_url}
+                        </a>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-md">
+                        {d.video_title ?? d.video_url}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <div className="flex items-center gap-2 text-[15px] text-muted-foreground">
+                    {matched && hasFlag(matched.country) && (
+                      <FlagIcon code={matched.country} width={18} height={12} />
+                    )}
+                    <span className="font-medium text-foreground/80">{d.channel_name ?? "Unknown channel"}</span>
+                    <span>·</span>
+                    <span>{d.published_at ? new Date(d.published_at).toLocaleDateString("cs-CZ") : "—"}</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {(d.mention_locations ?? []).map((m) => (
                       <MatchBadge key={m} label={m} />
                     ))}
                     {matched ? (
-                      <Badge className="bg-primary/15 text-primary hover:bg-primary/20">Creator: {matched.name}</Badge>
+                      <Badge className="border bg-[hsl(var(--tertiary)/0.15)] text-[hsl(var(--tertiary))] border-[hsl(var(--tertiary)/0.55)] hover:bg-[hsl(var(--tertiary)/0.22)]">
+                        Creator: {matched.name}
+                      </Badge>
                     ) : (
-                      <Badge className="bg-warning/15 text-warning hover:bg-warning/20">Unknown Creator</Badge>
+                      <Badge className="border bg-[hsl(var(--warning)/0.15)] text-[hsl(var(--warning))] border-[hsl(var(--warning)/0.55)] hover:bg-[hsl(var(--warning)/0.22)]">
+                        Unknown Creator
+                      </Badge>
                     )}
                     {similar && <Badge variant="outline" className="text-muted-foreground">Similar to above</Badge>}
                   </div>
                 </div>
 
-                <div className="flex flex-col items-end gap-1 text-xs text-muted-foreground">
-                  <div>👁 {formatCompact(d.views)}</div>
-                  <div>👍 {formatCompact(d.likes)}</div>
-                  <div>💬 {formatCompact(d.comments)}</div>
-                </div>
+                <DetectionStats views={d.views} likes={d.likes} comments={d.comments} />
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
                 <Button size="sm" onClick={() => setApprove(d)} className="btn-neon-green">
                   <CheckCircle2 className="h-4 w-4" /> Approve & Add
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => dismiss(d.id)} className="text-muted-foreground hover:text-foreground">
+                <Button size="sm" onClick={() => dismiss(d.id)} className="btn-neon-red">
                   <X className="h-4 w-4" /> Dismiss
                 </Button>
-                <Button size="sm" variant="outline" asChild>
+                <Button size="sm" asChild className="btn-neon-cyan">
                   <a href={d.video_url} target="_blank" rel="noreferrer">
                     <ExternalLink className="h-4 w-4" /> View Original
                   </a>
                 </Button>
                 {!matched && (
-                  <Button size="sm" variant="outline" asChild>
+                  <Button size="sm" asChild className="btn-neon-purple">
                     <a href="/creators"><Plus className="h-4 w-4" /> Add to Roster</a>
                   </Button>
                 )}
@@ -575,6 +684,31 @@ function DetectionQueue({
     </Card>
   );
 }
+
+const DetectionStats = ({ views, likes, comments }: { views: number | null; likes: number | null; comments: number | null }) => {
+  const v = views ?? 0;
+  const l = likes ?? 0;
+  const c = comments ?? 0;
+  if (v === 0 && l === 0 && c === 0) {
+    return <div className="flex items-start text-xs italic text-muted-foreground/60">No stats</div>;
+  }
+  return (
+    <div className="flex flex-col items-end gap-1.5 text-sm font-semibold tabular-nums">
+      <div className="flex items-center gap-1.5" style={{ color: "hsl(var(--glow-cyan))" }} title="Views">
+        <Eye className="h-4 w-4" />
+        <span>{formatCompact(v)}</span>
+      </div>
+      <div className="flex items-center gap-1.5" style={{ color: "hsl(var(--warning))" }} title="Likes">
+        <span className="text-base leading-none">🔥</span>
+        <span>{formatCompact(l)}</span>
+      </div>
+      <div className="flex items-center gap-1.5" style={{ color: "hsl(var(--glow-pink))" }} title="Comments">
+        <span className="text-base leading-none">💬</span>
+        <span>{formatCompact(c)}</span>
+      </div>
+    </div>
+  );
+};
 
 function ApproveDialog({
   open, detection, matched, onClose, onSaved,
@@ -738,13 +872,16 @@ function SettingsForm({ settings, onSaved }: { settings: ScanSettings; onSaved: 
 
   return (
     <Card>
-      <CardHeader><CardTitle>Scan Settings</CardTitle></CardHeader>
+      <CardHeader><CardTitle className="section-heading text-base">Scan Settings</CardTitle></CardHeader>
       <CardContent className="space-y-6">
         <div>
-          <Label>Brand keywords</Label>
+          <Label className="section-heading">Brand keywords</Label>
           <div className="mt-2 flex flex-wrap gap-2">
             {keywords.map((k) => (
-              <Badge key={k} variant="secondary" className="gap-1">
+              <Badge
+                key={k}
+                className="gap-1 border bg-[hsl(var(--success)/0.15)] text-[hsl(var(--success))] border-[hsl(var(--success)/0.5)] hover:bg-[hsl(var(--success)/0.22)]"
+              >
                 {k}
                 <button type="button" onClick={() => setKeywords(keywords.filter((x) => x !== k))}>
                   <X className="h-3 w-3" />
@@ -754,6 +891,7 @@ function SettingsForm({ settings, onSaved }: { settings: ScanSettings; onSaved: 
           </div>
           <div className="mt-2 flex gap-2">
             <Input
+              className="input-neon"
               value={kwInput}
               onChange={(e) => setKwInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addKw())}
@@ -765,9 +903,10 @@ function SettingsForm({ settings, onSaved }: { settings: ScanSettings; onSaved: 
         </div>
 
         <div>
-          <Label>YouTube API key</Label>
+          <Label className="section-heading">YouTube API key</Label>
           <div className="mt-2 flex gap-2">
             <Input
+              className="input-neon"
               type={showKey ? "text" : "password"}
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
@@ -785,7 +924,7 @@ function SettingsForm({ settings, onSaved }: { settings: ScanSettings; onSaved: 
 
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <Label>Scan frequency</Label>
+            <Label className="section-heading">Scan frequency</Label>
             <Select value={String(freq)} onValueChange={(v) => setFreq(Number(v))}>
               <SelectTrigger className="mt-2"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -796,7 +935,7 @@ function SettingsForm({ settings, onSaved }: { settings: ScanSettings; onSaved: 
             </Select>
           </div>
           <div>
-            <Label>Stats refresh frequency</Label>
+            <Label className="section-heading">Stats refresh frequency</Label>
             <Select value={String(statsFreq)} onValueChange={(v) => setStatsFreq(Number(v))}>
               <SelectTrigger className="mt-2"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -809,7 +948,7 @@ function SettingsForm({ settings, onSaved }: { settings: ScanSettings; onSaved: 
         </div>
 
         <div>
-          <Label>Platforms to scan</Label>
+          <Label className="section-heading">Platforms to scan</Label>
           <div className="mt-2 flex gap-6">
             {["YouTube", "Instagram"].map((p) => (
               <label key={p} className="flex items-center gap-2 text-sm">
@@ -836,7 +975,7 @@ function SettingsForm({ settings, onSaved }: { settings: ScanSettings; onSaved: 
         </div>
 
         <div className="flex justify-end">
-          <Button onClick={save} disabled={saving}>
+          <Button onClick={save} disabled={saving} className="btn-neon-cyan gap-2">
             {saving && <Loader2 className="h-4 w-4 animate-spin" />} Save Settings
           </Button>
         </div>
