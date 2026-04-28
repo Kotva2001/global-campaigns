@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, Edit3, Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, Edit3, Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { toastError } from "@/lib/toast-helpers";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,6 +35,7 @@ import type { TablesUpdate } from "@/integrations/supabase/types";
 import type { ProductRecord } from "@/types/product";
 import { DealsSection } from "@/components/DealsSection";
 import { DealCell } from "@/components/DealCell";
+import { QuickStoryDialog } from "@/components/QuickStoryDialog";
 
 interface Props {
   creator: InfluencerRecord | null;
@@ -55,6 +56,13 @@ const STATUS_META = {
 };
 
 const platformBadge = (platform: string) => {
+  if (platform === "Story") {
+    return (
+      <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold", "bg-[hsl(var(--platform-story)/0.18)] text-[hsl(var(--platform-story))]")}>
+        <Eye className="h-3 w-3" /> Story
+      </span>
+    );
+  }
   const cls = platform === "YouTube"
     ? "bg-[hsl(var(--platform-youtube)/0.15)] text-[hsl(var(--platform-youtube))]"
     : platform === "Instagram"
@@ -75,7 +83,7 @@ const collabBadge = (collab: string) => {
 
 type SavedFlash = string;
 
-const PLATFORM_OPTIONS = ["YouTube", "Instagram", "YB Shorts", "TikTok", "Other"] as const;
+const PLATFORM_OPTIONS = ["YouTube", "Instagram", "YB Shorts", "Story", "TikTok", "Other"] as const;
 const COLLAB_OPTIONS = ["Paid", "Barter", "Hybrid", "Other"] as const;
 
 type EditableNumberField = "views" | "likes" | "comments" | "campaignCost" | "purchaseRevenue";
@@ -323,6 +331,7 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
   const [deleteCampaign, setDeleteCampaign] = useState<CampaignEntry | null>(null);
   const [products, setProducts] = useState<ProductRecord[]>([]);
   const [flashedCells, setFlashedCells] = useState<Record<string, number>>({});
+  const [storyOpen, setStoryOpen] = useState(false);
 
   useEffect(() => {
     if (!creator) return;
@@ -469,12 +478,27 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
               </div>
 
               <div className="border-t border-border px-6 py-4">
-                <Button className="gap-2" onClick={onAddCampaign}><Plus className="h-4 w-4" /> Add Campaign</Button>
+                <div className="flex items-center gap-2">
+                  <Button className="gap-2" onClick={onAddCampaign}><Plus className="h-4 w-4" /> Add Campaign</Button>
+                  <Button variant="secondary" className="gap-2" onClick={() => setStoryOpen(true)}>
+                    <Eye className="h-4 w-4 text-[hsl(var(--platform-story))]" /> Quick Log Story
+                  </Button>
+                </div>
               </div>
             </>
           )}
         </SheetContent>
       </Sheet>
+
+      {creator && (
+        <QuickStoryDialog
+          open={storyOpen}
+          onOpenChange={setStoryOpen}
+          influencerId={creator.id}
+          influencerName={creator.name}
+          onSaved={() => { onChanged?.(); }}
+        />
+      )}
 
       <AlertDialog open={!!deleteCampaign} onOpenChange={(open) => !open && setDeleteCampaign(null)}>
         <AlertDialogContent>

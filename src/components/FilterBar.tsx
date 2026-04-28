@@ -14,7 +14,7 @@ interface Props {
   resultCount: number;
 }
 
-const PLATFORMS: PlatformFilter[] = ["All", "YouTube", "Instagram", "YB Shorts"];
+const PLATFORMS: PlatformFilter[] = ["All", "YouTube", "Instagram", "YB Shorts", "Story"];
 
 export const FilterBar = ({
   search,

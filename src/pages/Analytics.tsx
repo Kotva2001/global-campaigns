@@ -48,7 +48,7 @@ interface InfluencerLookupRow {
 interface Row {
   id: string;
   campaign: string;
-  platform: "YouTube" | "Instagram" | "YB Shorts";
+  platform: "YouTube" | "Instagram" | "YB Shorts" | "Story";
   date: Date | null;
   dateIso: string | null;
   cost: number;
@@ -64,6 +64,7 @@ const PLATFORM_COLOR: Record<Row["platform"], string> = {
   YouTube: "hsl(var(--platform-youtube))",
   Instagram: "hsl(var(--platform-instagram))",
   "YB Shorts": "hsl(var(--platform-shorts))",
+  Story: "hsl(var(--platform-story))",
 };
 
 const COUNTRY_COLORS = [
@@ -80,6 +81,7 @@ const num = (v: unknown): number => {
 
 const normalizePlatform = (p: string): Row["platform"] => {
   const v = p.toLowerCase();
+  if (v === "story" || v.includes("storie")) return "Story";
   if (v.includes("short")) return "YB Shorts";
   if (v.includes("insta")) return "Instagram";
   return "YouTube";
@@ -222,7 +224,7 @@ const Analytics = () => {
 
   // Chart 3: Platform split
   const platformSplit = useMemo(() => {
-    const counts: Record<Row["platform"], number> = { YouTube: 0, Instagram: 0, "YB Shorts": 0 };
+    const counts: Record<Row["platform"], number> = { YouTube: 0, Instagram: 0, "YB Shorts": 0, Story: 0 };
     for (const r of filtered) counts[r.platform] += 1;
     return (Object.keys(counts) as Row["platform"][])
       .map((p) => ({ name: p, value: counts[p], color: PLATFORM_COLOR[p] }))
@@ -291,6 +293,7 @@ const Analytics = () => {
               <SelectItem value="YouTube">YouTube</SelectItem>
               <SelectItem value="Instagram">Instagram</SelectItem>
               <SelectItem value="YB Shorts">YB Shorts</SelectItem>
+              <SelectItem value="Story">Story</SelectItem>
             </SelectContent>
           </Select>
           {(from || to || country !== "All" || platform !== "All") && (

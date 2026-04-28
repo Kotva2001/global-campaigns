@@ -8,7 +8,7 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Download, Edit3, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Download, Edit3, Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { toastError } from "@/lib/toast-helpers";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,6 +39,13 @@ interface Props {
 const COLLAB_TYPES = ["Barter", "Paid", "Gifted", "Affiliate", "Other"];
 
 const platformBadge = (platform: string) => {
+  if (platform === "Story") {
+    return (
+      <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold", "bg-[hsl(var(--platform-story)/0.18)] text-[hsl(var(--platform-story))]")}>
+        <Eye className="h-3 w-3" /> Story
+      </span>
+    );
+  }
   const cls = platform === "YouTube"
     ? "bg-[hsl(var(--platform-youtube)/0.15)] text-[hsl(var(--platform-youtube))]"
     : platform === "Instagram"
