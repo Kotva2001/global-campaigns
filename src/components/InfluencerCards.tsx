@@ -1,4 +1,4 @@
-import { Eye, Sparkles } from "lucide-react";
+import { ArrowRight, Eye, Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { COUNTRY_FLAGS } from "@/lib/countries";
@@ -18,6 +18,20 @@ const platformClass = (p: string) => {
   if (p === "Instagram") return "bg-[hsl(var(--platform-instagram)/0.15)] text-[hsl(var(--platform-instagram))] badge-glow-instagram";
   if (p === "Story") return "bg-[hsl(var(--platform-story)/0.18)] text-[hsl(var(--platform-story))] badge-glow-story";
   return "bg-[hsl(var(--platform-shorts)/0.15)] text-[hsl(var(--platform-shorts))] badge-glow-shorts";
+};
+
+const platformHsl = (platform: string) => {
+  if (platform === "YouTube") return "var(--platform-youtube)";
+  if (platform === "Instagram") return "var(--platform-instagram)";
+  if (platform === "Story") return "var(--platform-story)";
+  return "var(--platform-shorts)";
+};
+
+const rankColor = (rank: number) => {
+  if (rank === 1) return "hsl(51 100% 50%)";
+  if (rank === 2) return "hsl(0 0% 75%)";
+  if (rank === 3) return "hsl(30 61% 50%)";
+  return "hsl(var(--glow-cyan) / 0.75)";
 };
 
 export const InfluencerCards = ({ influencers, currency = "CZK", onSelectInfluencer }: Props) => {
