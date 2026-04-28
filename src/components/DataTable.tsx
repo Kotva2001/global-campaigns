@@ -27,6 +27,7 @@ import { COUNTRY_FLAGS } from "@/lib/countries";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { CampaignEntry } from "@/types/campaign";
+import { recalcDealSplit } from "@/lib/deals";
 
 interface Props {
   rows: CampaignEntry[];
@@ -131,16 +132,20 @@ export const DataTable = ({ rows, onChanged, onAddCampaign, onEditCampaign }: Pr
 
   const deleteOne = async () => {
     if (!deleteCampaign) return;
+    const dealId = deleteCampaign.dealId;
     const { error } = await supabase.from("campaigns").delete().eq("id", deleteCampaign.id);
     if (error) return toast.error(error.message);
+    if (dealId) await recalcDealSplit(dealId);
     toast.success("Campaign deleted");
     setDeleteCampaign(null);
     onChanged?.();
   };
 
   const deleteSelected = async () => {
+    const affectedDealIds = Array.from(new Set(selectedRows.map((r) => r.dealId).filter(Boolean) as string[]));
     const { error } = await supabase.from("campaigns").delete().in("id", selectedIds);
     if (error) return toast.error(error.message);
+    await Promise.all(affectedDealIds.map((id) => recalcDealSplit(id)));
     toast.success(`Deleted ${selectedIds.length} campaigns`);
     setSelected({});
     setBulkDeleteOpen(false);
