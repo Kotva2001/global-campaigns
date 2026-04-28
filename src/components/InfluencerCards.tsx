@@ -1,4 +1,4 @@
-import { Eye } from "lucide-react";
+import { Eye, Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { COUNTRY_FLAGS } from "@/lib/countries";
@@ -54,6 +54,15 @@ export const InfluencerCards = ({ influencers, currency = "CZK", onSelectInfluen
                     <span>{inf.country}</span>
                     <span>·</span>
                     <span>{inf.campaigns} campaign{inf.campaigns === 1 ? "" : "s"}</span>
+                    {inf.stories > 0 && (
+                      <>
+                        <span>·</span>
+                        <span className="inline-flex items-center gap-0.5 text-[hsl(var(--platform-story))]">
+                          <Sparkles className="h-3 w-3" />
+                          {inf.stories} {inf.stories === 1 ? "story" : "stories"}
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

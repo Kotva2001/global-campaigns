@@ -390,8 +390,9 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
               </SheetHeader>
 
               <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-                <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
-                  <Stat label="Campaigns" value={String(campaigns.length)} />
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-7">
+                  <Stat label="Campaigns" value={String(kpis.campaigns)} />
+                  <Stat label="Stories" value={String(kpis.stories)} valueClass="text-[hsl(var(--platform-story))]" />
                   <Stat label="Views" value={formatCompact(kpis.totalViews)} />
                   <Stat label="Spend" value={formatCurrency(kpis.totalSpend, displayCurrency)} />
                   <Stat label="Revenue" value={formatCurrency(kpis.totalRevenue, displayCurrency)} valueClass={kpis.totalRevenue > 0 ? "text-success" : undefined} />
