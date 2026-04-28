@@ -5,11 +5,13 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { COUNTRY_FLAGS } from "@/lib/countries";
 import { FlagIcon, hasFlag } from "@/components/FlagIcon";
 import type { InfluencerSummary } from "@/lib/calculations";
+import type { CampaignEntry } from "@/types/campaign";
 import { formatCompact, formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
 interface Props {
   influencers: InfluencerSummary[];
+  rows?: CampaignEntry[];
   currency?: string;
   onSelectInfluencer?: (influencer: InfluencerSummary) => void;
 }
@@ -35,7 +37,7 @@ const rankColor = (rank: number) => {
   return "hsl(var(--glow-cyan) / 0.75)";
 };
 
-export const InfluencerCards = ({ influencers, currency = "CZK", onSelectInfluencer }: Props) => {
+export const InfluencerCards = ({ influencers, rows = [], currency = "CZK", onSelectInfluencer }: Props) => {
   if (!influencers.length) {
     return (
       <div className="px-6 pt-6">
@@ -59,7 +61,10 @@ export const InfluencerCards = ({ influencers, currency = "CZK", onSelectInfluen
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {visibleInfluencers.map((inf, index) => {
           const roiPos = (inf.roi ?? 0) >= 0;
-          const platformColor = platformHsl(inf.topPlatform);
+          const influencerRows = rows.filter((row) => row.country === inf.country && row.influencer === inf.influencer);
+          const topPlatform = topPlatformFor(influencerRows, inf.platforms);
+          const viewTrend = viewTrendFor(influencerRows, inf.totalViews, inf.campaigns);
+          const platformColor = platformHsl(topPlatform);
           const hasNoData = inf.totalViews === 0 && inf.campaigns === 0;
           const revenueDirection = inf.totalRevenue > inf.totalSpend ? "success" : inf.totalRevenue < inf.totalSpend ? "pink" : "muted";
           const viewShare = Math.max(4, Math.round((inf.totalViews / maxViews) * 100));
@@ -124,7 +129,7 @@ export const InfluencerCards = ({ influencers, currency = "CZK", onSelectInfluen
                         {formatCompact(inf.totalViews)}
                       </div>
                     </div>
-                    <Sparkline values={inf.viewTrend} color="hsl(var(--glow-cyan))" />
+                    <Sparkline values={viewTrend} color="hsl(var(--glow-cyan))" />
                   </div>
 
                   <div className="flex items-center justify-between gap-2">
