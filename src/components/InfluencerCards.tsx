@@ -203,5 +203,28 @@ const Stat = ({ label, value, valueClass }: { label: string; value: string; valu
   </div>
 );
 
+const Sparkline = ({ values, color }: { values: number[]; color: string }) => {
+  const points = values.length ? values : [0, 0];
+  const min = Math.min(...points);
+  const max = Math.max(...points);
+  const range = Math.max(max - min, 1);
+  const width = 40;
+  const height = 18;
+  const path = points
+    .map((value, index) => {
+      const x = points.length === 1 ? width / 2 : (index / (points.length - 1)) * width;
+      const y = height - ((value - min) / range) * (height - 4) - 2;
+      return `${index === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`;
+    })
+    .join(" ");
+
+  return (
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="shrink-0 overflow-visible" aria-hidden="true">
+      <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={path} fill="none" stroke={color} strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" opacity="0.18" />
+    </svg>
+  );
+};
+
 // expose unused re-export for ts
 export { formatNumber };
