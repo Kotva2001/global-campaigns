@@ -23,6 +23,7 @@ import { FlagIcon, FLAG_COMPONENTS, hasFlag } from "@/components/FlagIcon";
 import { instagramHandlesFromValue } from "@/lib/instagram";
 import { computeKPIs } from "@/lib/calculations";
 import { formatCompact, formatPercent } from "@/lib/formatters";
+import { openExternal } from "@/lib/external-link";
 import { cn } from "@/lib/utils";
 import type { CampaignEntry, InfluencerRecord, Platform } from "@/types/campaign";
 
