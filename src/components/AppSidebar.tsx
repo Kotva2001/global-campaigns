@@ -66,29 +66,74 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
 
   return (
     <div
-      className="relative flex h-full w-full flex-col bg-sidebar text-foreground"
+      className="relative flex h-full w-full flex-col text-foreground"
       style={{
-        backgroundImage:
-          "linear-gradient(180deg, transparent, hsl(var(--glow-purple) / 0.08))",
+        background:
+          "linear-gradient(180deg, rgba(0,240,255,0.03) 0%, transparent 40%, rgba(180,50,255,0.05) 100%), #06061a",
       }}
     >
+      {/* Vertical line texture */}
       <div
-        className="px-4 py-5"
-        style={{ borderBottom: "1px solid hsl(var(--glow-purple) / 0.20)" }}
-      >
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0 1px, transparent 1px 30px)",
+        }}
+      />
+      {/* Right edge gradient border */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute right-0 top-0 h-full w-px"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(0,240,255,0.15), rgba(180,77,255,0.15))",
+        }}
+      />
+
+      <div className="relative px-4 py-5">
         <div className="flex items-center gap-3">
           <span className="relative flex h-2.5 w-2.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[hsl(var(--glow-cyan))] opacity-60" />
-            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[hsl(var(--glow-cyan))] shadow-[0_0_8px_hsl(var(--glow-cyan)/0.8)]" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#00f0ff] opacity-60" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#00f0ff] shadow-[0_0_10px_#00f0ff]" />
           </span>
           <div className="min-w-0">
-            <div className="gradient-text truncate text-sm font-bold tracking-tight">Influencer ROI Tracker</div>
-            <div className="truncate text-[11px] font-medium text-[hsl(var(--glow-cyan))]">regals.cz</div>
+            <div
+              className="truncate font-bold tracking-tight"
+              style={{
+                fontSize: "16px",
+                fontWeight: 700,
+                background: "linear-gradient(90deg, #00f0ff, #ff2d95)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
+            >
+              Influencer ROI Tracker
+            </div>
+            <div
+              className="truncate font-medium"
+              style={{
+                fontSize: "12px",
+                color: "#00f0ff",
+                textShadow: "0 0 6px rgba(0,240,255,0.6)",
+              }}
+            >
+              regals.cz
+            </div>
           </div>
         </div>
+        {/* Header divider */}
+        <div
+          className="mt-4 h-px w-full"
+          style={{
+            background:
+              "linear-gradient(90deg, transparent, rgba(0,240,255,0.5), transparent)",
+          }}
+        />
       </div>
 
-      <nav className="flex-1 space-y-0.5 px-3 py-4">
+      <nav className="relative flex-1 space-y-1 px-3 py-2">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = location.pathname.startsWith(item.to);
@@ -104,22 +149,26 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
               to={item.to}
               onClick={onNavigate}
               className={cn(
-                "relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all duration-150",
-                active
-                  ? "bg-[hsl(var(--glow-cyan)/0.10)] text-[hsl(var(--glow-cyan))] shadow-[inset_3px_0_0_hsl(var(--glow-cyan)),0_0_16px_-4px_hsl(var(--glow-cyan)/0.55)]"
-                  : "text-muted-foreground hover:bg-[hsl(var(--glow-purple)/0.12)] hover:text-white hover:shadow-[0_0_14px_-6px_hsl(var(--glow-purple)/0.7)]",
+                "sidebar-nav-item group relative flex items-center gap-3 rounded-lg text-sm font-medium transition-all duration-150",
+                active && "sidebar-nav-item-active",
               )}
+              style={{ height: "44px", paddingLeft: "12px", paddingRight: "12px" }}
             >
-              <Icon className={cn("h-4 w-4", active && "text-[hsl(var(--glow-cyan))] drop-shadow-[0_0_6px_hsl(var(--glow-cyan)/0.7)]")} />
-              <span className="flex-1">{item.label}</span>
+              <Icon className="sidebar-nav-icon shrink-0" style={{ width: 20, height: 20 }} />
+              <span className="sidebar-nav-label flex-1">{item.label}</span>
               {badge > 0 && (
                 <span
                   className={cn(
-                    "min-w-[20px] rounded-full px-1.5 py-0.5 text-center text-[10px] font-bold tabular-nums",
+                    "min-w-[20px] rounded-full px-1.5 py-0.5 text-center text-[10px] font-bold tabular-nums text-white",
                     item.badgeKey === "alerts"
-                      ? "bg-[hsl(var(--glow-pink))] text-white shadow-[0_0_8px_hsl(var(--glow-pink)/0.65)]"
-                      : "bg-[hsl(var(--glow-purple))] text-white shadow-[0_0_8px_hsl(var(--glow-purple)/0.65)]",
+                      ? "animate-pulse"
+                      : "",
                   )}
+                  style={
+                    item.badgeKey === "alerts"
+                      ? { background: "#ff2d95", boxShadow: "0 0 8px rgba(255,45,149,0.6)" }
+                      : { background: "#b44dff", boxShadow: "0 0 8px rgba(180,77,255,0.5)" }
+                  }
                 >
                   {badge}
                 </span>
@@ -129,33 +178,56 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
         })}
       </nav>
 
+      {/* Group divider */}
       <div
-        className="px-3 py-3"
-        style={{ borderTop: "1px solid hsl(var(--glow-purple) / 0.20)" }}
-      >
+        className="relative mx-3 h-px"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, rgba(180,100,255,0.2), transparent)",
+        }}
+      />
+
+      <div className="relative px-3 py-3">
         <Button
           variant="ghost"
-          className="w-full justify-start gap-3 text-sm text-muted-foreground hover:bg-muted/30 hover:text-foreground"
+          className="sidebar-nav-item w-full justify-start gap-3 rounded-lg font-medium"
+          style={{ height: "40px", paddingLeft: "12px", fontSize: "13px" }}
           onClick={() => {
             onOpenSettings();
             onNavigate?.();
           }}
         >
-          <SettingsIcon className="h-4 w-4" />
-          Settings
+          <SettingsIcon className="sidebar-nav-icon shrink-0" style={{ width: 18, height: 18 }} />
+          <span className="sidebar-nav-label">Settings</span>
         </Button>
         <Button
           variant="ghost"
-          className="mt-1 w-full justify-start gap-3 text-sm text-muted-foreground hover:bg-muted/30 hover:text-foreground"
+          className="sidebar-nav-item sidebar-nav-item-danger mt-1 w-full justify-start gap-3 rounded-lg font-medium"
+          style={{ height: "40px", paddingLeft: "12px", fontSize: "13px" }}
           onClick={async () => {
             await supabase.auth.signOut();
             onNavigate?.();
           }}
         >
-          <LogOut className="h-4 w-4" />
-          Logout
+          <LogOut className="sidebar-nav-icon shrink-0" style={{ width: 18, height: 18 }} />
+          <span className="sidebar-nav-label">Logout</span>
         </Button>
       </div>
+
+      {/* Synthwave sun decoration */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2"
+        style={{
+          width: "80px",
+          height: "40px",
+          background:
+            "radial-gradient(ellipse at center bottom, rgba(255,45,149,0.18), rgba(180,77,255,0.12) 60%, transparent 80%)",
+          borderTopLeftRadius: "40px",
+          borderTopRightRadius: "40px",
+          opacity: 0.8,
+        }}
+      />
     </div>
   );
 };

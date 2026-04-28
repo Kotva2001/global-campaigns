@@ -454,3 +454,49 @@ All colors MUST be HSL.
     animation: fade-in-up 0.3s ease-out both;
   }
 }
+
+/* ===== Sidebar Navigation ===== */
+.sidebar-nav-item {
+  color: #8888aa;
+  transition: all 150ms ease;
+}
+.sidebar-nav-item .sidebar-nav-icon {
+  color: #8888aa;
+  transition: all 150ms ease;
+}
+.sidebar-nav-item:hover {
+  background: rgba(0, 240, 255, 0.06) !important;
+  color: #ffffff !important;
+  box-shadow: inset 2px 0 0 rgba(0, 240, 255, 0.4), -4px 0 12px -6px rgba(0, 240, 255, 0.4);
+}
+.sidebar-nav-item:hover .sidebar-nav-icon {
+  color: #00f0ff;
+  filter: drop-shadow(0 0 4px rgba(0, 240, 255, 0.6));
+}
+.sidebar-nav-item:hover .sidebar-nav-label {
+  color: #ffffff;
+}
+.sidebar-nav-item-active {
+  background: rgba(0, 240, 255, 0.12) !important;
+  color: #00f0ff !important;
+  box-shadow: inset 3px 0 0 #00f0ff, -2px 0 8px rgba(0, 240, 255, 0.3);
+}
+.sidebar-nav-item-active .sidebar-nav-icon,
+.sidebar-nav-item-active .sidebar-nav-label {
+  color: #00f0ff !important;
+}
+.sidebar-nav-item-active .sidebar-nav-icon {
+  filter: drop-shadow(0 0 6px rgba(0, 240, 255, 0.7));
+}
+.sidebar-nav-item-danger:hover {
+  background: rgba(255, 51, 102, 0.08) !important;
+  box-shadow: inset 2px 0 0 rgba(255, 51, 102, 0.5), -4px 0 12px -6px rgba(255, 51, 102, 0.4);
+  color: #ff3366 !important;
+}
+.sidebar-nav-item-danger:hover .sidebar-nav-icon {
+  color: #ff3366;
+  filter: drop-shadow(0 0 4px rgba(255, 51, 102, 0.6));
+}
+.sidebar-nav-item-danger:hover .sidebar-nav-label {
+  color: #ff3366;
+}
