@@ -13,10 +13,10 @@ interface Props {
 }
 
 const platformClass = (p: string) => {
-  if (p === "YouTube") return "bg-[hsl(var(--platform-youtube)/0.15)] text-[hsl(var(--platform-youtube))]";
-  if (p === "Instagram") return "bg-[hsl(var(--platform-instagram)/0.15)] text-[hsl(var(--platform-instagram))]";
-  if (p === "Story") return "bg-[hsl(var(--platform-story)/0.18)] text-[hsl(var(--platform-story))]";
-  return "bg-[hsl(var(--platform-shorts)/0.15)] text-[hsl(var(--platform-shorts))]";
+  if (p === "YouTube") return "bg-[hsl(var(--platform-youtube)/0.15)] text-[hsl(var(--platform-youtube))] badge-glow-youtube";
+  if (p === "Instagram") return "bg-[hsl(var(--platform-instagram)/0.15)] text-[hsl(var(--platform-instagram))] badge-glow-instagram";
+  if (p === "Story") return "bg-[hsl(var(--platform-story)/0.18)] text-[hsl(var(--platform-story))] badge-glow-story";
+  return "bg-[hsl(var(--platform-shorts)/0.15)] text-[hsl(var(--platform-shorts))] badge-glow-shorts";
 };
 
 export const InfluencerCards = ({ influencers, currency = "CZK", onSelectInfluencer }: Props) => {
@@ -34,7 +34,7 @@ export const InfluencerCards = ({ influencers, currency = "CZK", onSelectInfluen
 
   return (
     <div className="px-6 pt-6">
-      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.10em] text-muted-foreground">
         Top Influencers
       </h2>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -44,11 +44,23 @@ export const InfluencerCards = ({ influencers, currency = "CZK", onSelectInfluen
             <Card
               key={inf.key}
               onClick={() => onSelectInfluencer?.(inf)}
-              className="group cursor-pointer border-border bg-card p-4 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card-hover hover:shadow-lg"
+              className="group cursor-pointer p-4 transition-all hover:-translate-y-1"
+              style={{
+                background: "hsl(240 45% 9%)",
+                border: "1px solid hsl(var(--glow-cyan) / 0.10)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.border = "1px solid hsl(var(--glow-cyan) / 0.35)";
+                e.currentTarget.style.boxShadow = "0 0 24px hsl(var(--glow-cyan) / 0.15)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.border = "1px solid hsl(var(--glow-cyan) / 0.10)";
+                e.currentTarget.style.boxShadow = "none";
+              }}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-base font-bold text-foreground">{inf.influencer}</div>
+                  <div className="truncate text-base font-bold text-white transition-[text-shadow] group-hover:[text-shadow:0_0_10px_hsl(var(--glow-pink)/0.5)]">{inf.influencer}</div>
                   <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
                     <span>{COUNTRY_FLAGS[inf.country]}</span>
                     <span>{inf.country}</span>
@@ -80,7 +92,7 @@ export const InfluencerCards = ({ influencers, currency = "CZK", onSelectInfluen
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                <Stat label="Views" value={formatCompact(inf.totalViews)} />
+                <Stat label="Views" value={formatCompact(inf.totalViews)} valueClass="neon-number" />
                 {inf.roi == null ? (
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -92,25 +104,28 @@ export const InfluencerCards = ({ influencers, currency = "CZK", onSelectInfluen
                   <Stat
                     label="ROI"
                     value={`${roiPos ? "+" : ""}${inf.roi.toFixed(0)}%`}
-                    valueClass={roiPos ? "text-success" : "text-destructive"}
+                    valueClass={roiPos ? "neon-number-green" : "neon-number-pink"}
                   />
                 )}
                 <Stat label="Spend" value={formatCurrency(inf.totalSpend, currency)} />
                 <Stat
                   label="Revenue"
                   value={formatCurrency(inf.totalRevenue, currency)}
-                  valueClass={inf.totalRevenue > 0 ? "text-success" : undefined}
+                  valueClass={inf.totalRevenue > 0 ? "neon-number-green" : undefined}
                 />
               </div>
 
               {inf.topCampaign && (
-                <div className="mt-3 border-t border-border pt-2">
-                  <span className="inline-flex max-w-full items-center rounded-full bg-muted/60 px-2 py-1 text-xs text-muted-foreground">
+                <div className="mt-3 pt-2" style={{ borderTop: "1px solid hsl(var(--glow-purple) / 0.18)" }}>
+                  <span
+                    className="inline-flex max-w-full items-center rounded-full px-2 py-1 text-xs text-muted-foreground"
+                    style={{ background: "hsl(248 60% 12%)", border: "1px solid hsl(var(--glow-purple) / 0.25)" }}
+                  >
                     <span className="shrink-0">Top:&nbsp;</span><span className="truncate text-foreground">{inf.topCampaign}</span>
                   </span>
                 </div>
               )}
-              <div className="mt-3 text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
+              <div className="mt-3 text-xs font-medium text-[hsl(var(--glow-cyan))] opacity-0 transition-opacity group-hover:opacity-100">
                 View details →
               </div>
             </Card>
@@ -122,8 +137,11 @@ export const InfluencerCards = ({ influencers, currency = "CZK", onSelectInfluen
 };
 
 const Stat = ({ label, value, valueClass }: { label: string; value: string; valueClass?: string }) => (
-  <div className="rounded-md bg-muted/50 p-2">
-    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+  <div
+    className="rounded-md p-2"
+    style={{ background: "hsl(248 50% 9%)", border: "1px solid hsl(var(--glow-purple) / 0.12)" }}
+  >
+    <div className="stat-label">{label}</div>
     <div className={cn("text-sm font-bold text-foreground", valueClass)}>{value}</div>
   </div>
 );

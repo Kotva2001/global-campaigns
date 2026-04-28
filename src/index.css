@@ -9,12 +9,12 @@ All colors MUST be HSL.
 @layer base {
   :root {
     /* Synthwave dark theme — deep navy/purple base with neon accents */
-    --background: 240 45% 6%;            /* deep navy/purple #0a0a1a */
+    --background: 240 60% 6%;            /* deep navy/purple #0a0a1a */
     --foreground: 0 0% 98%;
 
-    --card: 240 40% 12%;                 /* dark with subtle purple tint #12122a */
+    --card: 240 45% 11%;                 /* dark with purple tint #0f0f25 */
     --card-foreground: 0 0% 98%;
-    --card-hover: 240 40% 16%;
+    --card-hover: 240 45% 15%;
 
     --popover: 240 42% 9%;
     --popover-foreground: 0 0% 98%;
@@ -59,7 +59,7 @@ All colors MUST be HSL.
 
     --radius: 0.5rem;
 
-    --sidebar-background: 240 50% 5%;    /* darker than main #08081a */
+    --sidebar-background: 248 75% 6%;    /* deep purple-black #08061a */
     --sidebar-foreground: 240 20% 80%;
     --sidebar-primary: 186 100% 50%;
     --sidebar-primary-foreground: 240 45% 6%;
@@ -121,10 +121,10 @@ All colors MUST be HSL.
     -moz-osx-font-smoothing: grayscale;
     background-color: hsl(var(--background));
     background-image:
-      linear-gradient(hsl(var(--glow-purple) / 0.05) 1px, transparent 1px),
-      linear-gradient(90deg, hsl(var(--glow-purple) / 0.05) 1px, transparent 1px),
-      radial-gradient(ellipse at 50% 0%, hsl(var(--glow-purple) / 0.10), transparent 60%);
-    background-size: 48px 48px, 48px 48px, 100% 100%;
+      linear-gradient(hsl(var(--glow-purple) / 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--glow-purple) / 0.06) 1px, transparent 1px),
+      radial-gradient(ellipse at 50% 0%, hsl(var(--glow-purple) / 0.14), transparent 60%);
+    background-size: 40px 40px, 40px 40px, 100% 100%;
     background-attachment: fixed;
   }
 
@@ -168,18 +168,18 @@ All colors MUST be HSL.
   .glass-card {
     position: relative;
     background: linear-gradient(180deg, hsl(var(--card) / 0.92), hsl(var(--card) / 0.72));
-    border: 1px solid hsl(var(--glow-purple) / 0.18);
+    border: 1px solid hsl(var(--glow-cyan) / 0.18);
     backdrop-filter: blur(8px);
     box-shadow:
-      0 0 0 1px hsl(var(--glow-purple) / 0.04) inset,
+      0 0 0 1px hsl(var(--glow-cyan) / 0.04) inset,
       0 8px 24px -12px hsl(240 60% 2% / 0.7);
     transition: border-color 200ms ease, box-shadow 200ms ease, transform 150ms ease;
   }
   .glass-card:hover {
-    border-color: hsl(var(--glow-cyan) / 0.45);
+    border-color: hsl(var(--glow-cyan) / 0.50);
     box-shadow:
-      0 0 0 1px hsl(var(--glow-cyan) / 0.10) inset,
-      0 0 24px -4px hsl(var(--glow-cyan) / 0.25),
+      0 0 0 1px hsl(var(--glow-cyan) / 0.12) inset,
+      0 0 28px -4px hsl(var(--glow-cyan) / 0.32),
       0 12px 32px -12px hsl(240 60% 2% / 0.8);
   }
 
@@ -189,15 +189,101 @@ All colors MUST be HSL.
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background-image: repeating-linear-gradient(
-      45deg,
-      hsl(var(--glow-cyan) / 0.03) 0,
-      hsl(var(--glow-cyan) / 0.03) 1px,
-      transparent 1px,
-      transparent 8px
-    );
+    background-image:
+      radial-gradient(ellipse at center, hsl(var(--glow-cyan) / 0.045), transparent 65%),
+      repeating-linear-gradient(
+        45deg,
+        hsl(var(--glow-cyan) / 0.03) 0,
+        hsl(var(--glow-cyan) / 0.03) 1px,
+        transparent 1px,
+        transparent 8px
+      );
     border-radius: inherit;
   }
+
+  /* Neon button styles — apply alongside Button variant or on plain buttons */
+  .btn-neon-cyan {
+    background: transparent !important;
+    border: 1px solid hsl(var(--glow-cyan)) !important;
+    color: hsl(var(--glow-cyan)) !important;
+    transition: all 150ms ease;
+    box-shadow: 0 0 0 0 hsl(var(--glow-cyan) / 0);
+  }
+  .btn-neon-cyan:hover {
+    background: hsl(var(--glow-cyan)) !important;
+    color: hsl(var(--background)) !important;
+    box-shadow: 0 0 16px hsl(var(--glow-cyan) / 0.55);
+  }
+  .btn-neon-pink {
+    background: transparent !important;
+    border: 1px solid hsl(var(--glow-pink)) !important;
+    color: hsl(var(--glow-pink)) !important;
+    transition: all 150ms ease;
+  }
+  .btn-neon-pink:hover {
+    background: hsl(var(--glow-pink)) !important;
+    color: white !important;
+    box-shadow: 0 0 16px hsl(var(--glow-pink) / 0.55);
+  }
+  .btn-neon-green {
+    background: transparent !important;
+    border: 1px solid hsl(var(--success)) !important;
+    color: hsl(var(--success)) !important;
+    transition: all 150ms ease;
+  }
+  .btn-neon-green:hover {
+    background: hsl(var(--success)) !important;
+    color: hsl(var(--background)) !important;
+    box-shadow: 0 0 16px hsl(var(--success) / 0.6);
+  }
+
+  /* Neon focus ring for inputs */
+  .input-neon {
+    border: 1px solid hsl(var(--glow-cyan) / 0.20) !important;
+    background: hsl(var(--card) / 0.6) !important;
+    transition: all 150ms ease;
+  }
+  .input-neon::placeholder { color: hsl(240 20% 60% / 0.55); }
+  .input-neon:focus, .input-neon:focus-visible {
+    border-color: hsl(var(--glow-cyan)) !important;
+    box-shadow: 0 0 12px hsl(var(--glow-cyan) / 0.30) !important;
+    outline: none !important;
+  }
+
+  /* Stat sub-label used on influencer/KPI cards */
+  .stat-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    color: hsl(240 18% 65% / 0.75);
+  }
+
+  /* Big neon-cyan number with glow */
+  .neon-number {
+    color: hsl(var(--glow-cyan));
+    font-weight: 700;
+    text-shadow: 0 0 10px hsl(var(--glow-cyan) / 0.45);
+    font-variant-numeric: tabular-nums;
+  }
+  .neon-number-pink {
+    color: hsl(var(--glow-pink));
+    font-weight: 700;
+    text-shadow: 0 0 10px hsl(var(--glow-pink) / 0.45);
+    font-variant-numeric: tabular-nums;
+  }
+  .neon-number-green {
+    color: hsl(var(--success));
+    font-weight: 700;
+    text-shadow: 0 0 10px hsl(var(--success) / 0.50);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Platform badge color glows */
+  .badge-glow-youtube    { box-shadow: 0 0 8px hsl(var(--platform-youtube) / 0.45); border: 1px solid hsl(var(--platform-youtube) / 0.55); }
+  .badge-glow-instagram  { box-shadow: 0 0 8px hsl(var(--platform-instagram) / 0.45); border: 1px solid hsl(var(--platform-instagram) / 0.55); }
+  .badge-glow-shorts     { box-shadow: 0 0 8px hsl(var(--platform-shorts) / 0.45); border: 1px solid hsl(var(--platform-shorts) / 0.55); }
+  .badge-glow-story      { box-shadow: 0 0 8px hsl(var(--platform-story) / 0.45); border: 1px solid hsl(var(--platform-story) / 0.55); }
 
   .lift-hover {
     @apply transition-all duration-150 ease-out;
