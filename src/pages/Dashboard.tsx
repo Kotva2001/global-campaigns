@@ -9,6 +9,7 @@ import { CreatorDialog } from "@/components/CreatorDialog";
 import { DataTable } from "@/components/DataTable";
 import { CampaignCharts } from "@/components/CampaignCharts";
 import { CampaignDialog } from "@/components/CampaignDialog";
+import { KPIBreakdownPanel, type KPIMetric } from "@/components/KPIBreakdownPanel";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -32,6 +33,7 @@ const Dashboard = () => {
   const [creatorOpen, setCreatorOpen] = useState(false);
   const [detailCreator, setDetailCreator] = useState<InfluencerRecord | null>(null);
   const [campaignInfluencerId, setCampaignInfluencerId] = useState<string | null>(null);
+  const [breakdownMetric, setBreakdownMetric] = useState<KPIMetric | null>(null);
   const filters = useFilters(data);
   const { selectedCountry, filtered } = filters;
 
@@ -121,7 +123,7 @@ const Dashboard = () => {
           ))}
         </div>
       ) : (
-        <KPISummary kpis={kpis} currency={displayCurrency} convertedSub={convertedSub} />
+        <KPISummary kpis={kpis} currency={displayCurrency} convertedSub={convertedSub} onSelectMetric={setBreakdownMetric} />
       )}
 
       {loading && data.length === 0 ? (
@@ -161,6 +163,20 @@ const Dashboard = () => {
         }}
       />
       <CreatorDialog open={creatorOpen} onOpenChange={setCreatorOpen} editing={detailCreator} onSaved={() => { setCreatorOpen(false); void refresh(); }} />
+      <KPIBreakdownPanel
+        metric={breakdownMetric}
+        rows={filtered}
+        displayCurrency={displayCurrency}
+        rates={rates}
+        onClose={() => setBreakdownMetric(null)}
+        onSelectInfluencer={(name, country) => {
+          const summary = influencers.find((s) => s.influencer === name && s.country === country);
+          if (summary) {
+            setBreakdownMetric(null);
+            void openInfluencerDetail(summary);
+          }
+        }}
+      />
       <InfluencerDetailPanel
         creator={detailCreator}
         campaigns={detailCampaigns}
