@@ -19,14 +19,14 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const PLATFORMS: Platform[] = ["YouTube", "Instagram", "YB Shorts", "TikTok", "Other"];
+const PLATFORMS: Platform[] = ["YouTube", "Instagram", "YB Shorts", "Story", "TikTok", "Other"];
 const COLLAB_TYPES = ["Barter", "Paid", "Gifted", "Affiliate", "Other"];
 
 const numeric = z.union([z.number(), z.literal("")]).nullable();
 const campaignSchema = z.object({
   influencerId: z.string().min(1, "Influencer is required"),
   campaignName: z.string().trim().max(240).optional(),
-  platform: z.enum(["YouTube", "Instagram", "YB Shorts", "TikTok", "Other"]),
+  platform: z.enum(["YouTube", "Instagram", "YB Shorts", "Story", "TikTok", "Other"]),
   publishDate: z.date(),
   videoLink: z.string().trim().max(1000).optional(),
   collaborationType: z.string().trim().max(80).optional(),

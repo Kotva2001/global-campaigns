@@ -1,4 +1,4 @@
-export type Platform = "YouTube" | "Instagram" | "YB Shorts" | "TikTok" | "Other";
+export type Platform = "YouTube" | "Instagram" | "YB Shorts" | "Story" | "TikTok" | "Other";
 export type CurrencyCode = "CZK" | "EUR" | "HUF" | "RON";
 
 export interface CampaignEntry {
