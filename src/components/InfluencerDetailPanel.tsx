@@ -35,6 +35,7 @@ import type { TablesUpdate } from "@/integrations/supabase/types";
 import type { ProductRecord } from "@/types/product";
 import { DealsSection } from "@/components/DealsSection";
 import { DealCell } from "@/components/DealCell";
+import { QuickStoryDialog } from "@/components/QuickStoryDialog";
 
 interface Props {
   creator: InfluencerRecord | null;
@@ -330,6 +331,7 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
   const [deleteCampaign, setDeleteCampaign] = useState<CampaignEntry | null>(null);
   const [products, setProducts] = useState<ProductRecord[]>([]);
   const [flashedCells, setFlashedCells] = useState<Record<string, number>>({});
+  const [storyOpen, setStoryOpen] = useState(false);
 
   useEffect(() => {
     if (!creator) return;
@@ -476,12 +478,27 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
               </div>
 
               <div className="border-t border-border px-6 py-4">
-                <Button className="gap-2" onClick={onAddCampaign}><Plus className="h-4 w-4" /> Add Campaign</Button>
+                <div className="flex items-center gap-2">
+                  <Button className="gap-2" onClick={onAddCampaign}><Plus className="h-4 w-4" /> Add Campaign</Button>
+                  <Button variant="secondary" className="gap-2" onClick={() => setStoryOpen(true)}>
+                    <Eye className="h-4 w-4 text-[hsl(var(--platform-story))]" /> Quick Log Story
+                  </Button>
+                </div>
               </div>
             </>
           )}
         </SheetContent>
       </Sheet>
+
+      {creator && (
+        <QuickStoryDialog
+          open={storyOpen}
+          onOpenChange={setStoryOpen}
+          influencerId={creator.id}
+          influencerName={creator.name}
+          onSaved={() => { onChanged?.(); }}
+        />
+      )}
 
       <AlertDialog open={!!deleteCampaign} onOpenChange={(open) => !open && setDeleteCampaign(null)}>
         <AlertDialogContent>
