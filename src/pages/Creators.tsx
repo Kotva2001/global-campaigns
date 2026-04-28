@@ -19,28 +19,12 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { COUNTRIES, COUNTRY_FLAGS, COUNTRY_NAMES } from "@/lib/countries";
-import { CZ, SK, HU, DE, AT, NL, RO, SI, IT, GR, ES } from "country-flag-icons/react/3x2";
+import { FlagIcon, FLAG_COMPONENTS, hasFlag } from "@/components/FlagIcon";
 import { instagramHandlesFromValue } from "@/lib/instagram";
 import { computeKPIs } from "@/lib/calculations";
 import { formatCompact, formatPercent } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { CampaignEntry, InfluencerRecord, Platform } from "@/types/campaign";
-
-const FLAG_COMPONENTS: Record<string, React.ComponentType<any>> = {
-  CZ, SK, HU, DE, AT, NL, RO, SI, IT, GR, ES,
-};
-
-const FlagIcon = ({ code, width, height, className }: { code: string; width: number; height: number; className?: string }) => {
-  const Comp = FLAG_COMPONENTS[code];
-  if (!Comp) return null;
-  return (
-    <Comp
-      title={code}
-      style={{ width, height, borderRadius: 4, display: "block", objectFit: "cover" }}
-      className={className}
-    />
-  );
-};
 
 interface CampaignRow {
   id: string;
