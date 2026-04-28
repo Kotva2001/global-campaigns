@@ -655,8 +655,18 @@ function DetectionQueue({
                 <Button size="sm" onClick={() => setApprove(d)} className="btn-neon-green">
                   <CheckCircle2 className="h-4 w-4" /> Approve & Add
                 </Button>
-                <Button size="sm" onClick={() => dismiss(d.id)} className="btn-neon-red">
-                  <X className="h-4 w-4" /> Dismiss
+                <Button
+                  size="sm"
+                  onClick={() => dismiss(d.id)}
+                  className="scanner-dismiss-button btn-neon-red"
+                  style={{
+                    background: "transparent",
+                    border: "1px solid hsl(348 100% 60%)",
+                    color: "hsl(348 100% 60%)",
+                  }}
+                >
+                  <X className="h-4 w-4" style={{ color: "hsl(348 100% 60%)", stroke: "hsl(348 100% 60%)" }} />
+                  <span style={{ color: "hsl(348 100% 60%)" }}>Dismiss</span>
                 </Button>
                 <Button size="sm" asChild className="btn-neon-cyan">
                   <a href={d.video_url} target="_blank" rel="noreferrer">

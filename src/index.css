@@ -254,6 +254,26 @@ All colors MUST be HSL.
   .btn-neon-red:hover svg {
     color: hsl(348 100% 67%) !important;
   }
+  .scanner-dismiss-button {
+    background: transparent !important;
+    border: 1px solid hsl(348 100% 60%) !important;
+    color: hsl(348 100% 60%) !important;
+  }
+  .scanner-dismiss-button span {
+    color: hsl(348 100% 60%) !important;
+  }
+  .scanner-dismiss-button svg,
+  .scanner-dismiss-button svg * {
+    color: hsl(348 100% 60%) !important;
+    stroke: hsl(348 100% 60%) !important;
+    fill: none !important;
+  }
+  .scanner-dismiss-button:hover {
+    background: hsl(348 100% 60% / 0.15) !important;
+    border-color: hsl(348 100% 63%) !important;
+    color: hsl(348 100% 60%) !important;
+    box-shadow: 0 0 10px hsl(348 100% 60% / 0.3) !important;
+  }
   .btn-neon-purple {
     background: transparent !important;
     border: 1px solid hsl(var(--tertiary)) !important;
