@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { ArrowRight, Eye, Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -47,35 +48,37 @@ export const InfluencerCards = ({ influencers, currency = "CZK", onSelectInfluen
     );
   }
 
+  const visibleInfluencers = influencers.slice(0, 12);
+  const maxViews = Math.max(...visibleInfluencers.map((inf) => inf.totalViews), 1);
+
   return (
     <div className="px-6 pt-6">
       <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.10em] text-muted-foreground">
         Top Influencers
       </h2>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {influencers.slice(0, 12).map((inf) => {
+        {visibleInfluencers.map((inf, index) => {
           const roiPos = (inf.roi ?? 0) >= 0;
+          const platformColor = platformHsl(inf.topPlatform);
+          const hasNoData = inf.totalViews === 0 && inf.campaigns === 0;
+          const revenueDirection = inf.totalRevenue > inf.totalSpend ? "success" : inf.totalRevenue < inf.totalSpend ? "pink" : "muted";
+          const viewShare = Math.max(4, Math.round((inf.totalViews / maxViews) * 100));
           return (
             <Card
               key={inf.key}
               onClick={() => onSelectInfluencer?.(inf)}
-              className="group cursor-pointer p-4 transition-all hover:-translate-y-1"
-              style={{
-                background: "hsl(240 45% 9%)",
-                border: "1px solid hsl(var(--glow-cyan) / 0.10)",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.border = "1px solid hsl(var(--glow-cyan) / 0.35)";
-                e.currentTarget.style.boxShadow = "0 0 24px hsl(var(--glow-cyan) / 0.15)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.border = "1px solid hsl(var(--glow-cyan) / 0.10)";
-                e.currentTarget.style.boxShadow = "none";
-              }}
+              className="top-influencer-card group relative flex h-full min-h-[280px] cursor-pointer flex-col overflow-hidden p-4 animate-fade-in-up"
+              style={{ "--card-platform-hsl": platformColor, animationDelay: `${index * 40}ms` } as CSSProperties}
             >
-              <div className="flex items-start justify-between gap-2">
+              <div className="flex items-start justify-between gap-2 pl-8">
+                <div
+                  className="absolute left-3 top-3 text-xs font-black tabular-nums"
+                  style={{ color: rankColor(index + 1), textShadow: `0 0 8px ${rankColor(index + 1)}` }}
+                >
+                  #{index + 1}
+                </div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-base font-bold text-white transition-[text-shadow] group-hover:[text-shadow:0_0_10px_hsl(var(--glow-pink)/0.5)]">{inf.influencer}</div>
+                  <div className="truncate text-lg font-bold text-foreground transition-[text-shadow] group-hover:[text-shadow:0_0_10px_hsl(var(--glow-pink)/0.5)]">{inf.influencer}</div>
                   <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
                     {hasFlag(inf.country)
                       ? <FlagIcon code={inf.country} width={16} height={11} />
@@ -108,42 +111,79 @@ export const InfluencerCards = ({ influencers, currency = "CZK", onSelectInfluen
                 ))}
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                <Stat label="Views" value={formatCompact(inf.totalViews)} valueClass="neon-number" />
-                {inf.roi == null ? (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div><Stat label="ROI" value="—" /></div>
-                    </TooltipTrigger>
-                    <TooltipContent>No spend data entered</TooltipContent>
-                  </Tooltip>
-                ) : (
-                  <Stat
-                    label="ROI"
-                    value={`${roiPos ? "+" : ""}${inf.roi.toFixed(0)}%`}
-                    valueClass={roiPos ? "neon-number-green" : "neon-number-pink"}
-                  />
-                )}
-                <Stat label="Spend" value={formatCurrency(inf.totalSpend, currency)} />
-                <Stat
-                  label="Revenue"
-                  value={formatCurrency(inf.totalRevenue, currency)}
-                  valueClass={inf.totalRevenue > 0 ? "neon-number-green" : undefined}
+              {hasNoData ? (
+                <div className="mt-4 flex flex-1 items-center justify-center rounded-md border border-dashed border-[hsl(var(--glow-purple)/0.32)] bg-[hsl(var(--muted)/0.18)] text-sm font-medium text-muted-foreground">
+                  No data yet
+                </div>
+              ) : (
+                <div className="mt-4 flex-1 space-y-3 text-xs tabular-nums">
+                  <div className="flex items-end justify-between gap-3">
+                    <div>
+                      <div className="stat-label">Views</div>
+                      <div className="text-[28px] font-black leading-none text-[hsl(var(--glow-cyan))] [text-shadow:0_0_12px_hsl(var(--glow-cyan)/0.55)]">
+                        {formatCompact(inf.totalViews)}
+                      </div>
+                    </div>
+                    <Sparkline values={inf.viewTrend} color="hsl(var(--glow-cyan))" />
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2">
+                    {inf.roi == null ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex rounded-full border border-border bg-muted/40 px-2.5 py-1 text-xs font-bold text-muted-foreground">ROI —</span>
+                        </TooltipTrigger>
+                        <TooltipContent>No spend data entered</TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <span
+                        className={cn(
+                          "inline-flex rounded-full border px-2.5 py-1 text-xs font-bold",
+                          roiPos
+                            ? "border-[hsl(var(--success)/0.55)] bg-[hsl(var(--success)/0.15)] text-[hsl(var(--success))] shadow-[0_0_10px_hsl(var(--success)/0.35)]"
+                            : "border-[hsl(var(--glow-pink)/0.55)] bg-[hsl(var(--glow-pink)/0.15)] text-[hsl(var(--glow-pink))] shadow-[0_0_10px_hsl(var(--glow-pink)/0.35)]",
+                        )}
+                      >
+                        ROI {`${roiPos ? "+" : ""}${inf.roi.toFixed(0)}%`}
+                      </span>
+                    )}
+                    <div className="flex min-w-0 items-center gap-1.5 text-sm font-bold text-foreground/90">
+                      <span className="truncate">{formatCurrency(inf.totalSpend, currency)}</span>
+                      <ArrowRight
+                        className={cn(
+                          "h-4 w-4 shrink-0",
+                          revenueDirection === "success" && "text-[hsl(var(--success))]",
+                          revenueDirection === "pink" && "text-[hsl(var(--glow-pink))]",
+                          revenueDirection === "muted" && "text-muted-foreground",
+                        )}
+                      />
+                      <span className="truncate">{formatCurrency(inf.totalRevenue, currency)}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-4 h-1 overflow-hidden rounded-full bg-[hsl(var(--muted)/0.45)]">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{ width: `${hasNoData ? 0 : viewShare}%`, background: `hsl(${platformColor})`, boxShadow: `0 0 10px hsl(${platformColor} / 0.55)` }}
                 />
               </div>
 
-              {inf.topCampaign && (
-                <div className="mt-3 pt-2" style={{ borderTop: "1px solid hsl(var(--glow-purple) / 0.18)" }}>
+              <div className="mt-3 flex items-end justify-between gap-3 pt-2" style={{ borderTop: "1px solid hsl(var(--glow-purple) / 0.18)" }}>
+                {inf.topCampaign ? (
                   <span
-                    className="inline-flex max-w-full items-center rounded-full px-2 py-1 text-xs text-muted-foreground"
-                    style={{ background: "hsl(248 60% 12%)", border: "1px solid hsl(var(--glow-purple) / 0.25)" }}
+                    className="inline-flex min-w-0 max-w-[75%] items-center rounded-full px-2 py-1 text-xs text-muted-foreground"
+                    style={{ background: "hsl(248 60% 12%)", border: "1px solid hsl(var(--glow-purple) / 0.32)", boxShadow: "0 0 10px hsl(var(--glow-purple) / 0.12)" }}
                   >
                     <span className="shrink-0">Top:&nbsp;</span><span className="truncate text-foreground">{inf.topCampaign}</span>
                   </span>
+                ) : (
+                  <span />
+                )}
+                <div className="shrink-0 text-xs font-medium text-[hsl(var(--glow-cyan))] opacity-0 transition-opacity group-hover:opacity-100">
+                  View details →
                 </div>
-              )}
-              <div className="mt-3 text-xs font-medium text-[hsl(var(--glow-cyan))] opacity-0 transition-opacity group-hover:opacity-100">
-                View details →
               </div>
             </Card>
           );
