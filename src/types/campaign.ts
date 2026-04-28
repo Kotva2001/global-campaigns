@@ -4,6 +4,7 @@ export type CurrencyCode = "CZK" | "EUR" | "HUF" | "RON";
 export interface CampaignEntry {
   id: string;
   influencerId: string | null;
+  dealId: string | null;
   country: string;
   influencer: string;
   campaignName: string;

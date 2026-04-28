@@ -162,6 +162,7 @@ const Analytics = () => {
     const summary = computeKPIs(filtered.map((r) => ({
       id: r.id,
       influencerId: r.id,
+      dealId: null,
       country: r.country,
       influencer: r.influencer,
       campaignName: r.campaign,
