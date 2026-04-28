@@ -23,6 +23,7 @@ import {
   CheckCircle2, Clock, Loader2, Eye, EyeOff, Info, RefreshCw,
 } from "lucide-react";
 import { formatNumber, formatCompact } from "@/lib/formatters";
+import { handleExternalClick } from "@/lib/external-link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { FlagIcon, hasFlag } from "@/components/FlagIcon";
