@@ -65,15 +65,15 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
   const location = useLocation();
 
   return (
-    <div className="flex h-full w-full flex-col bg-[hsl(220_28%_4%)] text-foreground">
-      <div className="border-b border-border/60 px-4 py-5">
+    <div className="flex h-full w-full flex-col bg-sidebar text-foreground">
+      <div className="border-b border-sidebar-border px-4 py-5">
         <div className="flex items-center gap-3">
           <span className="relative flex h-2.5 w-2.5">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
             <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
           </span>
           <div className="min-w-0">
-            <div className="truncate text-sm font-bold tracking-tight">Influencer ROI Tracker</div>
+            <div className="gradient-text truncate text-sm font-bold tracking-tight">Influencer ROI Tracker</div>
             <div className="truncate text-[11px] text-muted-foreground">regals.cz</div>
           </div>
         </div>
@@ -97,8 +97,8 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
               className={cn(
                 "relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all duration-150",
                 active
-                  ? "bg-primary/15 text-foreground shadow-[inset_3px_0_0_hsl(var(--primary))]"
-                  : "text-muted-foreground hover:bg-muted/30 hover:text-foreground",
+                  ? "bg-primary/10 text-foreground shadow-[inset_3px_0_0_hsl(var(--primary)),0_0_18px_-6px_hsl(var(--primary)/0.5)]"
+                  : "text-muted-foreground hover:bg-[hsl(var(--glow-purple)/0.10)] hover:text-foreground hover:shadow-[0_0_14px_-6px_hsl(var(--glow-purple)/0.6)]",
               )}
             >
               <Icon className={cn("h-4 w-4", active && "text-primary")} />
@@ -108,8 +108,8 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
                   className={cn(
                     "min-w-[20px] rounded-full px-1.5 py-0.5 text-center text-[10px] font-bold tabular-nums",
                     item.badgeKey === "alerts"
-                      ? "bg-destructive text-destructive-foreground"
-                      : "bg-info text-white",
+                      ? "bg-[hsl(var(--platform-instagram))] text-white shadow-[0_0_10px_hsl(var(--platform-instagram)/0.55)]"
+                      : "bg-[hsl(var(--platform-story))] text-white shadow-[0_0_10px_hsl(var(--platform-story)/0.55)]",
                   )}
                 >
                   {badge}
@@ -120,7 +120,7 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
         })}
       </nav>
 
-      <div className="border-t border-border/60 px-3 py-3">
+      <div className="border-t border-sidebar-border px-3 py-3">
         <Button
           variant="ghost"
           className="w-full justify-start gap-3 text-sm text-muted-foreground hover:bg-muted/30 hover:text-foreground"
