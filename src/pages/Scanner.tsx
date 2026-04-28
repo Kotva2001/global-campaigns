@@ -19,11 +19,11 @@ import {
 import { toast } from "sonner";
 import { toastError } from "@/lib/toast-helpers";
 import {
-  Play, ExternalLink, X, Plus, Youtube, Instagram, AlertCircle,
+  Play, ExternalLink, X, Plus, Youtube, Instagram, AlertCircle, Copy,
   CheckCircle2, Clock, Loader2, Eye, EyeOff, Info, RefreshCw,
 } from "lucide-react";
 import { formatNumber, formatCompact } from "@/lib/formatters";
-import { copyExternalLinkToClipboard, wrapExternalUrl } from "@/lib/external-link-copy";
+import { copyExternalLinkToClipboard, isInstagramUrl } from "@/lib/external-link-copy";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { FlagIcon, hasFlag } from "@/components/FlagIcon";
