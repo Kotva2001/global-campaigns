@@ -19,11 +19,11 @@ import {
 import { toast } from "sonner";
 import { toastError } from "@/lib/toast-helpers";
 import {
-  Play, ExternalLink, X, Plus, Youtube, Instagram, AlertCircle,
+  Play, ExternalLink, X, Plus, Youtube, Instagram, AlertCircle, Copy,
   CheckCircle2, Clock, Loader2, Eye, EyeOff, Info, RefreshCw,
 } from "lucide-react";
 import { formatNumber, formatCompact } from "@/lib/formatters";
-import { copyExternalLinkToClipboard, wrapExternalUrl } from "@/lib/external-link-copy";
+import { copyExternalLinkToClipboard, isInstagramUrl } from "@/lib/external-link-copy";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { FlagIcon, hasFlag } from "@/components/FlagIcon";
@@ -603,22 +603,38 @@ function DetectionQueue({
                   <TooltipProvider delayDuration={300}>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <a
-                          href={wrapExternalUrl(d.video_url)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={() => copyExternalLinkToClipboard(d.video_url)}
-                          className="block font-semibold hover:underline"
-                          style={{
-                            display: "-webkit-box",
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                          }}
-                        >
-                          {d.video_title ?? d.video_url}
-                        </a>
+                        {isInstagramUrl(d.video_url) ? (
+                          <button
+                            type="button"
+                            onClick={() => copyExternalLinkToClipboard(d.video_url)}
+                            className="block text-left font-semibold hover:underline"
+                            style={{
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {d.video_title ?? d.video_url}
+                          </button>
+                        ) : (
+                          <a
+                            href={d.video_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block font-semibold hover:underline"
+                            style={{
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {d.video_title ?? d.video_url}
+                          </a>
+                        )}
                       </TooltipTrigger>
                       <TooltipContent className="max-w-md">
                         {d.video_title ?? d.video_url}
@@ -670,11 +686,21 @@ function DetectionQueue({
                   <X className="h-4 w-4" style={{ color: "hsl(348 100% 60%)", stroke: "hsl(348 100% 60%)" }} />
                   <span style={{ color: "hsl(348 100% 60%)" }}>Dismiss</span>
                 </Button>
-                <Button size="sm" asChild className="btn-neon-cyan">
-                  <a href={wrapExternalUrl(d.video_url)} target="_blank" rel="noopener noreferrer" onClick={() => copyExternalLinkToClipboard(d.video_url)}>
-                    <ExternalLink className="h-4 w-4" /> View Original
-                  </a>
-                </Button>
+                {isInstagramUrl(d.video_url) ? (
+                  <Button
+                    size="sm"
+                    className="btn-neon-cyan"
+                    onClick={() => copyExternalLinkToClipboard(d.video_url)}
+                  >
+                    <Copy className="h-4 w-4" /> Copy Link
+                  </Button>
+                ) : (
+                  <Button size="sm" asChild className="btn-neon-cyan">
+                    <a href={d.video_url} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-4 w-4" /> View Original
+                    </a>
+                  </Button>
+                )}
                 {!matched && (
                   <Button size="sm" asChild className="btn-neon-purple">
                     <a href="/creators"><Plus className="h-4 w-4" /> Add to Roster</a>

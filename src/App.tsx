@@ -12,7 +12,6 @@ import Analytics from "./pages/Analytics";
 import Alerts from "./pages/Alerts";
 import Products from "./pages/Products";
 import NotFound from "./pages/NotFound.tsx";
-import RedirectPage from "./pages/RedirectPage";
 
 const queryClient = new QueryClient();
 
@@ -23,7 +22,6 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/go" element={<RedirectPage />} />
           <Route
             path="*"
             element={

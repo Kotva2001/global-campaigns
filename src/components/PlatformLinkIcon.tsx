@@ -1,6 +1,6 @@
 import { useId } from "react";
-import { Play } from "lucide-react";
-import { copyExternalLinkToClipboard, wrapExternalUrl } from "@/lib/external-link-copy";
+import { Copy, Play } from "lucide-react";
+import { copyExternalLinkToClipboard, isInstagramUrl } from "@/lib/external-link-copy";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -61,12 +61,32 @@ export const PlatformLinkIcon = ({ platform, url, className }: Props) => {
     );
   }
 
+  if (isInstagramUrl(url)) {
+    return (
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          copyExternalLinkToClipboard(url);
+        }}
+        title={`Copy ${label} link`}
+        aria-label={`Copy ${label} link`}
+        className={cn(
+          "relative inline-flex h-8 w-8 items-center justify-center opacity-70 transition-opacity hover:opacity-100",
+          className,
+        )}
+      >
+        {content}
+        <Copy className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-background p-[1px] text-foreground/70" />
+      </button>
+    );
+  }
+
   return (
     <a
-      href={wrapExternalUrl(url)}
+      href={url}
       target="_blank"
       rel="noopener noreferrer"
-      onClick={() => copyExternalLinkToClipboard(url)}
       title={`Open on ${label}`}
       aria-label={`Open on ${label}`}
       className={cn("inline-flex h-8 w-8 items-center justify-center opacity-70 transition-opacity hover:opacity-100", className)}
