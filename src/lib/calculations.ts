@@ -46,13 +46,11 @@ export interface InfluencerSummary {
   campaigns: number;
   stories: number;
   platforms: string[];
-  topPlatform: string;
   totalViews: number;
   totalSpend: number;
   totalRevenue: number;
   roi: number | null;
   topCampaign: string;
-  viewTrend: number[];
 }
 
 export const summarizeInfluencers = (rows: CampaignEntry[], displayCurrency: CurrencyCode = "CZK", rates?: ExchangeRates): InfluencerSummary[] => {
@@ -67,15 +65,6 @@ export const summarizeInfluencers = (rows: CampaignEntry[], displayCurrency: Cur
   for (const [key, entries] of map) {
     const videos = entries.filter((e) => e.platform !== "Story");
     const stories = entries.filter((e) => e.platform === "Story");
-    const platforms = Array.from(new Set(entries.map((e) => e.platform)));
-    const topPlatform = [...entries].sort((a, b) => {
-      const aCount = entries.filter((entry) => entry.platform === a.platform).length;
-      const bCount = entries.filter((entry) => entry.platform === b.platform).length;
-      return bCount - aCount;
-    })[0]?.platform ?? platforms[0] ?? "YouTube";
-    const viewTrend = [...videos]
-      .sort((a, b) => (a.publishDateIso ?? "").localeCompare(b.publishDateIso ?? ""))
-      .map((e) => e.views ?? 0);
     const totalSpend = sum(entries.map((e) => convertCurrency(e.campaignCost, e.currency, displayCurrency, rates)));
     const totalRevenue = sum(entries.map((e) => convertCurrency(e.purchaseRevenue, e.currency, displayCurrency, rates)));
     const totalViews = sum(videos.map((e) => e.views));
@@ -86,14 +75,12 @@ export const summarizeInfluencers = (rows: CampaignEntry[], displayCurrency: Cur
       country: entries[0].country,
       campaigns: videos.length,
       stories: stories.length,
-      platforms,
-      topPlatform,
+      platforms: Array.from(new Set(entries.map((e) => e.platform))),
       totalViews,
       totalSpend,
       totalRevenue,
       roi: totalSpend > 0 ? ((totalRevenue - totalSpend) / totalSpend) * 100 : null,
       topCampaign: top?.campaignName ?? "",
-      viewTrend,
     });
   }
   return out.sort((a, b) => b.totalViews - a.totalViews);
