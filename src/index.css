@@ -236,6 +236,28 @@ All colors MUST be HSL.
     color: hsl(var(--background)) !important;
     box-shadow: 0 0 16px hsl(var(--success) / 0.6);
   }
+  .btn-neon-red {
+    background: transparent !important;
+    border: 1px solid hsl(var(--destructive)) !important;
+    color: hsl(var(--destructive)) !important;
+    transition: all 150ms ease;
+  }
+  .btn-neon-red:hover {
+    background: hsl(var(--destructive) / 0.12) !important;
+    color: hsl(var(--destructive)) !important;
+    box-shadow: 0 0 16px hsl(var(--destructive) / 0.55);
+  }
+  .btn-neon-purple {
+    background: transparent !important;
+    border: 1px solid hsl(var(--tertiary)) !important;
+    color: hsl(var(--tertiary)) !important;
+    transition: all 150ms ease;
+  }
+  .btn-neon-purple:hover {
+    background: hsl(var(--tertiary) / 0.15) !important;
+    color: hsl(var(--tertiary)) !important;
+    box-shadow: 0 0 16px hsl(var(--tertiary) / 0.6);
+  }
 
   /* Neon focus ring for inputs */
   .input-neon {
