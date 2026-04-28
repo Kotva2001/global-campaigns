@@ -1,4 +1,4 @@
-import { Activity, Eye, Wallet, TrendingUp, Percent, DollarSign } from "lucide-react";
+import { Activity, Eye, Wallet, TrendingUp, Percent, DollarSign, Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/formatters";
 import type { KPISet } from "@/lib/calculations";
@@ -13,12 +13,19 @@ interface Props {
 export const KPISummary = ({ kpis, currency = "CZK", convertedSub }: Props) => {
   const roiPositive = (kpis.roi ?? 0) >= 0;
   return (
-    <div className="grid grid-cols-2 gap-3 px-6 pt-6 md:grid-cols-3 xl:grid-cols-6">
+    <div className="grid grid-cols-2 gap-3 px-6 pt-6 md:grid-cols-3 xl:grid-cols-7">
       <KPI
         icon={<Activity className="h-4 w-4" />}
         label="Campaigns"
         value={formatNumber(kpis.campaigns)}
         sub={`${kpis.influencers} influencers`}
+      />
+      <KPI
+        icon={<Sparkles className="h-4 w-4" />}
+        label="Stories"
+        value={formatNumber(kpis.stories)}
+        sub="IG Stories logged"
+        valueClass="text-[hsl(var(--platform-story))]"
       />
       <KPI
         icon={<Eye className="h-4 w-4" />}

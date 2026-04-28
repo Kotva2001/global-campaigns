@@ -83,7 +83,7 @@ const collabBadge = (collab: string) => {
 
 type SavedFlash = string;
 
-const PLATFORM_OPTIONS = ["YouTube", "Instagram", "YB Shorts", "Story", "TikTok", "Other"] as const;
+const PLATFORM_OPTIONS = ["YouTube", "Instagram", "YB Shorts", "Story"] as const;
 const COLLAB_OPTIONS = ["Paid", "Barter", "Hybrid", "Other"] as const;
 
 type EditableNumberField = "views" | "likes" | "comments" | "campaignCost" | "purchaseRevenue";
@@ -390,8 +390,9 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
               </SheetHeader>
 
               <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-                <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
-                  <Stat label="Campaigns" value={String(campaigns.length)} />
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-7">
+                  <Stat label="Campaigns" value={String(kpis.campaigns)} />
+                  <Stat label="Stories" value={String(kpis.stories)} valueClass="text-[hsl(var(--platform-story))]" />
                   <Stat label="Views" value={formatCompact(kpis.totalViews)} />
                   <Stat label="Spend" value={formatCurrency(kpis.totalSpend, displayCurrency)} />
                   <Stat label="Revenue" value={formatCurrency(kpis.totalRevenue, displayCurrency)} valueClass={kpis.totalRevenue > 0 ? "text-success" : undefined} />
@@ -481,7 +482,7 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
                 <div className="flex items-center gap-2">
                   <Button className="gap-2" onClick={onAddCampaign}><Plus className="h-4 w-4" /> Add Campaign</Button>
                   <Button variant="secondary" className="gap-2" onClick={() => setStoryOpen(true)}>
-                    <Eye className="h-4 w-4 text-[hsl(var(--platform-story))]" /> Quick Log Story
+                    <Eye className="h-4 w-4 text-[hsl(var(--platform-story))]" /> Log Story
                   </Button>
                 </div>
               </div>

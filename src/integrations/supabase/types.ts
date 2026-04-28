@@ -110,6 +110,7 @@ export type Database = {
           last_stats_update: string | null
           likes: number | null
           managed_by: string | null
+          notes: string | null
           platform: string
           publish_date: string | null
           purchase_revenue: number | null
@@ -138,6 +139,7 @@ export type Database = {
           last_stats_update?: string | null
           likes?: number | null
           managed_by?: string | null
+          notes?: string | null
           platform: string
           publish_date?: string | null
           purchase_revenue?: number | null
@@ -166,6 +168,7 @@ export type Database = {
           last_stats_update?: string | null
           likes?: number | null
           managed_by?: string | null
+          notes?: string | null
           platform?: string
           publish_date?: string | null
           purchase_revenue?: number | null

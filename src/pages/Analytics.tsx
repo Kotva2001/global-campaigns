@@ -185,7 +185,7 @@ const Analytics = () => {
       purchaseRevenue: r.revenue,
       conversionRate: null,
     })), "CZK", { EUR_CZK: eurCzkRate });
-    return { campaigns: summary.campaigns, spend: summary.totalSpend, revenue: summary.totalRevenue, profit: summary.totalRevenue - summary.totalSpend, roi: summary.roi };
+    return { campaigns: summary.campaigns, stories: summary.stories, spend: summary.totalSpend, revenue: summary.totalRevenue, profit: summary.totalRevenue - summary.totalSpend, roi: summary.roi };
   }, [filtered]);
 
   // Chart 1: Revenue vs Cost by influencer
@@ -307,8 +307,9 @@ const Analytics = () => {
 
       <div className="space-y-6 px-6 py-6">
         {/* KPIs */}
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
           <KpiCard label="Total Campaigns" value={formatNumber(kpis.campaigns)} />
+          <KpiCard label="Stories" value={formatNumber(kpis.stories)} valueClass="text-[hsl(var(--platform-story))]" />
           <KpiCard label="Total Spend" value={formatCurrency(kpis.spend)} />
           <KpiCard label="Total Revenue" value={formatCurrency(kpis.revenue)} valueClass={kpis.revenue > 0 ? "text-success" : undefined} />
           <KpiCard
@@ -404,25 +405,32 @@ const Analytics = () => {
                   <Empty />
                 ) : (
                   <div className="relative">
-                    <ResponsiveContainer width="100%" height={320}>
-                      <PieChart>
-                        <Pie data={platformSplit} dataKey="value" nameKey="name" innerRadius={70} outerRadius={110} paddingAngle={2}>
-                          {platformSplit.map((d) => <Cell key={d.name} fill={d.color} />)}
-                          <LabelList
-                            dataKey="value"
-                            position="outside"
-                            formatter={(v: number) => `${((v / kpis.campaigns) * 100).toFixed(0)}%`}
-                            style={{ fill: "hsl(var(--foreground))", fontSize: 11 }}
-                          />
-                        </Pie>
-                        <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))" }} />
-                        <Legend wrapperStyle={{ fontSize: 12 }} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                      <div className="text-3xl font-bold">{kpis.campaigns}</div>
-                      <div className="text-xs text-muted-foreground">campaigns</div>
-                    </div>
+                    {(() => {
+                      const total = platformSplit.reduce((s, d) => s + d.value, 0) || 1;
+                      return (
+                        <>
+                          <ResponsiveContainer width="100%" height={320}>
+                            <PieChart>
+                              <Pie data={platformSplit} dataKey="value" nameKey="name" innerRadius={70} outerRadius={110} paddingAngle={2}>
+                                {platformSplit.map((d) => <Cell key={d.name} fill={d.color} />)}
+                                <LabelList
+                                  dataKey="value"
+                                  position="outside"
+                                  formatter={(v: number) => `${((v / total) * 100).toFixed(0)}%`}
+                                  style={{ fill: "hsl(var(--foreground))", fontSize: 11 }}
+                                />
+                              </Pie>
+                              <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))" }} formatter={(v: number, name) => [`${v} ${name === "Story" ? (v === 1 ? "story" : "stories") : "posts"}`, name]} />
+                              <Legend wrapperStyle={{ fontSize: 12 }} />
+                            </PieChart>
+                          </ResponsiveContainer>
+                          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                            <div className="text-3xl font-bold">{kpis.campaigns + kpis.stories}</div>
+                            <div className="text-xs text-muted-foreground">posts incl. stories</div>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                 )}
               </Card>
