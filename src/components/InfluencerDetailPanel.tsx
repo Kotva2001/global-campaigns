@@ -33,6 +33,8 @@ import { cn } from "@/lib/utils";
 import type { CampaignEntry, InfluencerRecord } from "@/types/campaign";
 import type { TablesUpdate } from "@/integrations/supabase/types";
 import type { ProductRecord } from "@/types/product";
+import { DealsSection } from "@/components/DealsSection";
+import { DealCell } from "@/components/DealCell";
 
 interface Props {
   creator: InfluencerRecord | null;
@@ -388,12 +390,14 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
                   <Stat label="Avg. engagement" value={formatPercent(kpis.avgEngagement)} />
                 </div>
 
+                <DealsSection influencerId={creator.id} campaigns={campaigns} onChanged={onChanged} />
+
                 <Card className="mt-5 overflow-hidden border-border bg-card">
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead className="sticky top-0 z-10 bg-muted/60 backdrop-blur">
                         <tr className="border-b border-border">
-                          {['Date', 'Campaign', 'Platform', 'Collab', 'Link', 'Views', 'Likes', 'Comments', 'Cost', 'Revenue', 'Engagement', 'Conversion', ''].map((head) => (
+                          {['Date', 'Campaign', 'Platform', 'Collab', 'Link', 'Deal', 'Views', 'Likes', 'Comments', 'Cost', 'Revenue', 'Engagement', 'Conversion', ''].map((head) => (
                             <th key={head} className="whitespace-nowrap px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{head}</th>
                           ))}
                         </tr>
