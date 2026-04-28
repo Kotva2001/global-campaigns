@@ -59,11 +59,10 @@ const num = (value: unknown): number | null => {
 
 const normalizePlatform = (raw: string): Platform => {
   const value = raw.toLowerCase();
+  if (value === "story" || value.includes("storie")) return "Story";
   if (value.includes("insta")) return "Instagram";
   if (value.includes("short")) return "YB Shorts";
-  if (value.includes("tik")) return "TikTok";
-  if (value.includes("you") || value.includes("yt")) return "YouTube";
-  return "Other";
+  return "YouTube";
 };
 
 const formatDate = (iso: string | null) => {
