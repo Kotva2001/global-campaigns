@@ -543,10 +543,10 @@ function DetectionQueue({
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
-                <Button size="sm" onClick={() => setApprove(d)}>
+                <Button size="sm" onClick={() => setApprove(d)} className="btn-neon-green">
                   <CheckCircle2 className="h-4 w-4" /> Approve & Add
                 </Button>
-                <Button size="sm" variant="secondary" onClick={() => dismiss(d.id)}>
+                <Button size="sm" variant="ghost" onClick={() => dismiss(d.id)} className="text-muted-foreground hover:text-foreground">
                   <X className="h-4 w-4" /> Dismiss
                 </Button>
                 <Button size="sm" variant="outline" asChild>

@@ -96,11 +96,11 @@ const Dashboard = () => {
                 <SelectContent><SelectItem value="CZK">CZK</SelectItem><SelectItem value="EUR">EUR</SelectItem></SelectContent>
               </Select>
             </div>
-            <Button size="sm" onClick={() => { setEditingCampaign(null); setCampaignInfluencerId(null); setCampaignOpen(true); }} className="gap-2">
+            <Button size="sm" onClick={() => { setEditingCampaign(null); setCampaignInfluencerId(null); setCampaignOpen(true); }} className="btn-neon-cyan gap-2">
               <Plus className="h-4 w-4" />
               Add Campaign
             </Button>
-            <Button variant="secondary" size="sm" onClick={refresh} disabled={loading} className="gap-2">
+            <Button variant="secondary" size="sm" onClick={refresh} disabled={loading} className="btn-neon-cyan gap-2">
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
               Refresh
             </Button>

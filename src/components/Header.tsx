@@ -46,7 +46,7 @@ export const Header = ({ selectedCountry, loading, lastFetched, onRefresh, onOpe
             size="sm"
             onClick={onRefresh}
             disabled={loading}
-            className="gap-2"
+            className="btn-neon-cyan gap-2"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             Refresh
