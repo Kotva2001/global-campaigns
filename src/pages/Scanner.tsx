@@ -872,13 +872,16 @@ function SettingsForm({ settings, onSaved }: { settings: ScanSettings; onSaved: 
 
   return (
     <Card>
-      <CardHeader><CardTitle>Scan Settings</CardTitle></CardHeader>
+      <CardHeader><CardTitle className="section-heading text-base">Scan Settings</CardTitle></CardHeader>
       <CardContent className="space-y-6">
         <div>
-          <Label>Brand keywords</Label>
+          <Label className="section-heading">Brand keywords</Label>
           <div className="mt-2 flex flex-wrap gap-2">
             {keywords.map((k) => (
-              <Badge key={k} variant="secondary" className="gap-1">
+              <Badge
+                key={k}
+                className="gap-1 border bg-[hsl(var(--success)/0.15)] text-[hsl(var(--success))] border-[hsl(var(--success)/0.5)] hover:bg-[hsl(var(--success)/0.22)]"
+              >
                 {k}
                 <button type="button" onClick={() => setKeywords(keywords.filter((x) => x !== k))}>
                   <X className="h-3 w-3" />
@@ -888,6 +891,7 @@ function SettingsForm({ settings, onSaved }: { settings: ScanSettings; onSaved: 
           </div>
           <div className="mt-2 flex gap-2">
             <Input
+              className="input-neon"
               value={kwInput}
               onChange={(e) => setKwInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addKw())}
@@ -899,9 +903,10 @@ function SettingsForm({ settings, onSaved }: { settings: ScanSettings; onSaved: 
         </div>
 
         <div>
-          <Label>YouTube API key</Label>
+          <Label className="section-heading">YouTube API key</Label>
           <div className="mt-2 flex gap-2">
             <Input
+              className="input-neon"
               type={showKey ? "text" : "password"}
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
@@ -919,7 +924,7 @@ function SettingsForm({ settings, onSaved }: { settings: ScanSettings; onSaved: 
 
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <Label>Scan frequency</Label>
+            <Label className="section-heading">Scan frequency</Label>
             <Select value={String(freq)} onValueChange={(v) => setFreq(Number(v))}>
               <SelectTrigger className="mt-2"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -930,7 +935,7 @@ function SettingsForm({ settings, onSaved }: { settings: ScanSettings; onSaved: 
             </Select>
           </div>
           <div>
-            <Label>Stats refresh frequency</Label>
+            <Label className="section-heading">Stats refresh frequency</Label>
             <Select value={String(statsFreq)} onValueChange={(v) => setStatsFreq(Number(v))}>
               <SelectTrigger className="mt-2"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -943,7 +948,7 @@ function SettingsForm({ settings, onSaved }: { settings: ScanSettings; onSaved: 
         </div>
 
         <div>
-          <Label>Platforms to scan</Label>
+          <Label className="section-heading">Platforms to scan</Label>
           <div className="mt-2 flex gap-6">
             {["YouTube", "Instagram"].map((p) => (
               <label key={p} className="flex items-center gap-2 text-sm">
@@ -970,7 +975,7 @@ function SettingsForm({ settings, onSaved }: { settings: ScanSettings; onSaved: 
         </div>
 
         <div className="flex justify-end">
-          <Button onClick={save} disabled={saving}>
+          <Button onClick={save} disabled={saving} className="btn-neon-cyan gap-2">
             {saving && <Loader2 className="h-4 w-4 animate-spin" />} Save Settings
           </Button>
         </div>
