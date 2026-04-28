@@ -65,21 +65,21 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
   const location = useLocation();
 
   return (
-    <div className="flex h-full w-full flex-col bg-zinc-950 text-foreground">
-      <div className="border-b border-border px-5 py-5">
-        <div className="flex items-center gap-2.5">
+    <div className="flex h-full w-full flex-col bg-[hsl(220_28%_4%)] text-foreground">
+      <div className="border-b border-border/60 px-4 py-5">
+        <div className="flex items-center gap-3">
           <span className="relative flex h-2.5 w-2.5">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
             <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
           </span>
           <div className="min-w-0">
-            <div className="truncate text-sm font-bold">Influencer ROI Tracker</div>
-            <div className="truncate text-xs text-muted-foreground">regals.cz</div>
+            <div className="truncate text-sm font-bold tracking-tight">Influencer ROI Tracker</div>
+            <div className="truncate text-[11px] text-muted-foreground">regals.cz</div>
           </div>
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1 px-3 py-4">
+      <nav className="flex-1 space-y-0.5 px-3 py-4">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = location.pathname.startsWith(item.to);
@@ -95,24 +95,21 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
               to={item.to}
               onClick={onNavigate}
               className={cn(
-                "relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                "relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all duration-150",
                 active
-                  ? "bg-primary/10 text-foreground"
-                  : "text-muted-foreground hover:bg-muted/40 hover:text-foreground",
+                  ? "bg-primary/15 text-foreground shadow-[inset_3px_0_0_hsl(var(--primary))]"
+                  : "text-muted-foreground hover:bg-muted/30 hover:text-foreground",
               )}
             >
-              {active && (
-                <span className="absolute -left-3 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-primary" />
-              )}
-              <Icon className="h-4 w-4" />
+              <Icon className={cn("h-4 w-4", active && "text-primary")} />
               <span className="flex-1">{item.label}</span>
               {badge > 0 && (
                 <span
                   className={cn(
-                    "rounded-full px-1.5 py-0.5 text-[10px] font-bold",
+                    "min-w-[20px] rounded-full px-1.5 py-0.5 text-center text-[10px] font-bold tabular-nums",
                     item.badgeKey === "alerts"
                       ? "bg-destructive text-destructive-foreground"
-                      : "bg-primary text-primary-foreground",
+                      : "bg-info text-white",
                   )}
                 >
                   {badge}
@@ -123,10 +120,10 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
         })}
       </nav>
 
-      <div className="border-t border-border px-3 py-3">
+      <div className="border-t border-border/60 px-3 py-3">
         <Button
           variant="ghost"
-          className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
+          className="w-full justify-start gap-3 text-sm text-muted-foreground hover:bg-muted/30 hover:text-foreground"
           onClick={() => {
             onOpenSettings();
             onNavigate?.();
@@ -137,7 +134,7 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
         </Button>
         <Button
           variant="ghost"
-          className="mt-1 w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
+          className="mt-1 w-full justify-start gap-3 text-sm text-muted-foreground hover:bg-muted/30 hover:text-foreground"
           onClick={async () => {
             await supabase.auth.signOut();
             onNavigate?.();

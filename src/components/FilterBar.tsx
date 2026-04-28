@@ -25,27 +25,27 @@ export const FilterBar = ({
   clear,
   resultCount,
 }: Props) => (
-  <div className="flex flex-wrap items-center gap-3 px-6 pt-6">
-    <div className="relative min-w-[220px] flex-1">
-      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+  <div className="flex flex-wrap items-center gap-3 px-6 pt-8">
+    <div className="relative min-w-[260px] flex-1 max-w-md">
+      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       <Input
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Search influencer or campaign…"
-        className="border-border bg-card pl-9 text-foreground placeholder:text-muted-foreground"
+        className="h-10 rounded-lg border-border/80 bg-card pl-9 text-sm text-foreground placeholder:text-muted-foreground transition-colors focus-visible:border-primary/60 focus-visible:ring-1 focus-visible:ring-primary/40"
       />
     </div>
 
-    <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-border bg-card p-1">
+    <div className="flex flex-wrap items-center gap-1 rounded-lg border border-border/70 bg-card/60 p-1 backdrop-blur">
       {PLATFORMS.map((p) => (
         <button
           key={p}
           onClick={() => setPlatform(p)}
           className={cn(
-            "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+            "rounded-md px-3 py-1.5 text-xs font-semibold transition-all duration-150",
             platform === p
-              ? "bg-primary text-primary-foreground shadow"
-              : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              ? "bg-primary text-primary-foreground shadow-[0_0_0_1px_hsl(var(--primary)/0.4),0_4px_12px_-4px_hsl(var(--primary)/0.5)]"
+              : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
           )}
         >
           {p}
@@ -60,7 +60,7 @@ export const FilterBar = ({
     )}
 
     <div className="ml-auto text-sm text-muted-foreground">
-      <span className="font-semibold text-foreground">{resultCount}</span> result
+      <span className="font-semibold text-foreground tabular-nums">{resultCount}</span> result
       {resultCount === 1 ? "" : "s"}
     </div>
   </div>
