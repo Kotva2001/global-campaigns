@@ -185,7 +185,7 @@ const Analytics = () => {
       purchaseRevenue: r.revenue,
       conversionRate: null,
     })), "CZK", { EUR_CZK: eurCzkRate });
-    return { campaigns: summary.campaigns, spend: summary.totalSpend, revenue: summary.totalRevenue, profit: summary.totalRevenue - summary.totalSpend, roi: summary.roi };
+    return { campaigns: summary.campaigns, stories: summary.stories, spend: summary.totalSpend, revenue: summary.totalRevenue, profit: summary.totalRevenue - summary.totalSpend, roi: summary.roi };
   }, [filtered]);
 
   // Chart 1: Revenue vs Cost by influencer
@@ -307,8 +307,9 @@ const Analytics = () => {
 
       <div className="space-y-6 px-6 py-6">
         {/* KPIs */}
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
           <KpiCard label="Total Campaigns" value={formatNumber(kpis.campaigns)} />
+          <KpiCard label="Stories" value={formatNumber(kpis.stories)} valueClass="text-[hsl(var(--platform-story))]" />
           <KpiCard label="Total Spend" value={formatCurrency(kpis.spend)} />
           <KpiCard label="Total Revenue" value={formatCurrency(kpis.revenue)} valueClass={kpis.revenue > 0 ? "text-success" : undefined} />
           <KpiCard
