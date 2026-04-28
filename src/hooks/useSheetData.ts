@@ -27,6 +27,7 @@ const num = (v: unknown): number | null => {
 interface CampaignRow {
   id: string;
   influencer_id: string | null;
+  deal_id: string | null;
   campaign_name: string | null;
   platform: string;
   publish_date: string | null;
@@ -63,6 +64,7 @@ const mapRow = (r: CampaignRow, influencerById: Map<string, InfluencerLookupRow>
   return {
   id: r.id,
   influencerId: r.influencer_id,
+  dealId: r.deal_id,
   country: influencer?.country ?? "",
   influencer: influencer?.name ?? "",
   campaignName: r.campaign_name ?? "",
@@ -98,7 +100,7 @@ export const useSheetData = () => {
       const { data: rows, error: err } = await supabase
         .from("campaigns")
         .select(
-          "id, influencer_id, campaign_name, platform, publish_date, video_url, collaboration_type, currency, campaign_cost, utm_link, managed_by, views, likes, comments, sessions, engagement_rate, purchase_revenue, conversion_rate",
+          "id, influencer_id, deal_id, campaign_name, platform, publish_date, video_url, collaboration_type, currency, campaign_cost, utm_link, managed_by, views, likes, comments, sessions, engagement_rate, purchase_revenue, conversion_rate",
         )
         .order("publish_date", { ascending: false, nullsFirst: false });
       if (err) throw err;
