@@ -19,11 +19,28 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { COUNTRIES, COUNTRY_FLAGS, COUNTRY_NAMES } from "@/lib/countries";
+import { CZ, SK, HU, DE, AT, NL, RO, SI, IT, GR, ES } from "country-flag-icons/react/3x2";
 import { instagramHandlesFromValue } from "@/lib/instagram";
 import { computeKPIs } from "@/lib/calculations";
 import { formatCompact, formatPercent } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { CampaignEntry, InfluencerRecord, Platform } from "@/types/campaign";
+
+const FLAG_COMPONENTS: Record<string, React.ComponentType<any>> = {
+  CZ, SK, HU, DE, AT, NL, RO, SI, IT, GR, ES,
+};
+
+const FlagIcon = ({ code, width, height, className }: { code: string; width: number; height: number; className?: string }) => {
+  const Comp = FLAG_COMPONENTS[code];
+  if (!Comp) return null;
+  return (
+    <Comp
+      title={code}
+      style={{ width, height, borderRadius: 4, display: "block", objectFit: "cover" }}
+      className={className}
+    />
+  );
+};
 
 interface CampaignRow {
   id: string;
@@ -347,7 +364,9 @@ const CountryTab = ({ active, onClick, flag, code }: { active: boolean; onClick:
         : "border border-[hsl(var(--glow-purple)/0.20)] text-muted-foreground hover:text-foreground hover:border-[hsl(var(--glow-cyan)/0.40)]",
     )}
   >
-    <span className="text-[16px] leading-none">{flag}</span>
+    {FLAG_COMPONENTS[code]
+      ? <FlagIcon code={code} width={16} height={11} />
+      : <span className="text-[16px] leading-none">{flag}</span>}
     <span className="font-medium">{code}</span>
   </button>
 );
@@ -438,8 +457,8 @@ const CreatorCard = ({
               boxShadow: `0 0 12px ${accentVar.replace(")", " / 0.45)").replace("hsl(", "hsla(")}`,
             }}
           >
-            {avatarFlag ? (
-              <span style={{ fontSize: "28px", lineHeight: 1 }}>{avatarFlag}</span>
+            {FLAG_COMPONENTS[creator.country] ? (
+              <FlagIcon code={creator.country} width={28} height={19} />
             ) : (
               <span className="text-sm">{initial}</span>
             )}
@@ -464,9 +483,9 @@ const CreatorCard = ({
         {/* Identity */}
         <button className="min-w-0 flex-1 text-left">
           <div className="flex items-center gap-2">
-            <span className="text-[24px] leading-none shrink-0" title={creator.country}>
-              {COUNTRY_FLAGS[creator.country] ?? "🏳️"}
-            </span>
+            {FLAG_COMPONENTS[creator.country]
+              ? <FlagIcon code={creator.country} width={24} height={16} />
+              : <span className="text-[24px] leading-none shrink-0">{COUNTRY_FLAGS[creator.country] ?? "🏳️"}</span>}
             <div className="truncate text-base font-bold text-white">{creator.name}</div>
             {recentlyActive && (
               <span
