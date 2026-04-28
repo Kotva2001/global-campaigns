@@ -37,6 +37,24 @@ const rankColor = (rank: number) => {
   return "hsl(var(--glow-cyan) / 0.75)";
 };
 
+const topPlatformFor = (rows: CampaignEntry[], fallback: string[]) => {
+  if (!rows.length) return fallback[0] ?? "YouTube";
+  const counts = rows.reduce<Record<string, number>>((acc, row) => {
+    acc[row.platform] = (acc[row.platform] ?? 0) + 1;
+    return acc;
+  }, {});
+  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? fallback[0] ?? "YouTube";
+};
+
+const viewTrendFor = (rows: CampaignEntry[], totalViews: number, campaigns: number) => {
+  const points = rows
+    .filter((row) => row.platform !== "Story")
+    .sort((a, b) => (a.publishDateIso ?? "").localeCompare(b.publishDateIso ?? ""))
+    .map((row) => row.views ?? 0);
+  if (points.length) return points;
+  return campaigns > 1 ? [0, totalViews] : [totalViews, totalViews];
+};
+
 export const InfluencerCards = ({ influencers, rows = [], currency = "CZK", onSelectInfluencer }: Props) => {
   if (!influencers.length) {
     return (
