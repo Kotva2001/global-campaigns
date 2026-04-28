@@ -2,6 +2,7 @@ import { Eye, Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { COUNTRY_FLAGS } from "@/lib/countries";
+import { FlagIcon, hasFlag } from "@/components/FlagIcon";
 import type { InfluencerSummary } from "@/lib/calculations";
 import { formatCompact, formatCurrency, formatNumber } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
@@ -62,7 +63,9 @@ export const InfluencerCards = ({ influencers, currency = "CZK", onSelectInfluen
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-base font-bold text-white transition-[text-shadow] group-hover:[text-shadow:0_0_10px_hsl(var(--glow-pink)/0.5)]">{inf.influencer}</div>
                   <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <span>{COUNTRY_FLAGS[inf.country]}</span>
+                    {hasFlag(inf.country)
+                      ? <FlagIcon code={inf.country} width={16} height={11} />
+                      : <span>{COUNTRY_FLAGS[inf.country]}</span>}
                     <span>{inf.country}</span>
                     <span>·</span>
                     <span>{inf.campaigns} campaign{inf.campaigns === 1 ? "" : "s"}</span>
