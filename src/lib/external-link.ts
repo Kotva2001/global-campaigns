@@ -1,3 +1,5 @@
+import type { MouseEvent } from "react";
+
 /**
  * Open an external URL in a new tab without leaking the referrer.
  *
@@ -9,7 +11,10 @@
  */
 export const openExternal = (url: string | null | undefined) => {
   if (!url) return;
-  const w = window.open("about:blank", "_blank", "noopener,noreferrer");
+  // NOTE: do NOT pass "noopener" here — it forces window.open to return null,
+  // which would prevent us from setting the new tab's location. We strip the
+  // opener manually below instead.
+  const w = window.open("about:blank", "_blank");
   if (w) {
     try {
       w.opener = null;
@@ -17,9 +22,6 @@ export const openExternal = (url: string | null | undefined) => {
       // ignore
     }
     w.location.href = url;
-  } else {
-    // Popup blocked — fall back to a same-tab navigation that still strips referrer.
-    window.location.href = url;
   }
 };
 
@@ -29,7 +31,7 @@ export const openExternal = (url: string | null | undefined) => {
  */
 export const handleExternalClick =
   (url: string | null | undefined) =>
-  (event: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>) => {
+  (event: MouseEvent<HTMLAnchorElement | HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();
     openExternal(url);
