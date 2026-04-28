@@ -481,7 +481,7 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
                 <div className="flex items-center gap-2">
                   <Button className="gap-2" onClick={onAddCampaign}><Plus className="h-4 w-4" /> Add Campaign</Button>
                   <Button variant="secondary" className="gap-2" onClick={() => setStoryOpen(true)}>
-                    <Eye className="h-4 w-4 text-[hsl(var(--platform-story))]" /> Quick Log Story
+                    <Eye className="h-4 w-4 text-[hsl(var(--platform-story))]" /> Log Story
                   </Button>
                 </div>
               </div>
