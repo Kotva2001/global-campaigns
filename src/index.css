@@ -243,9 +243,16 @@ All colors MUST be HSL.
     transition: all 150ms ease;
   }
   .btn-neon-red:hover {
-    background: hsl(var(--destructive) / 0.12) !important;
+    background: hsl(var(--destructive) / 0.15) !important;
+    border-color: hsl(348 100% 67%) !important;
+    color: hsl(348 100% 67%) !important;
+    box-shadow: 0 0 10px hsl(var(--destructive) / 0.5);
+  }
+  .btn-neon-red svg {
     color: hsl(var(--destructive)) !important;
-    box-shadow: 0 0 16px hsl(var(--destructive) / 0.55);
+  }
+  .btn-neon-red:hover svg {
+    color: hsl(348 100% 67%) !important;
   }
   .btn-neon-purple {
     background: transparent !important;
