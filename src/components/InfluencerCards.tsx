@@ -5,7 +5,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { COUNTRY_FLAGS } from "@/lib/countries";
 import { FlagIcon, hasFlag } from "@/components/FlagIcon";
 import type { InfluencerSummary } from "@/lib/calculations";
-import { formatCompact, formatCurrency, formatNumber } from "@/lib/formatters";
+import { formatCompact, formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -193,16 +193,6 @@ export const InfluencerCards = ({ influencers, currency = "CZK", onSelectInfluen
   );
 };
 
-const Stat = ({ label, value, valueClass }: { label: string; value: string; valueClass?: string }) => (
-  <div
-    className="rounded-md p-2"
-    style={{ background: "hsl(248 50% 9%)", border: "1px solid hsl(var(--glow-purple) / 0.12)" }}
-  >
-    <div className="stat-label">{label}</div>
-    <div className={cn("text-sm font-bold text-foreground", valueClass)}>{value}</div>
-  </div>
-);
-
 const Sparkline = ({ values, color }: { values: number[]; color: string }) => {
   const points = values.length ? values : [0, 0];
   const min = Math.min(...points);
@@ -225,6 +215,3 @@ const Sparkline = ({ values, color }: { values: number[]; color: string }) => {
     </svg>
   );
 };
-
-// expose unused re-export for ts
-export { formatNumber };
