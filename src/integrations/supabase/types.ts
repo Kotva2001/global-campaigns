@@ -101,6 +101,7 @@ export type Database = {
           conversion_rate: number | null
           created_at: string | null
           currency: string | null
+          deal_id: string | null
           detected_automatically: boolean | null
           detection_source: string | null
           engagement_rate: number | null
@@ -128,6 +129,7 @@ export type Database = {
           conversion_rate?: number | null
           created_at?: string | null
           currency?: string | null
+          deal_id?: string | null
           detected_automatically?: boolean | null
           detection_source?: string | null
           engagement_rate?: number | null
@@ -155,6 +157,7 @@ export type Database = {
           conversion_rate?: number | null
           created_at?: string | null
           currency?: string | null
+          deal_id?: string | null
           detected_automatically?: boolean | null
           detection_source?: string | null
           engagement_rate?: number | null
@@ -175,10 +178,71 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "campaigns_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "campaigns_influencer_id_fkey"
             columns: ["influencer_id"]
             isOneToOne: false
             referencedRelation: "influencers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deals: {
+        Row: {
+          collaboration_type: string | null
+          created_at: string
+          currency: string
+          deal_name: string | null
+          id: string
+          influencer_id: string
+          notes: string | null
+          product_id: string | null
+          total_cost: number
+          updated_at: string
+        }
+        Insert: {
+          collaboration_type?: string | null
+          created_at?: string
+          currency?: string
+          deal_name?: string | null
+          id?: string
+          influencer_id: string
+          notes?: string | null
+          product_id?: string | null
+          total_cost?: number
+          updated_at?: string
+        }
+        Update: {
+          collaboration_type?: string | null
+          created_at?: string
+          currency?: string
+          deal_name?: string | null
+          id?: string
+          influencer_id?: string
+          notes?: string | null
+          product_id?: string | null
+          total_cost?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deals_influencer_id_fkey"
+            columns: ["influencer_id"]
+            isOneToOne: false
+            referencedRelation: "influencers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
