@@ -26,7 +26,7 @@ import { formatCompact, formatPercent } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { CampaignEntry, InfluencerRecord, Platform } from "@/types/campaign";
 
-const FLAG_COMPONENTS: Record<string, React.ComponentType<React.SVGProps<SVGSVGElement> & { title?: string }>> = {
+const FLAG_COMPONENTS: Record<string, React.ComponentType<any>> = {
   CZ, SK, HU, DE, AT, NL, RO, SI, IT, GR, ES,
 };
 
