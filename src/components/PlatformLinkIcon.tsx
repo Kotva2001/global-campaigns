@@ -64,7 +64,7 @@ export const PlatformLinkIcon = ({ platform, url, className }: Props) => {
     <a
       href={url}
       target="_blank"
-      rel="noreferrer"
+      rel="noopener noreferrer"
       title={`Open on ${label}`}
       aria-label={`Open on ${label}`}
       className={cn("inline-flex h-8 w-8 items-center justify-center opacity-70 transition-opacity hover:opacity-100", className)}
