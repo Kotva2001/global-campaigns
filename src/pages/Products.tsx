@@ -107,7 +107,11 @@ const Products = () => {
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filtered.map((product) => (
-              <Card key={product.id} className="border-border bg-card p-4 transition-colors hover:border-primary/40 hover:bg-card-hover">
+              <Card
+                key={product.id}
+                onClick={() => { setEditing(product); setDialogOpen(true); }}
+                className="cursor-pointer border-border bg-card p-4 transition-colors hover:border-primary/40 hover:bg-card-hover"
+              >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-base font-bold">{product.name}</div>
@@ -117,17 +121,17 @@ const Products = () => {
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
+                    <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                       <DropdownMenuItem onClick={() => { setEditing(product); setDialogOpen(true); }}>
                         <Pencil className="mr-2 h-4 w-4" /> Edit
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
-                        onClick={() => setConfirmDelete(product)}
+                        onClick={(e) => { e.stopPropagation(); setConfirmDelete(product); }}
                         className="text-destructive focus:text-destructive"
                       >
                         <Trash2 className="mr-2 h-4 w-4" /> Delete
