@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ProductDialog } from "@/components/ProductDialog";
 import { formatCurrency } from "@/lib/formatters";
+import { normalize } from "@/lib/normalize";
 import type { ProductRecord } from "@/types/product";
 
 const Products = () => {
@@ -47,12 +48,12 @@ const Products = () => {
   useEffect(() => { void load(); }, []);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = normalize(search.trim());
     if (!q) return products;
     return products.filter((p) =>
-      p.name.toLowerCase().includes(q) ||
-      (p.sku ?? "").toLowerCase().includes(q) ||
-      (p.category ?? "").toLowerCase().includes(q),
+      normalize(p.name).includes(q) ||
+      normalize(p.sku ?? "").includes(q) ||
+      normalize(p.category ?? "").includes(q),
     );
   }, [products, search]);
 

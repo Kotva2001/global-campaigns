@@ -24,6 +24,7 @@ import { instagramHandlesFromValue } from "@/lib/instagram";
 import { computeKPIs } from "@/lib/calculations";
 import { formatCompact, formatPercent } from "@/lib/formatters";
 import { copyExternalLinkToClipboard } from "@/lib/external-link-copy";
+import { normalize } from "@/lib/normalize";
 import { cn } from "@/lib/utils";
 import type { CampaignEntry, InfluencerRecord, Platform } from "@/types/campaign";
 
@@ -198,11 +199,11 @@ const Creators = () => {
   }, [campaigns]);
 
   const filtered = useMemo(() => {
-    const query = search.trim().toLowerCase();
+    const query = normalize(search.trim());
     return influencers.filter((creator) => {
       if (country !== "All" && creator.country !== country) return false;
       if (status !== "All" && creator.status !== status) return false;
-      return !query || creator.name.toLowerCase().includes(query) || (creator.contact_person ?? "").toLowerCase().includes(query);
+      return !query || normalize(creator.name).includes(query) || normalize(creator.contact_person ?? "").includes(query);
     });
   }, [country, influencers, search, status]);
 
