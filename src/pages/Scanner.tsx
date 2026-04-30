@@ -518,7 +518,11 @@ function DetectionQueue({
 
   const dismiss = async (id: string) => {
     const { error } = await supabase.from("detected_videos").update({ status: "dismissed" }).eq("id", id);
-    if (error) toastError("Could not dismiss detection", error); else { toast.success("Dismissed"); onChange(); }
+    if (error) toastError("Could not dismiss detection", error); else {
+      toast.success("Dismissed");
+      notifyScannerChanged();
+      onChange();
+    }
   };
 
   const filtered = detections.filter((d) => {
@@ -809,6 +813,7 @@ function ApproveDialog({
     }
     toast.success("Campaign created");
     setSaving(false);
+    notifyScannerChanged();
     onSaved();
   };
 
