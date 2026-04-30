@@ -266,6 +266,8 @@ export default function Scanner() {
     }
     await load();
     setRunning(false);
+    notifyScannerChanged();
+    notifyAlertsChanged();
   };
 
   const refreshYouTubeStats = async () => {
