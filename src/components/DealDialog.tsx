@@ -218,5 +218,22 @@ export const DealDialog = ({ open, onOpenChange, influencerId, editing, onSaved 
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={!!linkPrompt} onOpenChange={(o) => { if (!o) skipLink(); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Link existing campaigns to this deal?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Found {linkPrompt?.candidateIds.length ?? 0} campaign{(linkPrompt?.candidateIds.length ?? 0) === 1 ? "" : "s"} for {linkPrompt?.productLabel}.
+            Linking will split the deal cost evenly across all linked campaigns.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={skipLink}>Skip</AlertDialogCancel>
+          <AlertDialogAction onClick={confirmLink}>Link campaigns</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 };
