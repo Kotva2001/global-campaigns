@@ -30,6 +30,7 @@ import type { CampaignEntry, InfluencerRecord, Platform } from "@/types/campaign
 interface CampaignRow {
   id: string;
   influencer_id: string | null;
+  deal_id: string | null;
   campaign_name: string | null;
   platform: string;
   publish_date: string | null;
@@ -126,7 +127,7 @@ const formatDate = (iso: string | null) => {
 const mapCampaign = (row: CampaignRow, influencer: InfluencerRecord): CampaignEntry => ({
   id: row.id,
   influencerId: row.influencer_id,
-  dealId: null,
+  dealId: row.deal_id ?? null,
   country: influencer.country,
   influencer: influencer.name,
   campaignName: row.campaign_name ?? "",

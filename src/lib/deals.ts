@@ -41,3 +41,15 @@ export const linkCampaignToDeal = async (
   if (dealId) await recalcDealSplit(dealId);
   if (previousDealId && previousDealId !== dealId) await recalcDealSplit(previousDealId);
 };
+
+/**
+ * Bulk-link multiple campaigns to a deal, then recalc the split once.
+ */
+export const linkCampaignsToDeal = async (
+  campaignIds: string[],
+  dealId: string,
+): Promise<void> => {
+  if (campaignIds.length === 0) return;
+  await supabase.from("campaigns").update({ deal_id: dealId }).in("id", campaignIds);
+  await recalcDealSplit(dealId);
+};

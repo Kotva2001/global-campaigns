@@ -2,13 +2,17 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { toastError } from "@/lib/toast-helpers";
-import { recalcDealSplit } from "@/lib/deals";
+import { recalcDealSplit, linkCampaignsToDeal } from "@/lib/deals";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { CurrencyCode } from "@/lib/currency";
 import type { ProductRecord } from "@/types/product";
 import type { DealRecord } from "@/types/deal";
@@ -33,6 +37,11 @@ export const DealDialog = ({ open, onOpenChange, influencerId, editing, onSaved 
   const [collab, setCollab] = useState<string>("Barter");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [linkPrompt, setLinkPrompt] = useState<{
+    dealId: string;
+    productLabel: string;
+    candidateIds: string[];
+  } | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -94,13 +103,39 @@ export const DealDialog = ({ open, onOpenChange, influencerId, editing, onSaved 
         if (error) throw error;
         await recalcDealSplit(editing.id);
         toast.success("Deal updated");
+        onSaved();
+        onOpenChange(false);
       } else {
-        const { error } = await supabase.from("deals").insert(payload);
+        const { data: inserted, error } = await supabase
+          .from("deals")
+          .insert(payload)
+          .select("id")
+          .single();
         if (error) throw error;
         toast.success("Deal created");
+        onOpenChange(false);
+        // Look for unlinked campaigns matching this product (by product_id or by name).
+        const product = products.find((p) => p.id === productId);
+        const productName = product?.name ?? dealName;
+        const { data: candidates } = await supabase
+          .from("campaigns")
+          .select("id,campaign_name")
+          .eq("influencer_id", influencerId)
+          .is("deal_id", null);
+        const matches = (candidates ?? []).filter((c) => {
+          const name = (c.campaign_name ?? "").trim().toLowerCase();
+          return productName ? name === productName.trim().toLowerCase() : false;
+        });
+        if (matches.length > 0 && inserted?.id) {
+          setLinkPrompt({
+            dealId: inserted.id,
+            productLabel: productName || "this deal",
+            candidateIds: matches.map((m) => m.id),
+          });
+        } else {
+          onSaved();
+        }
       }
-      onSaved();
-      onOpenChange(false);
     } catch (e) {
       toastError("Could not save deal", e);
     } finally {
@@ -108,7 +143,26 @@ export const DealDialog = ({ open, onOpenChange, influencerId, editing, onSaved 
     }
   };
 
+  const confirmLink = async () => {
+    if (!linkPrompt) return;
+    try {
+      await linkCampaignsToDeal(linkPrompt.candidateIds, linkPrompt.dealId);
+      toast.success(`Linked ${linkPrompt.candidateIds.length} campaign${linkPrompt.candidateIds.length === 1 ? "" : "s"}`);
+    } catch (e) {
+      toastError("Could not link campaigns", e);
+    } finally {
+      setLinkPrompt(null);
+      onSaved();
+    }
+  };
+
+  const skipLink = () => {
+    setLinkPrompt(null);
+    onSaved();
+  };
+
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
@@ -164,5 +218,22 @@ export const DealDialog = ({ open, onOpenChange, influencerId, editing, onSaved 
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={!!linkPrompt} onOpenChange={(o) => { if (!o) skipLink(); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Link existing campaigns to this deal?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Found {linkPrompt?.candidateIds.length ?? 0} campaign{(linkPrompt?.candidateIds.length ?? 0) === 1 ? "" : "s"} for {linkPrompt?.productLabel}.
+            Linking will split the deal cost evenly across all linked campaigns.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={skipLink}>Skip</AlertDialogCancel>
+          <AlertDialogAction onClick={confirmLink}>Link campaigns</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 };
