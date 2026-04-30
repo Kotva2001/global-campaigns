@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { COUNTRIES, COUNTRY_FLAGS, COUNTRY_NAMES } from "@/lib/countries";
 import { formatNumber } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
+import { notifyAlertsChanged } from "@/lib/badge-events";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -81,8 +82,6 @@ const ALERT_TYPE_LABEL: Record<string, string> = {
   revenue_update: "Revenue Update",
   engagement_spike: "Engagement Spike",
 };
-
-const notifyAlertsChanged = () => window.dispatchEvent(new Event("alerts:changed"));
 
 const ruleSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(120),
