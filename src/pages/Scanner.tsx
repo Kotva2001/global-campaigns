@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { formatNumber, formatCompact } from "@/lib/formatters";
 import { copyExternalLinkToClipboard, isInstagramUrl } from "@/lib/external-link-copy";
+import { notifyScannerChanged, notifyAlertsChanged } from "@/lib/badge-events";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { FlagIcon, hasFlag } from "@/components/FlagIcon";
