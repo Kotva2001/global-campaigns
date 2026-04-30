@@ -126,7 +126,7 @@ const formatDate = (iso: string | null) => {
 const mapCampaign = (row: CampaignRow, influencer: InfluencerRecord): CampaignEntry => ({
   id: row.id,
   influencerId: row.influencer_id,
-  dealId: null,
+  dealId: (row as any).deal_id ?? null,
   country: influencer.country,
   influencer: influencer.name,
   campaignName: row.campaign_name ?? "",
