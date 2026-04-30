@@ -417,7 +417,7 @@ const CreatorCard = ({
   return (
     <Card
       onClick={onOpen}
-      className="group relative cursor-pointer overflow-hidden p-4 pl-5 transition-all duration-200 animate-fade-in-up hover:-translate-y-1"
+        className="group relative cursor-pointer overflow-visible p-4 pl-5 transition-all duration-200 animate-fade-in-up hover:-translate-y-1"
       style={{
         animationDelay: `${index * 30}ms`,
         background: `linear-gradient(90deg, ${accentVar.replace(")", " / 0.08)").replace("hsl(", "hsla(")}, transparent 60%), hsl(240 45% 9%)`,
@@ -503,7 +503,7 @@ const CreatorCard = ({
         </button>
 
         {/* Actions */}
-        <div className="flex items-center gap-1">
+        <div className="relative z-10 flex items-center gap-1">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8 text-[hsl(var(--glow-cyan))] hover:bg-[hsl(var(--glow-cyan)/0.12)]" onClick={(event) => { event.stopPropagation(); onAddCampaign(); }}>
