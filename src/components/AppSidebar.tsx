@@ -43,6 +43,7 @@ const navItems: NavItem[] = [
 const useBadgeCounts = () => {
   const [alertsCount, setAlertsCount] = useState(0);
   const [scannerCount, setScannerCount] = useState(0);
+  const { pathname } = useLocation();
 
   useEffect(() => {
     const load = async () => {
@@ -56,6 +57,9 @@ const useBadgeCounts = () => {
     void load();
 
     window.addEventListener("alerts:changed", load);
+    window.addEventListener("scanner:changed", load);
+
+    const interval = window.setInterval(load, 60000);
 
     const ch = supabase
       .channel("sidebar-counts")
@@ -64,9 +68,11 @@ const useBadgeCounts = () => {
       .subscribe();
     return () => {
       window.removeEventListener("alerts:changed", load);
+      window.removeEventListener("scanner:changed", load);
+      window.clearInterval(interval);
       void supabase.removeChannel(ch);
     };
-  }, []);
+  }, [pathname]);
 
   return { alerts: alertsCount, scanner: scannerCount };
 };

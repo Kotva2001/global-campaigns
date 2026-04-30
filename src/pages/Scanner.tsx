@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { formatNumber, formatCompact } from "@/lib/formatters";
 import { copyExternalLinkToClipboard, isInstagramUrl } from "@/lib/external-link-copy";
+import { notifyScannerChanged, notifyAlertsChanged } from "@/lib/badge-events";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { FlagIcon, hasFlag } from "@/components/FlagIcon";
@@ -265,6 +266,8 @@ export default function Scanner() {
     }
     await load();
     setRunning(false);
+    notifyScannerChanged();
+    notifyAlertsChanged();
   };
 
   const refreshYouTubeStats = async () => {
@@ -517,7 +520,11 @@ function DetectionQueue({
 
   const dismiss = async (id: string) => {
     const { error } = await supabase.from("detected_videos").update({ status: "dismissed" }).eq("id", id);
-    if (error) toastError("Could not dismiss detection", error); else { toast.success("Dismissed"); onChange(); }
+    if (error) toastError("Could not dismiss detection", error); else {
+      toast.success("Dismissed");
+      notifyScannerChanged();
+      onChange();
+    }
   };
 
   const filtered = detections.filter((d) => {
@@ -808,6 +815,7 @@ function ApproveDialog({
     }
     toast.success("Campaign created");
     setSaving(false);
+    notifyScannerChanged();
     onSaved();
   };
 
