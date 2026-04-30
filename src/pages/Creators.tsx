@@ -30,6 +30,7 @@ import type { CampaignEntry, InfluencerRecord, Platform } from "@/types/campaign
 interface CampaignRow {
   id: string;
   influencer_id: string | null;
+  deal_id: string | null;
   campaign_name: string | null;
   platform: string;
   publish_date: string | null;
