@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import type { CampaignEntry, Platform } from "@/types/campaign";
+import { normalize } from "@/lib/normalize";
 
 export type PlatformFilter = "All" | Platform;
 
@@ -9,11 +10,11 @@ export const useFilters = (allRows: CampaignEntry[]) => {
   const [search, setSearch] = useState("");
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = normalize(search.trim());
     return allRows.filter((r) => {
       if (selectedCountry !== "All" && r.country !== selectedCountry) return false;
       if (platform !== "All" && r.platform !== platform) return false;
-      if (q && !r.influencer.toLowerCase().includes(q) && !r.campaignName.toLowerCase().includes(q))
+      if (q && !normalize(r.influencer).includes(q) && !normalize(r.campaignName).includes(q))
         return false;
       return true;
     });
