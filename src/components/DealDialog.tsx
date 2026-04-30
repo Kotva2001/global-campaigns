@@ -224,7 +224,7 @@ export const DealDialog = ({ open, onOpenChange, influencerId, editing, onSaved 
         <AlertDialogHeader>
           <AlertDialogTitle>Link existing campaigns to this deal?</AlertDialogTitle>
           <AlertDialogDescription>
-            Found {linkPrompt?.candidateIds.length ?? 0} campaign{(linkPrompt?.candidateIds.length ?? 0) === 1 ? "" : "s"} for {linkPrompt?.productLabel}.
+            Found {linkPrompt?.candidateIds.length ?? 0} unlinked campaign{(linkPrompt?.candidateIds.length ?? 0) === 1 ? "" : "s"} for {linkPrompt?.productLabel}. Link them to this deal?
             Linking will split the deal cost evenly across all linked campaigns.
           </AlertDialogDescription>
         </AlertDialogHeader>
