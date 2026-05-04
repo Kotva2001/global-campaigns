@@ -431,10 +431,11 @@ const CreatorGridSkeleton = () => (
 );
 
 const CreatorCard = ({
-  creator, campaigns, maxCampaigns, index, score, selected, onSelect, onOpen, onAddCampaign, onEdit, onTogglePause, onDelete,
+  creator, campaigns, maxCampaigns, index, score, rank, selected, onSelect, onOpen, onAddCampaign, onEdit, onTogglePause, onDelete,
 }: {
   creator: InfluencerRecord; campaigns: CampaignEntry[]; maxCampaigns: number; index: number;
   score: number | null;
+  rank: number | null;
   selected: boolean; onSelect: (checked: boolean) => void; onOpen: () => void;
   onAddCampaign: () => void; onEdit: () => void; onTogglePause: () => void; onDelete: () => void;
 }) => {
@@ -479,25 +480,56 @@ const CreatorCard = ({
   };
   const avatarFlag = FLAGS[creator.country];
 
+  const rankColor = rank === 1 ? "hsl(48 100% 60%)" : rank === 2 ? "hsl(0 0% 80%)" : rank === 3 ? "hsl(28 70% 55%)" : null;
+  const isPodium = rank != null && rank <= 3;
+
   return (
     <Card
       onClick={onOpen}
         className="group relative cursor-pointer overflow-visible p-4 pl-5 transition-all duration-200 animate-fade-in-up hover:-translate-y-1"
       style={{
         animationDelay: `${index * 30}ms`,
-        background: `linear-gradient(90deg, ${accentVar.replace(")", " / 0.08)").replace("hsl(", "hsla(")}, transparent 60%), hsl(240 45% 9%)`,
-        border: "1px solid hsl(var(--glow-purple) / 0.18)",
-        boxShadow: `inset 4px 0 0 ${accentVar}`,
+        background: isPodium && rankColor
+          ? `linear-gradient(90deg, ${rankColor.replace(")", " / 0.10)").replace("hsl(", "hsla(")}, transparent 60%), hsl(240 45% 9%)`
+          : `linear-gradient(90deg, ${accentVar.replace(")", " / 0.08)").replace("hsl(", "hsla(")}, transparent 60%), hsl(240 45% 9%)`,
+        border: isPodium && rankColor
+          ? `1px solid ${rankColor.replace(")", " / 0.55)").replace("hsl(", "hsla(")}`
+          : "1px solid hsl(var(--glow-purple) / 0.18)",
+        boxShadow: isPodium && rankColor
+          ? `inset 4px 0 0 ${rankColor}, 0 0 22px ${rankColor.replace(")", " / 0.35)").replace("hsl(", "hsla(")}`
+          : `inset 4px 0 0 ${accentVar}`,
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.boxShadow = `inset 4px 0 0 ${accentVar}, 0 0 24px ${accentVar.replace(")", " / 0.30)").replace("hsl(", "hsla(")}`;
-        e.currentTarget.style.borderColor = accentVar.replace(")", " / 0.45)").replace("hsl(", "hsla(");
+        const c = isPodium && rankColor ? rankColor : accentVar;
+        e.currentTarget.style.boxShadow = `inset 4px 0 0 ${c}, 0 0 28px ${c.replace(")", " / 0.45)").replace("hsl(", "hsla(")}`;
+        e.currentTarget.style.borderColor = c.replace(")", " / 0.55)").replace("hsl(", "hsla(");
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.boxShadow = `inset 4px 0 0 ${accentVar}`;
-        e.currentTarget.style.borderColor = "hsl(var(--glow-purple) / 0.18)";
+        if (isPodium && rankColor) {
+          e.currentTarget.style.boxShadow = `inset 4px 0 0 ${rankColor}, 0 0 22px ${rankColor.replace(")", " / 0.35)").replace("hsl(", "hsla(")}`;
+          e.currentTarget.style.borderColor = rankColor.replace(")", " / 0.55)").replace("hsl(", "hsla(");
+        } else {
+          e.currentTarget.style.boxShadow = `inset 4px 0 0 ${accentVar}`;
+          e.currentTarget.style.borderColor = "hsl(var(--glow-purple) / 0.18)";
+        }
       }}
     >
+      {rank != null && (
+        <div
+          className="absolute -left-2 -top-2 z-20 flex h-7 min-w-[28px] items-center justify-center rounded-full px-1.5 text-xs font-black tabular-nums"
+          style={{
+            color: rankColor ?? "hsl(var(--muted-foreground))",
+            background: rankColor
+              ? rankColor.replace(")", " / 0.15)").replace("hsl(", "hsla(")
+              : "hsl(240 30% 14%)",
+            border: `1px solid ${(rankColor ?? "hsl(var(--glow-purple))").replace(")", " / 0.6)").replace("hsl(", "hsla(")}`,
+            textShadow: rankColor ? `0 0 8px ${rankColor}` : undefined,
+            boxShadow: rankColor ? `0 0 12px ${rankColor.replace(")", " / 0.55)").replace("hsl(", "hsla(")}` : undefined,
+          }}
+        >
+          {rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `#${rank}`}
+        </div>
+      )}
       {/* Top row: avatar + identity + actions */}
       <div className="flex items-start gap-3">
         {/* Avatar */}
