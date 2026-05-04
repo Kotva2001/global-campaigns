@@ -366,9 +366,9 @@ const Creators = () => {
       </header>
 
       <div className="px-6 py-6">
-        {loading ? <CreatorGridSkeleton /> : filtered.length === 0 ? <EmptyState country={country} onAdd={openCreate} /> : (
+        {loading ? <CreatorGridSkeleton /> : sorted.length === 0 ? <EmptyState country={country} onAdd={openCreate} /> : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((creator, i) => (
+            {sorted.map((creator, i) => (
               <CreatorCard
                 key={creator.id}
                 creator={creator}
@@ -376,6 +376,7 @@ const Creators = () => {
                 maxCampaigns={summary.maxCampaigns || 1}
                 index={i}
                 score={scores.get(creator.id)?.score ?? null}
+                rank={sortBy === "score" ? i + 1 : null}
                 selected={selectedCreators.includes(creator.id)}
                 onSelect={(checked) => toggleSelectedCreator(creator.id, checked)}
                 onOpen={() => setDetailCreator(creator)}
