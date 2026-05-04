@@ -230,6 +230,35 @@ const Creators = () => {
     });
   }, [country, influencers, search, status]);
 
+  const sorted = useMemo(() => {
+    const list = [...filtered];
+    const viewsOf = (id: string) => (campaignGroups.get(id) ?? []).reduce((s, c) => s + (c.views ?? 0), 0);
+    switch (sortBy) {
+      case "name":
+        list.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case "country":
+        list.sort((a, b) => a.country.localeCompare(b.country) || a.name.localeCompare(b.name));
+        break;
+      case "campaigns":
+        list.sort((a, b) => (campaignGroups.get(b.id)?.length ?? 0) - (campaignGroups.get(a.id)?.length ?? 0));
+        break;
+      case "views":
+        list.sort((a, b) => viewsOf(b.id) - viewsOf(a.id));
+        break;
+      case "score":
+      default:
+        list.sort((a, b) => {
+          const sa = scores.get(a.id)?.score ?? -1;
+          const sb = scores.get(b.id)?.score ?? -1;
+          if (sb !== sa) return sb - sa;
+          return viewsOf(b.id) - viewsOf(a.id);
+        });
+        break;
+    }
+    return list;
+  }, [filtered, sortBy, scores, campaignGroups]);
+
   const summary = useMemo(() => {
     let totalCampaigns = 0;
     let totalViews = 0;
@@ -311,6 +340,16 @@ const Creators = () => {
         <div className="flex flex-wrap items-center gap-3 px-6 pb-4">
           <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by name or contact…" className="input-neon min-w-[280px] flex-1" />
           <Select value={status} onValueChange={setStatus}><SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="All">All statuses</SelectItem><SelectItem value="active">Active</SelectItem><SelectItem value="paused">Paused</SelectItem><SelectItem value="ended">Ended</SelectItem></SelectContent></Select>
+          <Select value={sortBy} onValueChange={(v) => updateSort(v as SortKey)}>
+            <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="score">Sort by Performance Score</SelectItem>
+              <SelectItem value="views">Sort by Total Views</SelectItem>
+              <SelectItem value="campaigns">Sort by Campaigns</SelectItem>
+              <SelectItem value="name">Sort by Name</SelectItem>
+              <SelectItem value="country">Sort by Country</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="px-6 pb-4">
           <div
