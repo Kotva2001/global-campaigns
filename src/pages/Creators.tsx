@@ -161,6 +161,25 @@ const Creators = () => {
   const [country, setCountry] = useState("All");
   const [status, setStatus] = useState("All");
   const [search, setSearch] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const sortParam = searchParams.get("sort");
+  const validSorts = ["score", "name", "country", "campaigns", "views"] as const;
+  type SortKey = typeof validSorts[number];
+  const [sortBy, setSortBy] = useState<SortKey>(
+    (validSorts as readonly string[]).includes(sortParam ?? "") ? (sortParam as SortKey) : "score",
+  );
+  useEffect(() => {
+    if (sortParam && (validSorts as readonly string[]).includes(sortParam) && sortParam !== sortBy) {
+      setSortBy(sortParam as SortKey);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortParam]);
+  const updateSort = (next: SortKey) => {
+    setSortBy(next);
+    const params = new URLSearchParams(searchParams);
+    if (next === "score") params.delete("sort"); else params.set("sort", next);
+    setSearchParams(params, { replace: true });
+  };
   const [editing, setEditing] = useState<InfluencerRecord | null>(null);
   const [creatorOpen, setCreatorOpen] = useState(false);
   const [campaignOpen, setCampaignOpen] = useState(false);
