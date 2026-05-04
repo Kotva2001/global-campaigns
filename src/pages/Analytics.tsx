@@ -25,6 +25,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MonthlyOverview } from "@/components/MonthlyOverview";
 
 interface CampaignRow {
   id: string;
@@ -306,6 +307,9 @@ const Analytics = () => {
       </header>
 
       <div className="space-y-6 px-6 py-6">
+        {/* Monthly Performance Overview */}
+        <MonthlyOverview />
+
         {/* KPIs */}
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
           <KpiCard label="Total Campaigns" value={formatNumber(kpis.campaigns)} />
