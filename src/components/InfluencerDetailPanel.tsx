@@ -36,6 +36,7 @@ import type { ProductRecord } from "@/types/product";
 import { DealsSection } from "@/components/DealsSection";
 import { DealCell } from "@/components/DealCell";
 import { QuickStoryDialog } from "@/components/QuickStoryDialog";
+import { CreatorPerformancePanel } from "@/components/CreatorPerformancePanel";
 
 interface Props {
   creator: InfluencerRecord | null;
@@ -401,6 +402,8 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
                 </div>
 
                 <DealsSection influencerId={creator.id} campaigns={campaigns} onChanged={onChanged} />
+
+                <CreatorPerformancePanel creatorId={creator.id} />
 
                 <Card className="mt-5 overflow-hidden border-border bg-card">
                   <div className="overflow-x-auto">
