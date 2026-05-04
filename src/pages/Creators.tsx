@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { CreatorDialog } from "@/components/CreatorDialog";
 import { CampaignDialog } from "@/components/CampaignDialog";
 import { InfluencerDetailPanel } from "@/components/InfluencerDetailPanel";
+import { PerformanceScoreBadge } from "@/components/PerformanceScoreBadge";
+import { useCreatorScores } from "@/hooks/useCreatorScores";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -153,6 +155,7 @@ const mapCampaign = (row: CampaignRow, influencer: InfluencerRecord): CampaignEn
 const Creators = () => {
   const [influencers, setInfluencers] = useState<InfluencerRecord[]>([]);
   const [campaigns, setCampaigns] = useState<CampaignEntry[]>([]);
+  const { scores } = useCreatorScores();
   const [loading, setLoading] = useState(true);
   const [country, setCountry] = useState("All");
   const [status, setStatus] = useState("All");
@@ -313,6 +316,7 @@ const Creators = () => {
                 campaigns={campaignGroups.get(creator.id) ?? []}
                 maxCampaigns={summary.maxCampaigns || 1}
                 index={i}
+                score={scores.get(creator.id)?.score ?? null}
                 selected={selectedCreators.includes(creator.id)}
                 onSelect={(checked) => toggleSelectedCreator(creator.id, checked)}
                 onOpen={() => setDetailCreator(creator)}
@@ -367,9 +371,10 @@ const CreatorGridSkeleton = () => (
 );
 
 const CreatorCard = ({
-  creator, campaigns, maxCampaigns, index, selected, onSelect, onOpen, onAddCampaign, onEdit, onTogglePause, onDelete,
+  creator, campaigns, maxCampaigns, index, score, selected, onSelect, onOpen, onAddCampaign, onEdit, onTogglePause, onDelete,
 }: {
   creator: InfluencerRecord; campaigns: CampaignEntry[]; maxCampaigns: number; index: number;
+  score: number | null;
   selected: boolean; onSelect: (checked: boolean) => void; onOpen: () => void;
   onAddCampaign: () => void; onEdit: () => void; onTogglePause: () => void; onDelete: () => void;
 }) => {
@@ -504,6 +509,9 @@ const CreatorCard = ({
 
         {/* Actions */}
         <div className="relative z-10 flex items-center gap-1">
+          <div onClick={(e) => e.stopPropagation()} className="mr-1">
+            <PerformanceScoreBadge score={score} size="sm" />
+          </div>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8 text-[hsl(var(--glow-cyan))] hover:bg-[hsl(var(--glow-cyan)/0.12)]" onClick={(event) => { event.stopPropagation(); onAddCampaign(); }}>

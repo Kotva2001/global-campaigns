@@ -37,6 +37,8 @@ import { DealsSection } from "@/components/DealsSection";
 import { DealCell } from "@/components/DealCell";
 import { QuickStoryDialog } from "@/components/QuickStoryDialog";
 import { CreatorPerformancePanel } from "@/components/CreatorPerformancePanel";
+import { PerformanceScoreBadge } from "@/components/PerformanceScoreBadge";
+import { useCreatorScores } from "@/hooks/useCreatorScores";
 
 interface Props {
   creator: InfluencerRecord | null;
@@ -333,6 +335,8 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
   const [products, setProducts] = useState<ProductRecord[]>([]);
   const [flashedCells, setFlashedCells] = useState<Record<string, number>>({});
   const [storyOpen, setStoryOpen] = useState(false);
+  const { scores } = useCreatorScores();
+  const score = creator ? scores.get(creator.id)?.score ?? null : null;
 
   useEffect(() => {
     if (!creator) return;
@@ -379,7 +383,10 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
               <SheetHeader className="border-b border-border px-6 py-5">
                 <div className="flex items-start justify-between gap-4 pr-8">
                   <div className="min-w-0">
-                    <SheetTitle className="truncate text-2xl font-bold">{creator.name}</SheetTitle>
+                    <div className="flex items-center gap-3">
+                      <SheetTitle className="truncate text-2xl font-bold">{creator.name}</SheetTitle>
+                      <PerformanceScoreBadge score={score} size="md" />
+                    </div>
                     <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                       <span>{COUNTRY_FLAGS[creator.country] ?? "🏳️"} {creator.country}</span>
                       <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", status.cls)}>{status.label}</span>

@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PerformanceScoreBadge } from "@/components/PerformanceScoreBadge";
+import { useCreatorScores } from "@/hooks/useCreatorScores";
 
 interface MonthlyStats {
   totalViews: number;
@@ -22,7 +24,8 @@ interface MonthlyStats {
   productCost: number;
   ytViews: number;
   igViews: number;
-  topCreator: { name: string; views: number; engagement: number | null } | null;
+  topCreator: { id: string; name: string; views: number; engagement: number | null } | null;
+  topCreators: { id: string; name: string; views: number; engagement: number | null }[];
 }
 
 interface CampaignFetchRow {
@@ -137,16 +140,15 @@ const fetchMonthStats = async (
     }
   }
 
-  let topCreator: MonthlyStats["topCreator"] = null;
-  for (const c of creatorViews.values()) {
-    if (!topCreator || c.views > topCreator.views) {
-      topCreator = {
-        name: c.name,
-        views: c.views,
-        engagement: c.eng.length ? c.eng.reduce((a, b) => a + b, 0) / c.eng.length : null,
-      };
-    }
-  }
+  const creatorList = Array.from(creatorViews.entries()).map(([id, c]) => ({
+    id,
+    name: c.name,
+    views: c.views,
+    engagement: c.eng.length ? c.eng.reduce((a, b) => a + b, 0) / c.eng.length : null,
+  }));
+  creatorList.sort((a, b) => b.views - a.views);
+  const topCreator = creatorList[0] ?? null;
+  const topCreators = creatorList.slice(0, 5);
 
   return {
     totalViews,
@@ -156,6 +158,7 @@ const fetchMonthStats = async (
     ytViews,
     igViews,
     topCreator,
+    topCreators,
   };
 };
 
@@ -170,6 +173,7 @@ const initials = (name: string) =>
 
 export const MonthlyOverview = () => {
   const { eurCzkRate } = useCurrencySettings();
+  const { scores } = useCreatorScores();
   const [month, setMonth] = useState<Date>(() => startOfMonth(new Date()));
   const [current, setCurrent] = useState<MonthlyStats | null>(null);
   const [previous, setPrevious] = useState<MonthlyStats | null>(null);
@@ -302,6 +306,7 @@ export const MonthlyOverview = () => {
                         {current.topCreator.engagement == null ? "—" : formatPercent(current.topCreator.engagement)} engagement
                       </div>
                     </div>
+                    <PerformanceScoreBadge score={scores.get(current.topCreator.id)?.score ?? null} size="md" />
                   </div>
                 ) : (
                   <div className="text-sm text-muted-foreground">No creator data this month.</div>
@@ -364,6 +369,48 @@ export const MonthlyOverview = () => {
                 )}
               </Card>
             </div>
+
+            {/* Monthly Top 5 mini-leaderboard */}
+            {current.topCreators.length > 0 && (
+              <Card className="mt-3 border-primary/30 bg-background/40 p-4 shadow-[0_0_18px_-8px_hsl(var(--primary)/0.5)]">
+                <div className="mb-3 flex items-center gap-2 text-[10px] uppercase tracking-wider text-muted-foreground">
+                  <Trophy className="h-3.5 w-3.5 text-[hsl(48_100%_60%)]" style={{ filter: "drop-shadow(0 0 6px hsl(48 100% 60% / 0.7))" }} />
+                  Monthly Top 5 (by views)
+                </div>
+                <div className="space-y-1.5">
+                  {current.topCreators.map((creator, idx) => {
+                    const rank = idx + 1;
+                    const rankColor = rank === 1 ? "hsl(48 100% 60%)" : rank === 2 ? "hsl(0 0% 80%)" : rank === 3 ? "hsl(28 70% 55%)" : "hsl(var(--muted-foreground))";
+                    const isPodium = rank <= 3;
+                    return (
+                      <div
+                        key={creator.id}
+                        className="flex items-center gap-3 rounded-md border border-border/50 bg-background/30 px-2.5 py-1.5 transition-all hover:border-primary/40"
+                        style={isPodium ? { boxShadow: `inset 3px 0 0 ${rankColor}` } : undefined}
+                      >
+                        <span
+                          className="w-6 shrink-0 text-center text-xs font-black tabular-nums"
+                          style={{ color: rankColor, textShadow: `0 0 6px ${rankColor}` }}
+                        >
+                          {rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `#${rank}`}
+                        </span>
+                        <Avatar className="h-7 w-7 shrink-0 border border-primary/40">
+                          <AvatarFallback className="bg-primary/10 text-[10px] font-bold text-primary">
+                            {initials(creator.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1 truncate text-xs font-semibold">{creator.name}</div>
+                        <div className="hidden text-right text-xs sm:block">
+                          <span className="font-bold tabular-nums" style={{ color: "hsl(var(--glow-cyan))" }}>{formatNumber(creator.views)}</span>
+                          <span className="ml-1 text-[10px] text-muted-foreground">views</span>
+                        </div>
+                        <PerformanceScoreBadge score={scores.get(creator.id)?.score ?? null} size="xs" />
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            )}
           </>
         )}
       </Card>
