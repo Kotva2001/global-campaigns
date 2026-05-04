@@ -10,6 +10,7 @@ import { DataTable } from "@/components/DataTable";
 import { CampaignCharts } from "@/components/CampaignCharts";
 import { CampaignDialog } from "@/components/CampaignDialog";
 import { KPIBreakdownPanel, type KPIMetric } from "@/components/KPIBreakdownPanel";
+import { CreatorLeaderboard } from "@/components/CreatorLeaderboard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -125,6 +126,8 @@ const Dashboard = () => {
       ) : (
         <KPISummary kpis={kpis} currency={displayCurrency} convertedSub={convertedSub} onSelectMetric={setBreakdownMetric} />
       )}
+
+      {!(loading && data.length === 0) && <CreatorLeaderboard />}
 
       {loading && data.length === 0 ? (
         <DashboardBodySkeleton />
