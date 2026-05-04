@@ -371,9 +371,10 @@ const CreatorGridSkeleton = () => (
 );
 
 const CreatorCard = ({
-  creator, campaigns, maxCampaigns, index, selected, onSelect, onOpen, onAddCampaign, onEdit, onTogglePause, onDelete,
+  creator, campaigns, maxCampaigns, index, score, selected, onSelect, onOpen, onAddCampaign, onEdit, onTogglePause, onDelete,
 }: {
   creator: InfluencerRecord; campaigns: CampaignEntry[]; maxCampaigns: number; index: number;
+  score: number | null;
   selected: boolean; onSelect: (checked: boolean) => void; onOpen: () => void;
   onAddCampaign: () => void; onEdit: () => void; onTogglePause: () => void; onDelete: () => void;
 }) => {
