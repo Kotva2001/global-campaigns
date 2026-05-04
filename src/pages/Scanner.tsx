@@ -525,13 +525,13 @@ function DetectionQueue({
     }
     let cancelled = false;
     (async () => {
-      const queries: Promise<{ data: { id: string; video_url: string | null; video_id: string | null; campaign_name: string | null; publish_date: string | null }[] | null }>[] = [];
-      if (urls.length) queries.push(supabase.from("campaigns").select("id,video_url,video_id,campaign_name,publish_date").in("video_url", urls));
-      if (videoIds.length) queries.push(supabase.from("campaigns").select("id,video_url,video_id,campaign_name,publish_date").in("video_id", videoIds));
-      const results = await Promise.all(queries);
+      const [byUrl, byVid] = await Promise.all([
+        urls.length ? supabase.from("campaigns").select("id,video_url,video_id,campaign_name,publish_date").in("video_url", urls) : Promise.resolve({ data: [] as any[] }),
+        videoIds.length ? supabase.from("campaigns").select("id,video_url,video_id,campaign_name,publish_date").in("video_id", videoIds) : Promise.resolve({ data: [] as any[] }),
+      ]);
       if (cancelled) return;
       const map = new Map<string, { id: string; campaign_name: string | null; publish_date: string | null }>();
-      const rows = results.flatMap((r) => r.data ?? []);
+      const rows = [...(byUrl.data ?? []), ...(byVid.data ?? [])] as { id: string; video_url: string | null; video_id: string | null; campaign_name: string | null; publish_date: string | null }[];
       for (const d of detections) {
         const match = rows.find((r) => (r.video_url && r.video_url === d.video_url) || (r.video_id && r.video_id === d.video_id));
         if (match) map.set(d.id, { id: match.id, campaign_name: match.campaign_name, publish_date: match.publish_date });
