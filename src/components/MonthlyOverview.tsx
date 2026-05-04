@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { format, startOfMonth, endOfMonth, addMonths, subMonths, parseISO } from "date-fns";
+import { format, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { ChevronLeft, ChevronRight, ArrowUp, ArrowDown, Trophy, Youtube, Instagram } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
