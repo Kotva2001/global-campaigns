@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { MoreVertical, Package, Pencil, Plus, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, MoreVertical, Package, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { toastError } from "@/lib/toast-helpers";
@@ -36,17 +36,40 @@ const Products = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<ProductRecord | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<ProductRecord | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const PAGE_SIZE = 50;
+  const gridRef = useRef<HTMLDivElement | null>(null);
 
   const load = async () => {
     setLoading(true);
-    const { data, error } = await supabase.from("products").select("*").order("name");
+    const from = (page - 1) * PAGE_SIZE;
+    const to = page * PAGE_SIZE - 1;
+    const trimmed = search.trim();
+    let query = supabase
+      .from("products")
+      .select("*", { count: "exact" })
+      .order("name");
+    if (trimmed) {
+      // Server-side ilike on name/sku/category. Diacritic-insensitive client filter still applied below for the fetched page.
+      const pattern = `%${trimmed}%`;
+      query = query.or(
+        `name.ilike.${pattern},sku.ilike.${pattern},category.ilike.${pattern}`,
+      );
+    }
+    const { data, error, count } = await query.range(from, to);
     if (error) toastError("Could not load products", error);
     setProducts((data ?? []) as ProductRecord[]);
+    setTotalCount(count ?? 0);
     setLoading(false);
   };
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => { void load(); }, [page, search]);
 
+  // Reset to page 1 whenever the search query changes
+  useEffect(() => { setPage(1); }, [search]);
+
+  // Diacritic-insensitive client-side refinement on the current page
   const filtered = useMemo(() => {
     const q = normalize(search.trim());
     if (!q) return products;
@@ -56,6 +79,17 @@ const Products = () => {
       normalize(p.category ?? "").includes(q),
     );
   }, [products, search]);
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+
+  const goToPage = (next: number) => {
+    const clamped = Math.min(Math.max(1, next), totalPages);
+    if (clamped === page) return;
+    setPage(clamped);
+    requestAnimationFrame(() => {
+      gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
 
   const removeProduct = async () => {
     if (!confirmDelete) return;
@@ -85,11 +119,13 @@ const Products = () => {
             placeholder="Search by name, SKU or category…"
             className="min-w-[220px] flex-1"
           />
-          <span className="text-xs text-muted-foreground">{filtered.length} product{filtered.length === 1 ? "" : "s"}</span>
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {totalCount.toLocaleString()} product{totalCount === 1 ? "" : "s"}
+          </span>
         </div>
       </header>
 
-      <div className="px-6 py-6">
+      <div ref={gridRef} className="px-6 py-6">
         {loading ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-36 bg-card" />)}
@@ -105,6 +141,7 @@ const Products = () => {
             </Card>
           </div>
         ) : (
+          <>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filtered.map((product) => (
               <Card
@@ -155,6 +192,31 @@ const Products = () => {
               </Card>
             ))}
           </div>
+
+          <div className="mt-8 flex items-center justify-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => goToPage(page - 1)}
+              className="gap-1 border-primary/40 text-primary shadow-[0_0_12px_-2px_hsl(var(--primary)/0.5)] hover:bg-primary/10 hover:shadow-[0_0_18px_-2px_hsl(var(--primary)/0.7)] disabled:opacity-40 disabled:shadow-none"
+            >
+              <ChevronLeft className="h-4 w-4" /> Previous
+            </Button>
+            <span className="rounded-md border border-accent/40 bg-card/60 px-3 py-1.5 text-xs font-semibold tabular-nums text-accent shadow-[0_0_12px_-2px_hsl(var(--accent)/0.5)]">
+              Page {page} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages}
+              onClick={() => goToPage(page + 1)}
+              className="gap-1 border-accent/40 text-accent shadow-[0_0_12px_-2px_hsl(var(--accent)/0.5)] hover:bg-accent/10 hover:shadow-[0_0_18px_-2px_hsl(var(--accent)/0.7)] disabled:opacity-40 disabled:shadow-none"
+            >
+              Next <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          </>
         )}
       </div>
 
