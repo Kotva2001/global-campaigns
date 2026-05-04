@@ -509,6 +509,9 @@ const CreatorCard = ({
 
         {/* Actions */}
         <div className="relative z-10 flex items-center gap-1">
+          <div onClick={(e) => e.stopPropagation()} className="mr-1">
+            <PerformanceScoreBadge score={score} size="sm" />
+          </div>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8 text-[hsl(var(--glow-cyan))] hover:bg-[hsl(var(--glow-cyan)/0.12)]" onClick={(event) => { event.stopPropagation(); onAddCampaign(); }}>
