@@ -512,6 +512,36 @@ function DetectionQueue({
 }) {
   const [approve, setApprove] = useState<DetectedVideo | null>(null);
   const [platformFilter, setPlatformFilter] = useState<"all" | "youtube" | "instagram">("all");
+  const [duplicates, setDuplicates] = useState<Map<string, { id: string; campaign_name: string | null; publish_date: string | null }>>(new Map());
+
+  const detectionKey = useMemo(() => detections.map((d) => d.id).join(","), [detections]);
+
+  useEffect(() => {
+    const urls = Array.from(new Set(detections.map((d) => d.video_url).filter(Boolean)));
+    const videoIds = Array.from(new Set(detections.map((d) => d.video_id).filter(Boolean)));
+    if (!urls.length && !videoIds.length) {
+      setDuplicates(new Map());
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const [byUrl, byVid] = await Promise.all([
+        urls.length ? supabase.from("campaigns").select("id,video_url,video_id,campaign_name,publish_date").in("video_url", urls) : Promise.resolve({ data: [] as any[] }),
+        videoIds.length ? supabase.from("campaigns").select("id,video_url,video_id,campaign_name,publish_date").in("video_id", videoIds) : Promise.resolve({ data: [] as any[] }),
+      ]);
+      if (cancelled) return;
+      const map = new Map<string, { id: string; campaign_name: string | null; publish_date: string | null }>();
+      const rows = [...(byUrl.data ?? []), ...(byVid.data ?? [])] as { id: string; video_url: string | null; video_id: string | null; campaign_name: string | null; publish_date: string | null }[];
+      for (const d of detections) {
+        const match = rows.find((r) => (r.video_url && r.video_url === d.video_url) || (r.video_id && r.video_id === d.video_id));
+        if (match) map.set(d.id, { id: match.id, campaign_name: match.campaign_name, publish_date: match.publish_date });
+      }
+      setDuplicates(map);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detectionKey]);
+
   const matchInfluencer = (d: DetectedVideo): Influencer | undefined => {
     if (d.influencer_id) return influencers.find((i) => i.id === d.influencer_id);
     if (d.channel_id) return influencers.find((i) => i.youtube_channel_id === d.channel_id);
@@ -670,6 +700,26 @@ function DetectionQueue({
                       </Badge>
                     )}
                     {similar && <Badge variant="outline" className="text-muted-foreground">Similar to above</Badge>}
+                    {duplicates.has(d.id) && (
+                      <TooltipProvider delayDuration={200}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge
+                              className="border bg-[hsl(var(--warning)/0.15)] text-[hsl(var(--warning))] border-[hsl(var(--warning)/0.6)] hover:bg-[hsl(var(--warning)/0.22)] cursor-help"
+                              style={{ boxShadow: "0 0 10px hsl(var(--warning) / 0.5)" }}
+                            >
+                              ⚠️ Possible Duplicate
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-sm">
+                            Matches campaign: <span className="font-semibold">{duplicates.get(d.id)?.campaign_name ?? "(unnamed)"}</span>
+                            {duplicates.get(d.id)?.publish_date && (
+                              <> · {new Date(duplicates.get(d.id)!.publish_date!).toLocaleDateString("cs-CZ")}</>
+                            )}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
                   </div>
                 </div>
 
@@ -677,9 +727,24 @@ function DetectionQueue({
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
-                <Button size="sm" onClick={() => setApprove(d)} className="btn-neon-green">
-                  <CheckCircle2 className="h-4 w-4" /> Approve & Add
-                </Button>
+                {duplicates.has(d.id) ? (
+                  <Button
+                    size="sm"
+                    onClick={() => setApprove(d)}
+                    style={{
+                      background: "transparent",
+                      border: "1px solid hsl(var(--warning))",
+                      color: "hsl(var(--warning))",
+                      boxShadow: "0 0 12px hsl(var(--warning) / 0.5)",
+                    }}
+                  >
+                    <AlertCircle className="h-4 w-4" /> Approve & Add
+                  </Button>
+                ) : (
+                  <Button size="sm" onClick={() => setApprove(d)} className="btn-neon-green">
+                    <CheckCircle2 className="h-4 w-4" /> Approve & Add
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   onClick={() => dismiss(d.id)}
