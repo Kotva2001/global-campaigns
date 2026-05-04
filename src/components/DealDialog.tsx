@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { X, Search } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -91,18 +92,19 @@ export const DealDialog = ({ open, onOpenChange, influencerId, editing, onSaved 
     }
     setSearching(true);
     const handle = setTimeout(async () => {
-      // Strip diacritics from query for a looser match against stored values.
-      const stripped = q.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      const patterns = Array.from(new Set([q, stripped])).map((s) => `%${s}%`);
-      const orFilter = patterns
-        .flatMap((p) => [`name.ilike.${p}`, `sku.ilike.${p}`])
-        .join(",");
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .or(orFilter)
-        .order("name")
-        .limit(20);
+      // Split into words; each word must match (AND) against name OR sku.
+      // For each word we also try a diacritics-stripped variant (OR within the word).
+      const words = q.split(/\s+/).filter(Boolean);
+      let query = supabase.from("products").select("*");
+      for (const w of words) {
+        const stripped = w.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const variants = Array.from(new Set([w, stripped]));
+        const orFilter = variants
+          .flatMap((v) => [`name.ilike.%${v}%`, `sku.ilike.%${v}%`])
+          .join(",");
+        query = query.or(orFilter);
+      }
+      const { data, error } = await query.order("name").limit(20);
       if (!error) setProductResults((data ?? []) as ProductRecord[]);
       setSearching(false);
     }, 250);
@@ -209,7 +211,7 @@ export const DealDialog = ({ open, onOpenChange, influencerId, editing, onSaved 
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>{editing ? "Edit deal" : "Add deal"}</DialogTitle>
         </DialogHeader>
@@ -249,23 +251,36 @@ export const DealDialog = ({ open, onOpenChange, influencerId, editing, onSaved 
                   />
                 </div>
                 {showResults && productSearch.trim().length >= 2 && (
-                  <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-[280px] overflow-y-auto rounded-md border border-primary/40 bg-popover shadow-[0_0_24px_-8px_hsl(var(--primary)/0.6)]">
+                  <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-[320px] overflow-y-auto rounded-md border border-primary/40 bg-popover shadow-[0_0_24px_-8px_hsl(var(--primary)/0.6)]">
                     {searching && productResults.length === 0 ? (
                       <div className="px-3 py-2 text-xs text-muted-foreground">Searching…</div>
                     ) : productResults.length === 0 ? (
                       <div className="px-3 py-2 text-xs text-muted-foreground">No products match.</div>
                     ) : (
-                      productResults.map((p) => (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onMouseDown={(e) => { e.preventDefault(); pickProduct(p); }}
-                          className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-primary/10"
-                        >
-                          <span className="truncate">{p.name}</span>
-                          {p.sku && <span className="shrink-0 text-xs text-muted-foreground">{p.sku}</span>}
-                        </button>
-                      ))
+                      <TooltipProvider delayDuration={300}>
+                        {productResults.map((p) => (
+                          <Tooltip key={p.id}>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                onMouseDown={(e) => { e.preventDefault(); pickProduct(p); }}
+                                className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm hover:bg-primary/10"
+                              >
+                                <span className="block w-full whitespace-normal break-words leading-snug">{p.name}</span>
+                                {p.sku && (
+                                  <span className="block w-full whitespace-normal break-words text-xs text-muted-foreground">
+                                    SKU: {p.sku}
+                                  </span>
+                                )}
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="right" className="max-w-sm">
+                              <div className="font-medium">{p.name}</div>
+                              {p.sku && <div className="text-xs text-muted-foreground">SKU: {p.sku}</div>}
+                            </TooltipContent>
+                          </Tooltip>
+                        ))}
+                      </TooltipProvider>
                     )}
                   </div>
                 )}
