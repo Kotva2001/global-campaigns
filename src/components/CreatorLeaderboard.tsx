@@ -98,7 +98,7 @@ export const CreatorLeaderboard = () => {
               </h2>
               <span className="text-xs text-muted-foreground">· Top 10 by Performance Score</span>
             </div>
-            <Button variant="ghost" size="sm" className="text-[hsl(var(--glow-cyan))] hover:bg-[hsl(var(--glow-cyan)/0.12)]" onClick={() => navigate("/creators")}>
+            <Button variant="ghost" size="sm" className="text-[hsl(var(--glow-cyan))] hover:bg-[hsl(var(--glow-cyan)/0.12)]" onClick={() => navigate("/creators?sort=score")}>
               View all <ArrowRight className="ml-1 h-3.5 w-3.5" />
             </Button>
           </div>

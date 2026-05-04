@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, ExternalLink, Instagram, Mail, Merge, MoreVertical, PauseCircle, Pencil, PlayCircle, Plus, Trash2, TrendingDown, TrendingUp, Youtube } from "lucide-react";
 import { toast } from "sonner";
+import { useSearchParams } from "react-router-dom";
 import { toastError } from "@/lib/toast-helpers";
 import { supabase } from "@/integrations/supabase/client";
 import { CreatorDialog } from "@/components/CreatorDialog";
@@ -160,6 +161,25 @@ const Creators = () => {
   const [country, setCountry] = useState("All");
   const [status, setStatus] = useState("All");
   const [search, setSearch] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const sortParam = searchParams.get("sort");
+  const validSorts = ["score", "name", "country", "campaigns", "views"] as const;
+  type SortKey = typeof validSorts[number];
+  const [sortBy, setSortBy] = useState<SortKey>(
+    (validSorts as readonly string[]).includes(sortParam ?? "") ? (sortParam as SortKey) : "score",
+  );
+  useEffect(() => {
+    if (sortParam && (validSorts as readonly string[]).includes(sortParam) && sortParam !== sortBy) {
+      setSortBy(sortParam as SortKey);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortParam]);
+  const updateSort = (next: SortKey) => {
+    setSortBy(next);
+    const params = new URLSearchParams(searchParams);
+    if (next === "score") params.delete("sort"); else params.set("sort", next);
+    setSearchParams(params, { replace: true });
+  };
   const [editing, setEditing] = useState<InfluencerRecord | null>(null);
   const [creatorOpen, setCreatorOpen] = useState(false);
   const [campaignOpen, setCampaignOpen] = useState(false);
@@ -209,6 +229,35 @@ const Creators = () => {
       return !query || normalize(creator.name).includes(query) || normalize(creator.contact_person ?? "").includes(query);
     });
   }, [country, influencers, search, status]);
+
+  const sorted = useMemo(() => {
+    const list = [...filtered];
+    const viewsOf = (id: string) => (campaignGroups.get(id) ?? []).reduce((s, c) => s + (c.views ?? 0), 0);
+    switch (sortBy) {
+      case "name":
+        list.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case "country":
+        list.sort((a, b) => a.country.localeCompare(b.country) || a.name.localeCompare(b.name));
+        break;
+      case "campaigns":
+        list.sort((a, b) => (campaignGroups.get(b.id)?.length ?? 0) - (campaignGroups.get(a.id)?.length ?? 0));
+        break;
+      case "views":
+        list.sort((a, b) => viewsOf(b.id) - viewsOf(a.id));
+        break;
+      case "score":
+      default:
+        list.sort((a, b) => {
+          const sa = scores.get(a.id)?.score ?? -1;
+          const sb = scores.get(b.id)?.score ?? -1;
+          if (sb !== sa) return sb - sa;
+          return viewsOf(b.id) - viewsOf(a.id);
+        });
+        break;
+    }
+    return list;
+  }, [filtered, sortBy, scores, campaignGroups]);
 
   const summary = useMemo(() => {
     let totalCampaigns = 0;
@@ -291,6 +340,16 @@ const Creators = () => {
         <div className="flex flex-wrap items-center gap-3 px-6 pb-4">
           <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by name or contact…" className="input-neon min-w-[280px] flex-1" />
           <Select value={status} onValueChange={setStatus}><SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="All">All statuses</SelectItem><SelectItem value="active">Active</SelectItem><SelectItem value="paused">Paused</SelectItem><SelectItem value="ended">Ended</SelectItem></SelectContent></Select>
+          <Select value={sortBy} onValueChange={(v) => updateSort(v as SortKey)}>
+            <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="score">Sort by Performance Score</SelectItem>
+              <SelectItem value="views">Sort by Total Views</SelectItem>
+              <SelectItem value="campaigns">Sort by Campaigns</SelectItem>
+              <SelectItem value="name">Sort by Name</SelectItem>
+              <SelectItem value="country">Sort by Country</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="px-6 pb-4">
           <div
@@ -307,9 +366,9 @@ const Creators = () => {
       </header>
 
       <div className="px-6 py-6">
-        {loading ? <CreatorGridSkeleton /> : filtered.length === 0 ? <EmptyState country={country} onAdd={openCreate} /> : (
+        {loading ? <CreatorGridSkeleton /> : sorted.length === 0 ? <EmptyState country={country} onAdd={openCreate} /> : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((creator, i) => (
+            {sorted.map((creator, i) => (
               <CreatorCard
                 key={creator.id}
                 creator={creator}
@@ -317,6 +376,7 @@ const Creators = () => {
                 maxCampaigns={summary.maxCampaigns || 1}
                 index={i}
                 score={scores.get(creator.id)?.score ?? null}
+                rank={sortBy === "score" ? i + 1 : null}
                 selected={selectedCreators.includes(creator.id)}
                 onSelect={(checked) => toggleSelectedCreator(creator.id, checked)}
                 onOpen={() => setDetailCreator(creator)}
@@ -371,10 +431,11 @@ const CreatorGridSkeleton = () => (
 );
 
 const CreatorCard = ({
-  creator, campaigns, maxCampaigns, index, score, selected, onSelect, onOpen, onAddCampaign, onEdit, onTogglePause, onDelete,
+  creator, campaigns, maxCampaigns, index, score, rank, selected, onSelect, onOpen, onAddCampaign, onEdit, onTogglePause, onDelete,
 }: {
   creator: InfluencerRecord; campaigns: CampaignEntry[]; maxCampaigns: number; index: number;
   score: number | null;
+  rank: number | null;
   selected: boolean; onSelect: (checked: boolean) => void; onOpen: () => void;
   onAddCampaign: () => void; onEdit: () => void; onTogglePause: () => void; onDelete: () => void;
 }) => {
@@ -419,25 +480,56 @@ const CreatorCard = ({
   };
   const avatarFlag = FLAGS[creator.country];
 
+  const rankColor = rank === 1 ? "hsl(48 100% 60%)" : rank === 2 ? "hsl(0 0% 80%)" : rank === 3 ? "hsl(28 70% 55%)" : null;
+  const isPodium = rank != null && rank <= 3;
+
   return (
     <Card
       onClick={onOpen}
         className="group relative cursor-pointer overflow-visible p-4 pl-5 transition-all duration-200 animate-fade-in-up hover:-translate-y-1"
       style={{
         animationDelay: `${index * 30}ms`,
-        background: `linear-gradient(90deg, ${accentVar.replace(")", " / 0.08)").replace("hsl(", "hsla(")}, transparent 60%), hsl(240 45% 9%)`,
-        border: "1px solid hsl(var(--glow-purple) / 0.18)",
-        boxShadow: `inset 4px 0 0 ${accentVar}`,
+        background: isPodium && rankColor
+          ? `linear-gradient(90deg, ${rankColor.replace(")", " / 0.10)").replace("hsl(", "hsla(")}, transparent 60%), hsl(240 45% 9%)`
+          : `linear-gradient(90deg, ${accentVar.replace(")", " / 0.08)").replace("hsl(", "hsla(")}, transparent 60%), hsl(240 45% 9%)`,
+        border: isPodium && rankColor
+          ? `1px solid ${rankColor.replace(")", " / 0.55)").replace("hsl(", "hsla(")}`
+          : "1px solid hsl(var(--glow-purple) / 0.18)",
+        boxShadow: isPodium && rankColor
+          ? `inset 4px 0 0 ${rankColor}, 0 0 22px ${rankColor.replace(")", " / 0.35)").replace("hsl(", "hsla(")}`
+          : `inset 4px 0 0 ${accentVar}`,
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.boxShadow = `inset 4px 0 0 ${accentVar}, 0 0 24px ${accentVar.replace(")", " / 0.30)").replace("hsl(", "hsla(")}`;
-        e.currentTarget.style.borderColor = accentVar.replace(")", " / 0.45)").replace("hsl(", "hsla(");
+        const c = isPodium && rankColor ? rankColor : accentVar;
+        e.currentTarget.style.boxShadow = `inset 4px 0 0 ${c}, 0 0 28px ${c.replace(")", " / 0.45)").replace("hsl(", "hsla(")}`;
+        e.currentTarget.style.borderColor = c.replace(")", " / 0.55)").replace("hsl(", "hsla(");
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.boxShadow = `inset 4px 0 0 ${accentVar}`;
-        e.currentTarget.style.borderColor = "hsl(var(--glow-purple) / 0.18)";
+        if (isPodium && rankColor) {
+          e.currentTarget.style.boxShadow = `inset 4px 0 0 ${rankColor}, 0 0 22px ${rankColor.replace(")", " / 0.35)").replace("hsl(", "hsla(")}`;
+          e.currentTarget.style.borderColor = rankColor.replace(")", " / 0.55)").replace("hsl(", "hsla(");
+        } else {
+          e.currentTarget.style.boxShadow = `inset 4px 0 0 ${accentVar}`;
+          e.currentTarget.style.borderColor = "hsl(var(--glow-purple) / 0.18)";
+        }
       }}
     >
+      {rank != null && (
+        <div
+          className="absolute -left-2 -top-2 z-20 flex h-7 min-w-[28px] items-center justify-center rounded-full px-1.5 text-xs font-black tabular-nums"
+          style={{
+            color: rankColor ?? "hsl(var(--muted-foreground))",
+            background: rankColor
+              ? rankColor.replace(")", " / 0.15)").replace("hsl(", "hsla(")
+              : "hsl(240 30% 14%)",
+            border: `1px solid ${(rankColor ?? "hsl(var(--glow-purple))").replace(")", " / 0.6)").replace("hsl(", "hsla(")}`,
+            textShadow: rankColor ? `0 0 8px ${rankColor}` : undefined,
+            boxShadow: rankColor ? `0 0 12px ${rankColor.replace(")", " / 0.55)").replace("hsl(", "hsla(")}` : undefined,
+          }}
+        >
+          {rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `#${rank}`}
+        </div>
+      )}
       {/* Top row: avatar + identity + actions */}
       <div className="flex items-start gap-3">
         {/* Avatar */}
