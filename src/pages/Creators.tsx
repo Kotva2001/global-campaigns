@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { CreatorDialog } from "@/components/CreatorDialog";
 import { CampaignDialog } from "@/components/CampaignDialog";
 import { InfluencerDetailPanel } from "@/components/InfluencerDetailPanel";
+import { PerformanceScoreBadge } from "@/components/PerformanceScoreBadge";
+import { useCreatorScores } from "@/hooks/useCreatorScores";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -153,6 +155,7 @@ const mapCampaign = (row: CampaignRow, influencer: InfluencerRecord): CampaignEn
 const Creators = () => {
   const [influencers, setInfluencers] = useState<InfluencerRecord[]>([]);
   const [campaigns, setCampaigns] = useState<CampaignEntry[]>([]);
+  const { scores } = useCreatorScores();
   const [loading, setLoading] = useState(true);
   const [country, setCountry] = useState("All");
   const [status, setStatus] = useState("All");
@@ -313,6 +316,7 @@ const Creators = () => {
                 campaigns={campaignGroups.get(creator.id) ?? []}
                 maxCampaigns={summary.maxCampaigns || 1}
                 index={i}
+                score={scores.get(creator.id)?.score ?? null}
                 selected={selectedCreators.includes(creator.id)}
                 onSelect={(checked) => toggleSelectedCreator(creator.id, checked)}
                 onOpen={() => setDetailCreator(creator)}
