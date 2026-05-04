@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PerformanceScoreBadge } from "@/components/PerformanceScoreBadge";
+import { useCreatorScores } from "@/hooks/useCreatorScores";
 
 interface MonthlyStats {
   totalViews: number;
@@ -22,7 +24,8 @@ interface MonthlyStats {
   productCost: number;
   ytViews: number;
   igViews: number;
-  topCreator: { name: string; views: number; engagement: number | null } | null;
+  topCreator: { id: string; name: string; views: number; engagement: number | null } | null;
+  topCreators: { id: string; name: string; views: number; engagement: number | null }[];
 }
 
 interface CampaignFetchRow {
@@ -137,16 +140,15 @@ const fetchMonthStats = async (
     }
   }
 
-  let topCreator: MonthlyStats["topCreator"] = null;
-  for (const c of creatorViews.values()) {
-    if (!topCreator || c.views > topCreator.views) {
-      topCreator = {
-        name: c.name,
-        views: c.views,
-        engagement: c.eng.length ? c.eng.reduce((a, b) => a + b, 0) / c.eng.length : null,
-      };
-    }
-  }
+  const creatorList = Array.from(creatorViews.entries()).map(([id, c]) => ({
+    id,
+    name: c.name,
+    views: c.views,
+    engagement: c.eng.length ? c.eng.reduce((a, b) => a + b, 0) / c.eng.length : null,
+  }));
+  creatorList.sort((a, b) => b.views - a.views);
+  const topCreator = creatorList[0] ?? null;
+  const topCreators = creatorList.slice(0, 5);
 
   return {
     totalViews,
@@ -156,6 +158,7 @@ const fetchMonthStats = async (
     ytViews,
     igViews,
     topCreator,
+    topCreators,
   };
 };
 
@@ -170,6 +173,7 @@ const initials = (name: string) =>
 
 export const MonthlyOverview = () => {
   const { eurCzkRate } = useCurrencySettings();
+  const { scores } = useCreatorScores();
   const [month, setMonth] = useState<Date>(() => startOfMonth(new Date()));
   const [current, setCurrent] = useState<MonthlyStats | null>(null);
   const [previous, setPrevious] = useState<MonthlyStats | null>(null);
