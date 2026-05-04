@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, ExternalLink, Instagram, Mail, Merge, MoreVertical, PauseCircle, Pencil, PlayCircle, Plus, Trash2, TrendingDown, TrendingUp, Youtube } from "lucide-react";
 import { toast } from "sonner";
+import { useSearchParams } from "react-router-dom";
 import { toastError } from "@/lib/toast-helpers";
 import { supabase } from "@/integrations/supabase/client";
 import { CreatorDialog } from "@/components/CreatorDialog";
