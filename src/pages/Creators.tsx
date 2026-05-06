@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, ExternalLink, Instagram, Mail, Merge, MoreVertical, PauseCircle, Pencil, PlayCircle, Plus, Trash2, TrendingDown, TrendingUp, Youtube } from "lucide-react";
+import { ExternalLink, Instagram, Mail, Merge, MoreVertical, PauseCircle, Pencil, PlayCircle, Plus, Trash2, TrendingDown, TrendingUp, Youtube } from "lucide-react";
 import { toast } from "sonner";
 import { useSearchParams } from "react-router-dom";
 import { toastError } from "@/lib/toast-helpers";
@@ -749,31 +749,6 @@ const CreatorCard = ({
         View details →
       </div>
     </Card>
-  );
-};
-
-const RoiPill = ({ roi }: { roi: number | null | undefined }) => {
-  if (roi == null) {
-    return (
-      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold text-muted-foreground" style={{ background: "hsl(240 30% 14%)", border: "1px solid hsl(var(--glow-purple) / 0.20)" }}>
-        —
-      </span>
-    );
-  }
-  const positive = roi >= 0;
-  return (
-    <span
-      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold tabular-nums"
-      style={{
-        background: positive ? "hsl(var(--success) / 0.15)" : "hsl(var(--glow-pink) / 0.15)",
-        color: positive ? "hsl(var(--success))" : "hsl(var(--glow-pink))",
-        border: `1px solid ${positive ? "hsl(var(--success) / 0.50)" : "hsl(var(--glow-pink) / 0.50)"}`,
-        boxShadow: `0 0 8px ${positive ? "hsl(var(--success) / 0.35)" : "hsl(var(--glow-pink) / 0.35)"}`,
-      }}
-    >
-      {positive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-      {formatPercent(roi)}
-    </span>
   );
 };
 
