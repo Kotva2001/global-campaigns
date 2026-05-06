@@ -11,6 +11,7 @@ import { CampaignCharts } from "@/components/CampaignCharts";
 import { CampaignDialog } from "@/components/CampaignDialog";
 import { KPIBreakdownPanel, type KPIMetric } from "@/components/KPIBreakdownPanel";
 import { CreatorLeaderboard } from "@/components/CreatorLeaderboard";
+import { GlobalSearch } from "@/components/GlobalSearch";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -116,6 +117,14 @@ const Dashboard = () => {
         displayCurrency={displayCurrency}
         rates={rates}
       />
+
+      <div className="px-6 pt-6">
+        <GlobalSearch
+          scope="all"
+          placeholder="Search creators, campaigns, products…"
+          className="max-w-xl"
+        />
+      </div>
 
       {loading && data.length === 0 ? (
         <div className="grid grid-cols-2 gap-3 px-6 pt-6 md:grid-cols-3 xl:grid-cols-6">

@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MonthlyOverview } from "@/components/MonthlyOverview";
+import { GlobalSearch } from "@/components/GlobalSearch";
 
 interface CampaignRow {
   id: string;
@@ -309,6 +310,16 @@ const Analytics = () => {
       <div className="space-y-6 px-6 py-6">
         {/* Monthly Performance Overview */}
         <MonthlyOverview />
+
+        {/* Global Campaign Search */}
+        <Card className="border-border bg-card p-4">
+          <div className="mb-2 text-sm font-bold">Search campaigns across all creators</div>
+          <GlobalSearch
+            scope="campaigns"
+            placeholder="Search by campaign name or video URL…"
+            className="max-w-2xl"
+          />
+        </Card>
 
         {/* KPIs */}
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">

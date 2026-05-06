@@ -228,6 +228,18 @@ const Creators = () => {
 
   useEffect(() => { void load(); }, []);
 
+  // Open detail panel when navigated to /creators?focus=<id>
+  useEffect(() => {
+    const focusId = searchParams.get("focus");
+    if (!focusId || !influencers.length) return;
+    const target = influencers.find((c) => c.id === focusId);
+    if (target) setDetailCreator(target);
+    const next = new URLSearchParams(searchParams);
+    next.delete("focus");
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [influencers]);
+
   const campaignGroups = useMemo(() => {
     const map = new Map<string, CampaignEntry[]>();
     campaigns.forEach((campaign) => {

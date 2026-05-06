@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, Edit3, Eye, Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, Edit3, Eye, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { toastError } from "@/lib/toast-helpers";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,6 +39,7 @@ import { QuickStoryDialog } from "@/components/QuickStoryDialog";
 import { CreatorPerformancePanel } from "@/components/CreatorPerformancePanel";
 import { PerformanceScoreBadge } from "@/components/PerformanceScoreBadge";
 import { useCreatorScores } from "@/hooks/useCreatorScores";
+import { normalize } from "@/lib/normalize";
 
 interface Props {
   creator: InfluencerRecord | null;
@@ -335,6 +336,8 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
   const [products, setProducts] = useState<ProductRecord[]>([]);
   const [flashedCells, setFlashedCells] = useState<Record<string, number>>({});
   const [storyOpen, setStoryOpen] = useState(false);
+  const [campaignSearch, setCampaignSearch] = useState("");
+  const [dealProductMap, setDealProductMap] = useState<Map<string, string>>(new Map());
   const { scores } = useCreatorScores();
   const score = creator ? scores.get(creator.id)?.score ?? null : null;
 
@@ -348,6 +351,39 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
       .then(({ data }) => { if (active) setProducts((data ?? []) as ProductRecord[]); });
     return () => { active = false; };
   }, [creator]);
+
+  // Reset & load deal->product mapping when creator changes (for searching campaigns by linked product name)
+  useEffect(() => {
+    setCampaignSearch("");
+    if (!creator) { setDealProductMap(new Map()); return; }
+    let active = true;
+    void supabase
+      .from("deals")
+      .select("id, products(name)")
+      .eq("influencer_id", creator.id)
+      .then(({ data }) => {
+        if (!active) return;
+        const map = new Map<string, string>();
+        (data ?? []).forEach((d: any) => {
+          const name = d?.products?.name;
+          if (d?.id && name) map.set(d.id, name);
+        });
+        setDealProductMap(map);
+      });
+    return () => { active = false; };
+  }, [creator]);
+
+  const filteredCampaigns = useMemo(() => {
+    const q = normalize(campaignSearch.trim());
+    if (q.length < 2) return campaigns;
+    return campaigns.filter((c) => {
+      if (normalize(c.campaignName).includes(q)) return true;
+      if (c.videoLink && normalize(c.videoLink).includes(q)) return true;
+      const productName = c.dealId ? dealProductMap.get(c.dealId) : null;
+      if (productName && normalize(productName).includes(q)) return true;
+      return false;
+    });
+  }, [campaigns, campaignSearch, dealProductMap]);
 
   const flash = (key: string) => {
     const ts = Date.now();
@@ -412,7 +448,33 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
 
                 <CreatorPerformancePanel creatorId={creator.id} />
 
-                <Card className="mt-5 overflow-hidden border-border bg-card">
+                <div className="mt-5 mb-3 flex items-center gap-2">
+                  <div className="relative flex-1 max-w-md">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[hsl(var(--glow-cyan)/0.65)]" />
+                    <Input
+                      value={campaignSearch}
+                      onChange={(e) => setCampaignSearch(e.target.value)}
+                      placeholder="Search campaigns, products or video URLs…"
+                      className="input-neon h-9 rounded-lg pl-9 pr-9 text-sm"
+                    />
+                    {campaignSearch && (
+                      <button
+                        onClick={() => setCampaignSearch("")}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground"
+                        aria-label="Clear search"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  {campaignSearch.trim().length >= 2 && (
+                    <span className="text-xs text-muted-foreground">
+                      {filteredCampaigns.length} of {campaigns.length}
+                    </span>
+                  )}
+                </div>
+
+                <Card className="overflow-hidden border-border bg-card">
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead className="sticky top-0 z-10 bg-muted/60 backdrop-blur">
@@ -423,7 +485,7 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
                         </tr>
                       </thead>
                       <tbody>
-                        {campaigns.map((campaign) => (
+                        {filteredCampaigns.map((campaign) => (
                           <tr key={campaign.id} className="border-b border-border/60 transition-colors hover:bg-card-hover">
                             <td className="whitespace-nowrap px-3 py-2.5 text-muted-foreground">{campaign.publishDate || "—"}</td>
                             <td className="px-3 py-2.5 font-medium">
@@ -481,7 +543,11 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
                             </td>
                           </tr>
                         ))}
-                        {!campaigns.length && <tr><td colSpan={14} className="px-3 py-10 text-center text-muted-foreground">No campaigns yet.</td></tr>}
+                        {!filteredCampaigns.length && (
+                          <tr><td colSpan={14} className="px-3 py-10 text-center text-muted-foreground">
+                            {campaigns.length === 0 ? "No campaigns yet." : "No campaigns match your search."}
+                          </td></tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
