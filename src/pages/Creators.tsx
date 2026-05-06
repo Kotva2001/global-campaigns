@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ExternalLink, Instagram, Mail, Merge, MoreVertical, PauseCircle, Pencil, PlayCircle, Plus, Trash2, TrendingDown, TrendingUp, Youtube } from "lucide-react";
+import { ArrowDown, ArrowUp, ExternalLink, Instagram, Mail, Merge, MoreVertical, PauseCircle, Pencil, PlayCircle, Plus, Trash2, TrendingDown, TrendingUp, Youtube } from "lucide-react";
 import { toast } from "sonner";
 import { useSearchParams } from "react-router-dom";
 import { toastError } from "@/lib/toast-helpers";
@@ -165,22 +165,36 @@ const Creators = () => {
   const [platformFilter, setPlatformFilter] = useState<"All" | "YouTube" | "Instagram" | "Both">("All");
   const [searchParams, setSearchParams] = useSearchParams();
   const sortParam = searchParams.get("sort");
-  const validSorts = ["score", "name", "country", "campaigns", "views"] as const;
+  const orderParam = searchParams.get("order");
+  const validSorts = ["score", "views", "engagement", "campaigns", "spend", "name", "recent", "country"] as const;
   type SortKey = typeof validSorts[number];
+  type SortOrder = "asc" | "desc";
   const [sortBy, setSortBy] = useState<SortKey>(
     (validSorts as readonly string[]).includes(sortParam ?? "") ? (sortParam as SortKey) : "score",
   );
+  const [sortOrder, setSortOrder] = useState<SortOrder>(orderParam === "asc" ? "asc" : "desc");
   useEffect(() => {
     if (sortParam && (validSorts as readonly string[]).includes(sortParam) && sortParam !== sortBy) {
       setSortBy(sortParam as SortKey);
     }
+    const o: SortOrder = orderParam === "asc" ? "asc" : "desc";
+    if (o !== sortOrder) setSortOrder(o);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortParam]);
+  }, [sortParam, orderParam]);
+  const writeSortParams = (key: SortKey, order: SortOrder) => {
+    const params = new URLSearchParams(searchParams);
+    if (key === "score") params.delete("sort"); else params.set("sort", key);
+    if (order === "desc") params.delete("order"); else params.set("order", order);
+    setSearchParams(params, { replace: true });
+  };
   const updateSort = (next: SortKey) => {
     setSortBy(next);
-    const params = new URLSearchParams(searchParams);
-    if (next === "score") params.delete("sort"); else params.set("sort", next);
-    setSearchParams(params, { replace: true });
+    writeSortParams(next, sortOrder);
+  };
+  const toggleOrder = () => {
+    const next: SortOrder = sortOrder === "desc" ? "asc" : "desc";
+    setSortOrder(next);
+    writeSortParams(sortBy, next);
   };
   const [editing, setEditing] = useState<InfluencerRecord | null>(null);
   const [creatorOpen, setCreatorOpen] = useState(false);
@@ -250,32 +264,55 @@ const Creators = () => {
 
   const sorted = useMemo(() => {
     const list = [...filtered];
-    const viewsOf = (id: string) => (campaignGroups.get(id) ?? []).reduce((s, c) => s + (c.views ?? 0), 0);
+    const cs = (id: string) => campaignGroups.get(id) ?? [];
+    const viewsOf = (id: string) => cs(id).reduce((s, c) => s + (c.views ?? 0), 0);
+    const engagementOf = (id: string) => {
+      const arr = cs(id).map((c) => c.engagementRate).filter((v): v is number => v != null);
+      return arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : 0;
+    };
+    const spendOf = (id: string) => cs(id).reduce((s, c) => s + (c.campaignCost ?? 0), 0);
+    const lastDateOf = (id: string) =>
+      cs(id).reduce((max, c) => {
+        const t = c.publishDateIso ? new Date(c.publishDateIso).getTime() : 0;
+        return Number.isFinite(t) && t > max ? t : max;
+      }, 0);
+    const sign = sortOrder === "asc" ? 1 : -1;
+    const cmpNum = (a: number, b: number) => sign * (a - b);
+    const cmpStr = (a: string, b: string) => sign * a.localeCompare(b);
     switch (sortBy) {
       case "name":
-        list.sort((a, b) => a.name.localeCompare(b.name));
+        list.sort((a, b) => cmpStr(a.name, b.name));
         break;
       case "country":
-        list.sort((a, b) => a.country.localeCompare(b.country) || a.name.localeCompare(b.name));
+        list.sort((a, b) => cmpStr(a.country, b.country) || a.name.localeCompare(b.name));
         break;
       case "campaigns":
-        list.sort((a, b) => (campaignGroups.get(b.id)?.length ?? 0) - (campaignGroups.get(a.id)?.length ?? 0));
+        list.sort((a, b) => cmpNum(cs(a.id).length, cs(b.id).length));
         break;
       case "views":
-        list.sort((a, b) => viewsOf(b.id) - viewsOf(a.id));
+        list.sort((a, b) => cmpNum(viewsOf(a.id), viewsOf(b.id)));
+        break;
+      case "engagement":
+        list.sort((a, b) => cmpNum(engagementOf(a.id), engagementOf(b.id)));
+        break;
+      case "spend":
+        list.sort((a, b) => cmpNum(spendOf(a.id), spendOf(b.id)));
+        break;
+      case "recent":
+        list.sort((a, b) => cmpNum(lastDateOf(a.id), lastDateOf(b.id)));
         break;
       case "score":
       default:
         list.sort((a, b) => {
           const sa = scores.get(a.id)?.score ?? -1;
           const sb = scores.get(b.id)?.score ?? -1;
-          if (sb !== sa) return sb - sa;
-          return viewsOf(b.id) - viewsOf(a.id);
+          if (sa !== sb) return cmpNum(sa, sb);
+          return sign * (viewsOf(a.id) - viewsOf(b.id));
         });
         break;
     }
     return list;
-  }, [filtered, sortBy, scores, campaignGroups]);
+  }, [filtered, sortBy, sortOrder, scores, campaignGroups]);
 
   const summary = useMemo(() => {
     let totalCampaigns = 0;
@@ -359,15 +396,32 @@ const Creators = () => {
           <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by name or contact…" className="input-neon min-w-[280px] flex-1" />
           <Select value={status} onValueChange={setStatus}><SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="All">All statuses</SelectItem><SelectItem value="active">Active</SelectItem><SelectItem value="paused">Paused</SelectItem><SelectItem value="ended">Ended</SelectItem></SelectContent></Select>
           <Select value={sortBy} onValueChange={(v) => updateSort(v as SortKey)}>
-            <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="score">Sort by Performance Score</SelectItem>
               <SelectItem value="views">Sort by Total Views</SelectItem>
-              <SelectItem value="campaigns">Sort by Campaigns</SelectItem>
+              <SelectItem value="engagement">Sort by Engagement Rate</SelectItem>
+              <SelectItem value="campaigns">Sort by Number of Campaigns</SelectItem>
+              <SelectItem value="spend">Sort by Spend</SelectItem>
               <SelectItem value="name">Sort by Name</SelectItem>
+              <SelectItem value="recent">Sort by Recently Active</SelectItem>
               <SelectItem value="country">Sort by Country</SelectItem>
             </SelectContent>
           </Select>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={toggleOrder}
+                className="h-10 w-10 border-[hsl(var(--glow-cyan)/0.4)] text-[hsl(var(--glow-cyan))] hover:bg-[hsl(var(--glow-cyan)/0.1)]"
+                aria-label={`Sort ${sortOrder === "desc" ? "descending" : "ascending"}`}
+              >
+                {sortOrder === "desc" ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{sortOrder === "desc" ? "Descending (highest first)" : "Ascending (lowest first)"}</TooltipContent>
+          </Tooltip>
         </div>
         <div className="flex flex-wrap items-center gap-3 px-6 pb-4">
           <Select value={scoreRange} onValueChange={(v) => setScoreRange(v as typeof scoreRange)}>
@@ -414,7 +468,8 @@ const Creators = () => {
                 maxCampaigns={summary.maxCampaigns || 1}
                 index={i}
                 score={scores.get(creator.id)?.score ?? null}
-                rank={sortBy === "score" ? i + 1 : null}
+                rank={i + 1}
+                podium={sortBy === "score" && sortOrder === "desc"}
                 selected={selectedCreators.includes(creator.id)}
                 onSelect={(checked) => toggleSelectedCreator(creator.id, checked)}
                 onOpen={() => setDetailCreator(creator)}
@@ -469,11 +524,12 @@ const CreatorGridSkeleton = () => (
 );
 
 const CreatorCard = ({
-  creator, campaigns, maxCampaigns, index, score, rank, selected, onSelect, onOpen, onAddCampaign, onEdit, onTogglePause, onDelete,
+  creator, campaigns, maxCampaigns, index, score, rank, podium, selected, onSelect, onOpen, onAddCampaign, onEdit, onTogglePause, onDelete,
 }: {
   creator: InfluencerRecord; campaigns: CampaignEntry[]; maxCampaigns: number; index: number;
   score: number | null;
   rank: number | null;
+  podium?: boolean;
   selected: boolean; onSelect: (checked: boolean) => void; onOpen: () => void;
   onAddCampaign: () => void; onEdit: () => void; onTogglePause: () => void; onDelete: () => void;
 }) => {
@@ -518,8 +574,8 @@ const CreatorCard = ({
   };
   const avatarFlag = FLAGS[creator.country];
 
-  const rankColor = rank === 1 ? "hsl(48 100% 60%)" : rank === 2 ? "hsl(0 0% 80%)" : rank === 3 ? "hsl(28 70% 55%)" : null;
-  const isPodium = rank != null && rank <= 3;
+  const rankColor = podium && rank === 1 ? "hsl(48 100% 60%)" : podium && rank === 2 ? "hsl(0 0% 80%)" : podium && rank === 3 ? "hsl(28 70% 55%)" : null;
+  const isPodium = !!podium && rank != null && rank <= 3;
 
   return (
     <Card
