@@ -369,6 +369,26 @@ const Creators = () => {
             </SelectContent>
           </Select>
         </div>
+        <div className="flex flex-wrap items-center gap-3 px-6 pb-4">
+          <Select value={scoreRange} onValueChange={(v) => setScoreRange(v as typeof scoreRange)}>
+            <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All scores</SelectItem>
+              <SelectItem value="top">Top performers (70+)</SelectItem>
+              <SelectItem value="avg">Average (40–69)</SelectItem>
+              <SelectItem value="low">Needs attention (0–39)</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={platformFilter} onValueChange={(v) => setPlatformFilter(v as typeof platformFilter)}>
+            <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">All platforms</SelectItem>
+              <SelectItem value="YouTube">YouTube</SelectItem>
+              <SelectItem value="Instagram">Instagram</SelectItem>
+              <SelectItem value="Both">Both</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <div className="px-6 pb-4">
           <div
             className="flex flex-wrap items-center gap-x-5 gap-y-1 rounded-lg px-4 py-2.5 text-xs"
