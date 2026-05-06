@@ -1,5 +1,14 @@
+const safeDecode = (raw: string): string => {
+  if (!raw.includes("%")) return raw;
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+};
+
 export const normalizeInstagramHandle = (handle: string | null | undefined) =>
-  (handle ?? "").trim().replace(/^@+/, "").toLowerCase();
+  safeDecode((handle ?? "").trim()).replace(/^@+/, "").toLowerCase();
 
 export const parseInstagramHandles = (value: string) =>
   Array.from(

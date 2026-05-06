@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, ExternalLink, Instagram, Mail, Merge, MoreVertical, PauseCircle, Pencil, PlayCircle, Plus, Trash2, TrendingDown, TrendingUp, Youtube } from "lucide-react";
+import { ExternalLink, Instagram, Mail, Merge, MoreVertical, PauseCircle, Pencil, PlayCircle, Plus, Trash2, TrendingDown, TrendingUp, Youtube } from "lucide-react";
 import { toast } from "sonner";
 import { useSearchParams } from "react-router-dom";
 import { toastError } from "@/lib/toast-helpers";
@@ -25,7 +25,7 @@ import { COUNTRIES, COUNTRY_FLAGS, COUNTRY_NAMES } from "@/lib/countries";
 import { FlagIcon, FLAG_COMPONENTS, hasFlag } from "@/components/FlagIcon";
 import { instagramHandlesFromValue } from "@/lib/instagram";
 import { computeKPIs } from "@/lib/calculations";
-import { formatCompact, formatPercent } from "@/lib/formatters";
+import { formatCompact } from "@/lib/formatters";
 import { copyExternalLinkToClipboard } from "@/lib/external-link-copy";
 import { normalize } from "@/lib/normalize";
 import { cn } from "@/lib/utils";
@@ -161,6 +161,8 @@ const Creators = () => {
   const [country, setCountry] = useState("All");
   const [status, setStatus] = useState("All");
   const [search, setSearch] = useState("");
+  const [scoreRange, setScoreRange] = useState<"all" | "top" | "avg" | "low">("all");
+  const [platformFilter, setPlatformFilter] = useState<"All" | "YouTube" | "Instagram" | "Both">("All");
   const [searchParams, setSearchParams] = useSearchParams();
   const sortParam = searchParams.get("sort");
   const validSorts = ["score", "name", "country", "campaigns", "views"] as const;
@@ -226,9 +228,25 @@ const Creators = () => {
     return influencers.filter((creator) => {
       if (country !== "All" && creator.country !== country) return false;
       if (status !== "All" && creator.status !== status) return false;
+      if (scoreRange !== "all") {
+        const s = scores.get(creator.id)?.score ?? null;
+        if (s == null) return false;
+        if (scoreRange === "top" && s < 70) return false;
+        if (scoreRange === "avg" && (s < 40 || s > 69)) return false;
+        if (scoreRange === "low" && s > 39) return false;
+      }
+      if (platformFilter !== "All") {
+        const cs = campaignGroups.get(creator.id) ?? [];
+        const set = new Set(cs.map((c) => c.platform));
+        const hasYT = set.has("YouTube") || set.has("YB Shorts");
+        const hasIG = set.has("Instagram") || set.has("Story");
+        if (platformFilter === "YouTube" && !hasYT) return false;
+        if (platformFilter === "Instagram" && !hasIG) return false;
+        if (platformFilter === "Both" && !(hasYT && hasIG)) return false;
+      }
       return !query || normalize(creator.name).includes(query) || normalize(creator.contact_person ?? "").includes(query);
     });
-  }, [country, influencers, search, status]);
+  }, [country, influencers, search, status, scoreRange, platformFilter, scores, campaignGroups]);
 
   const sorted = useMemo(() => {
     const list = [...filtered];
@@ -348,6 +366,26 @@ const Creators = () => {
               <SelectItem value="campaigns">Sort by Campaigns</SelectItem>
               <SelectItem value="name">Sort by Name</SelectItem>
               <SelectItem value="country">Sort by Country</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 px-6 pb-4">
+          <Select value={scoreRange} onValueChange={(v) => setScoreRange(v as typeof scoreRange)}>
+            <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All scores</SelectItem>
+              <SelectItem value="top">Top performers (70+)</SelectItem>
+              <SelectItem value="avg">Average (40–69)</SelectItem>
+              <SelectItem value="low">Needs attention (0–39)</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={platformFilter} onValueChange={(v) => setPlatformFilter(v as typeof platformFilter)}>
+            <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">All platforms</SelectItem>
+              <SelectItem value="YouTube">YouTube</SelectItem>
+              <SelectItem value="Instagram">Instagram</SelectItem>
+              <SelectItem value="Both">Both</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -655,43 +693,41 @@ const CreatorCard = ({
             </div>
           </div>
 
-          {/* Campaigns bar + ROI pill */}
-          <div className="flex items-center gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-baseline justify-between">
-                <span className="stat-label">Campaigns</span>
-                <span className="text-xs font-bold text-foreground tabular-nums">{campaigns.length}</span>
-              </div>
-              <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[hsl(var(--glow-purple)/0.15)]">
-                <div
-                  className="h-full rounded-full transition-all"
-                  style={{
-                    width: `${Math.min(100, (campaigns.length / maxCampaigns) * 100)}%`,
-                    background: "linear-gradient(90deg, hsl(var(--glow-cyan)), hsl(var(--glow-cyan) / 0.6))",
-                    boxShadow: "0 0 8px hsl(var(--glow-cyan) / 0.45)",
-                  }}
-                />
-              </div>
+          {/* Campaigns progress bar */}
+          <div className="min-w-0">
+            <div className="flex items-baseline justify-between">
+              <span className="stat-label">Campaigns</span>
+              <span className="text-xs font-bold text-foreground tabular-nums">{campaigns.length}</span>
             </div>
-            <div>
-              <div className="stat-label text-right">ROI</div>
-              <RoiPill roi={kpis.roi} />
+            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[hsl(var(--glow-purple)/0.15)]">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  width: `${Math.min(100, (campaigns.length / maxCampaigns) * 100)}%`,
+                  background: "linear-gradient(90deg, hsl(var(--glow-cyan)), hsl(var(--glow-cyan) / 0.6))",
+                  boxShadow: "0 0 8px hsl(var(--glow-cyan) / 0.45)",
+                }}
+              />
             </div>
           </div>
 
-          {/* Spend → Revenue */}
+          {/* Bottom row: Spend (or —) */}
           <div className="flex items-center justify-between text-xs">
             <div>
               <span className="stat-label">Spend</span>
-              <div className="font-bold text-muted-foreground">{formatCompact(kpis.totalSpend)}</div>
-            </div>
-            <ArrowRight className="h-4 w-4 text-[hsl(var(--glow-cyan)/0.7)]" />
-            <div className="text-right">
-              <span className="stat-label">Revenue</span>
-              <div className={cn("font-bold", kpis.totalRevenue > 0 ? "neon-number-green" : "text-muted-foreground")}>
-                {formatCompact(kpis.totalRevenue)}
+              <div className="font-bold text-muted-foreground">
+                {kpis.totalSpend > 0 ? formatCompact(kpis.totalSpend) : "—"}
               </div>
             </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="text-right cursor-help">
+                  <span className="stat-label opacity-50">Revenue</span>
+                  <div className="font-bold text-muted-foreground/40">—</div>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>Coming soon — Shoptet sales integration</TooltipContent>
+            </Tooltip>
           </div>
         </div>
       ) : (
@@ -713,31 +749,6 @@ const CreatorCard = ({
         View details →
       </div>
     </Card>
-  );
-};
-
-const RoiPill = ({ roi }: { roi: number | null | undefined }) => {
-  if (roi == null) {
-    return (
-      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold text-muted-foreground" style={{ background: "hsl(240 30% 14%)", border: "1px solid hsl(var(--glow-purple) / 0.20)" }}>
-        —
-      </span>
-    );
-  }
-  const positive = roi >= 0;
-  return (
-    <span
-      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold tabular-nums"
-      style={{
-        background: positive ? "hsl(var(--success) / 0.15)" : "hsl(var(--glow-pink) / 0.15)",
-        color: positive ? "hsl(var(--success))" : "hsl(var(--glow-pink))",
-        border: `1px solid ${positive ? "hsl(var(--success) / 0.50)" : "hsl(var(--glow-pink) / 0.50)"}`,
-        boxShadow: `0 0 8px ${positive ? "hsl(var(--success) / 0.35)" : "hsl(var(--glow-pink) / 0.35)"}`,
-      }}
-    >
-      {positive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-      {formatPercent(roi)}
-    </span>
   );
 };
 
