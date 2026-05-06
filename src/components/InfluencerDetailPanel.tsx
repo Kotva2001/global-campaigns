@@ -543,7 +543,11 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
                             </td>
                           </tr>
                         ))}
-                        {!campaigns.length && <tr><td colSpan={14} className="px-3 py-10 text-center text-muted-foreground">No campaigns yet.</td></tr>}
+                        {!filteredCampaigns.length && (
+                          <tr><td colSpan={14} className="px-3 py-10 text-center text-muted-foreground">
+                            {campaigns.length === 0 ? "No campaigns yet." : "No campaigns match your search."}
+                          </td></tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
