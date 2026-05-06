@@ -693,43 +693,41 @@ const CreatorCard = ({
             </div>
           </div>
 
-          {/* Campaigns bar + ROI pill */}
-          <div className="flex items-center gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-baseline justify-between">
-                <span className="stat-label">Campaigns</span>
-                <span className="text-xs font-bold text-foreground tabular-nums">{campaigns.length}</span>
-              </div>
-              <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[hsl(var(--glow-purple)/0.15)]">
-                <div
-                  className="h-full rounded-full transition-all"
-                  style={{
-                    width: `${Math.min(100, (campaigns.length / maxCampaigns) * 100)}%`,
-                    background: "linear-gradient(90deg, hsl(var(--glow-cyan)), hsl(var(--glow-cyan) / 0.6))",
-                    boxShadow: "0 0 8px hsl(var(--glow-cyan) / 0.45)",
-                  }}
-                />
-              </div>
+          {/* Campaigns progress bar */}
+          <div className="min-w-0">
+            <div className="flex items-baseline justify-between">
+              <span className="stat-label">Campaigns</span>
+              <span className="text-xs font-bold text-foreground tabular-nums">{campaigns.length}</span>
             </div>
-            <div>
-              <div className="stat-label text-right">ROI</div>
-              <RoiPill roi={kpis.roi} />
+            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[hsl(var(--glow-purple)/0.15)]">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  width: `${Math.min(100, (campaigns.length / maxCampaigns) * 100)}%`,
+                  background: "linear-gradient(90deg, hsl(var(--glow-cyan)), hsl(var(--glow-cyan) / 0.6))",
+                  boxShadow: "0 0 8px hsl(var(--glow-cyan) / 0.45)",
+                }}
+              />
             </div>
           </div>
 
-          {/* Spend → Revenue */}
+          {/* Bottom row: Spend (or —) */}
           <div className="flex items-center justify-between text-xs">
             <div>
               <span className="stat-label">Spend</span>
-              <div className="font-bold text-muted-foreground">{formatCompact(kpis.totalSpend)}</div>
-            </div>
-            <ArrowRight className="h-4 w-4 text-[hsl(var(--glow-cyan)/0.7)]" />
-            <div className="text-right">
-              <span className="stat-label">Revenue</span>
-              <div className={cn("font-bold", kpis.totalRevenue > 0 ? "neon-number-green" : "text-muted-foreground")}>
-                {formatCompact(kpis.totalRevenue)}
+              <div className="font-bold text-muted-foreground">
+                {kpis.totalSpend > 0 ? formatCompact(kpis.totalSpend) : "—"}
               </div>
             </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="text-right cursor-help">
+                  <span className="stat-label opacity-50">Revenue</span>
+                  <div className="font-bold text-muted-foreground/40">—</div>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>Coming soon — Shoptet sales integration</TooltipContent>
+            </Tooltip>
           </div>
         </div>
       ) : (
