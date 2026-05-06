@@ -524,11 +524,12 @@ const CreatorGridSkeleton = () => (
 );
 
 const CreatorCard = ({
-  creator, campaigns, maxCampaigns, index, score, rank, selected, onSelect, onOpen, onAddCampaign, onEdit, onTogglePause, onDelete,
+  creator, campaigns, maxCampaigns, index, score, rank, podium, selected, onSelect, onOpen, onAddCampaign, onEdit, onTogglePause, onDelete,
 }: {
   creator: InfluencerRecord; campaigns: CampaignEntry[]; maxCampaigns: number; index: number;
   score: number | null;
   rank: number | null;
+  podium?: boolean;
   selected: boolean; onSelect: (checked: boolean) => void; onOpen: () => void;
   onAddCampaign: () => void; onEdit: () => void; onTogglePause: () => void; onDelete: () => void;
 }) => {
@@ -573,8 +574,8 @@ const CreatorCard = ({
   };
   const avatarFlag = FLAGS[creator.country];
 
-  const rankColor = rank === 1 ? "hsl(48 100% 60%)" : rank === 2 ? "hsl(0 0% 80%)" : rank === 3 ? "hsl(28 70% 55%)" : null;
-  const isPodium = rank != null && rank <= 3;
+  const rankColor = podium && rank === 1 ? "hsl(48 100% 60%)" : podium && rank === 2 ? "hsl(0 0% 80%)" : podium && rank === 3 ? "hsl(28 70% 55%)" : null;
+  const isPodium = !!podium && rank != null && rank <= 3;
 
   return (
     <Card
