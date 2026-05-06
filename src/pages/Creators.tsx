@@ -554,18 +554,17 @@ const CreatorCard = ({
     >
       {rank != null && (
         <div
-          className="absolute -left-2 -top-2 z-20 flex h-7 min-w-[28px] items-center justify-center rounded-full px-1.5 text-xs font-black tabular-nums"
+          className="absolute -left-2 -top-2 z-20 flex h-8 min-w-[32px] items-center justify-center rounded-full px-1.5 text-xs font-black tabular-nums"
           style={{
-            color: rankColor ?? "hsl(var(--muted-foreground))",
+            color: rank === 1 ? "hsl(45 80% 18%)" : rank === 2 ? "hsl(220 20% 18%)" : rank === 3 ? "#fff" : "hsl(var(--muted-foreground))",
             background: rankColor
-              ? rankColor.replace(")", " / 0.15)").replace("hsl(", "hsla(")
+              ? rankColor.replace(")", " / 0.22)").replace("hsl(", "hsla(")
               : "hsl(240 30% 14%)",
-            border: `1px solid ${(rankColor ?? "hsl(var(--glow-purple))").replace(")", " / 0.6)").replace("hsl(", "hsla(")}`,
-            textShadow: rankColor ? `0 0 8px ${rankColor}` : undefined,
-            boxShadow: rankColor ? `0 0 12px ${rankColor.replace(")", " / 0.55)").replace("hsl(", "hsla(")}` : undefined,
+            border: `1px solid ${(rankColor ?? "hsl(var(--glow-purple))").replace(")", " / 0.75)").replace("hsl(", "hsla(")}`,
+            boxShadow: rankColor ? `0 0 14px ${rankColor.replace(")", " / 0.65)").replace("hsl(", "hsla(")}` : undefined,
           }}
         >
-          {rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `#${rank}`}
+          #{rank}
         </div>
       )}
       {/* Top row: avatar + identity + actions */}
