@@ -66,53 +66,40 @@ export const GlobalSearch = ({
     setLoading(true);
     const like = `%${debounced.replace(/[%_]/g, (m) => `\\${m}`)}%`;
     const run = async () => {
-      const campaignsQuery = supabase
-        .from("campaigns")
-        .select("id,campaign_name,platform,publish_date,views,engagement_rate,video_url,influencer_id,deal_id, influencer:influencers!campaigns_influencer_id_fkey(id,name,country), deal:deals!campaigns_deal_id_fkey(id, products(name))")
-        .or(`campaign_name.ilike.${like},video_url.ilike.${like}`)
-        .order("publish_date", { ascending: false, nullsFirst: false })
-        .limit(15);
-
-      // Fallback in case implicit FK relationship name isn't recognized
-      const tasks: Promise<unknown>[] = [campaignsQuery];
-      if (scope === "all") {
-        tasks.push(
-          supabase.from("influencers").select("id,name,country,status").or(`name.ilike.${like},contact_person.ilike.${like}`).order("name").limit(8),
-          supabase.from("products").select("id,name,sku").or(`name.ilike.${like},sku.ilike.${like}`).order("name").limit(8),
-        );
-      }
-      const [campaignRes, creatorRes, productRes] = await Promise.all(tasks as [
-        ReturnType<typeof campaignsQuery.then> | any, any?, any?,
-      ]);
-      if (cancelled) return;
-
-      let campaignRows: CampaignHit[] = (campaignRes?.data ?? []) as CampaignHit[];
-      // If join failed (unknown relationship), retry without joins and hydrate manually
-      if (campaignRes?.error) {
-        const { data: plain } = await supabase
+      const [campaignRes, creatorRes, productRes] = await Promise.all([
+        supabase
           .from("campaigns")
           .select("id,campaign_name,platform,publish_date,views,engagement_rate,video_url,influencer_id,deal_id")
           .or(`campaign_name.ilike.${like},video_url.ilike.${like}`)
           .order("publish_date", { ascending: false, nullsFirst: false })
-          .limit(15);
-        campaignRows = (plain ?? []) as CampaignHit[];
-        const inflIds = [...new Set(campaignRows.map((r) => r.influencer_id).filter(Boolean) as string[])];
-        const dealIds = [...new Set(campaignRows.map((r) => r.deal_id).filter(Boolean) as string[])];
-        const [{ data: infl }, { data: dl }] = await Promise.all([
-          inflIds.length ? supabase.from("influencers").select("id,name,country").in("id", inflIds) : Promise.resolve({ data: [] as any[] }),
-          dealIds.length ? supabase.from("deals").select("id, products(name)").in("id", dealIds) : Promise.resolve({ data: [] as any[] }),
-        ]);
-        const inflMap = new Map((infl ?? []).map((x: any) => [x.id, x]));
-        const dealMap = new Map((dl ?? []).map((x: any) => [x.id, x]));
-        campaignRows = campaignRows.map((r) => ({
-          ...r,
-          influencer: r.influencer_id ? (inflMap.get(r.influencer_id) as any) ?? null : null,
-          deal: r.deal_id ? (dealMap.get(r.deal_id) as any) ?? null : null,
-        }));
-      }
+          .limit(15),
+        scope === "all"
+          ? supabase.from("influencers").select("id,name,country,status").or(`name.ilike.${like},contact_person.ilike.${like}`).order("name").limit(8)
+          : Promise.resolve({ data: [] as CreatorHit[], error: null }),
+        scope === "all"
+          ? supabase.from("products").select("id,name,sku").or(`name.ilike.${like},sku.ilike.${like}`).order("name").limit(8)
+          : Promise.resolve({ data: [] as ProductHit[], error: null }),
+      ]);
+      if (cancelled) return;
+
+      let campaignRows: CampaignHit[] = (campaignRes.data ?? []) as CampaignHit[];
+      const inflIds = [...new Set(campaignRows.map((r) => r.influencer_id).filter(Boolean) as string[])];
+      const dealIds = [...new Set(campaignRows.map((r) => r.deal_id).filter(Boolean) as string[])];
+      const [inflRes, dealRes] = await Promise.all([
+        inflIds.length ? supabase.from("influencers").select("id,name,country").in("id", inflIds) : Promise.resolve({ data: [] as any[] }),
+        dealIds.length ? supabase.from("deals").select("id, products(name)").in("id", dealIds) : Promise.resolve({ data: [] as any[] }),
+      ]);
+      if (cancelled) return;
+      const inflMap = new Map(((inflRes.data ?? []) as any[]).map((x) => [x.id, x]));
+      const dealMap = new Map(((dealRes.data ?? []) as any[]).map((x) => [x.id, x]));
+      campaignRows = campaignRows.map((r) => ({
+        ...r,
+        influencer: r.influencer_id ? (inflMap.get(r.influencer_id) as any) ?? null : null,
+        deal: r.deal_id ? (dealMap.get(r.deal_id) as any) ?? null : null,
+      }));
       setCampaigns(campaignRows);
-      setCreators(((creatorRes?.data ?? []) as CreatorHit[]));
-      setProducts(((productRes?.data ?? []) as ProductHit[]));
+      setCreators(((creatorRes.data ?? []) as CreatorHit[]));
+      setProducts(((productRes.data ?? []) as ProductHit[]));
       setLoading(false);
     };
     void run();
