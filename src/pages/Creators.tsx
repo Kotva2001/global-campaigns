@@ -554,14 +554,13 @@ const CreatorCard = ({
     >
       {rank != null && (
         <div
-          className="absolute -left-2 -top-2 z-20 flex h-8 min-w-[32px] items-center justify-center rounded-full px-1.5 text-xs font-black tabular-nums"
+          className="absolute -left-2 -top-2 z-20 flex h-8 w-8 items-center justify-center rounded-full text-xs font-black tabular-nums text-white"
           style={{
-            color: rank === 1 ? "hsl(45 80% 18%)" : rank === 2 ? "hsl(220 20% 18%)" : rank === 3 ? "#fff" : "hsl(var(--muted-foreground))",
-            background: rankColor
-              ? rankColor.replace(")", " / 0.22)").replace("hsl(", "hsla(")
-              : "hsl(240 30% 14%)",
-            border: `1px solid ${(rankColor ?? "hsl(var(--glow-purple))").replace(")", " / 0.75)").replace("hsl(", "hsla(")}`,
-            boxShadow: rankColor ? `0 0 14px ${rankColor.replace(")", " / 0.65)").replace("hsl(", "hsla(")}` : undefined,
+            background: "hsl(240 40% 10%)",
+            border: `2px solid ${rankColor ?? "hsl(var(--glow-purple))"}`,
+            boxShadow: rankColor
+              ? `0 0 14px ${rankColor.replace(")", " / 0.75)").replace("hsl(", "hsla(")}, inset 0 0 8px ${rankColor.replace(")", " / 0.35)").replace("hsl(", "hsla(")}`
+              : `0 0 8px hsl(var(--glow-purple) / 0.5)`,
           }}
         >
           #{rank}
