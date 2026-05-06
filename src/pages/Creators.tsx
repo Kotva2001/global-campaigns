@@ -25,7 +25,7 @@ import { COUNTRIES, COUNTRY_FLAGS, COUNTRY_NAMES } from "@/lib/countries";
 import { FlagIcon, FLAG_COMPONENTS, hasFlag } from "@/components/FlagIcon";
 import { instagramHandlesFromValue } from "@/lib/instagram";
 import { computeKPIs } from "@/lib/calculations";
-import { formatCompact, formatPercent } from "@/lib/formatters";
+import { formatCompact } from "@/lib/formatters";
 import { copyExternalLinkToClipboard } from "@/lib/external-link-copy";
 import { normalize } from "@/lib/normalize";
 import { cn } from "@/lib/utils";
@@ -161,6 +161,8 @@ const Creators = () => {
   const [country, setCountry] = useState("All");
   const [status, setStatus] = useState("All");
   const [search, setSearch] = useState("");
+  const [scoreRange, setScoreRange] = useState<"all" | "top" | "avg" | "low">("all");
+  const [platformFilter, setPlatformFilter] = useState<"All" | "YouTube" | "Instagram" | "Both">("All");
   const [searchParams, setSearchParams] = useSearchParams();
   const sortParam = searchParams.get("sort");
   const validSorts = ["score", "name", "country", "campaigns", "views"] as const;
@@ -226,9 +228,25 @@ const Creators = () => {
     return influencers.filter((creator) => {
       if (country !== "All" && creator.country !== country) return false;
       if (status !== "All" && creator.status !== status) return false;
+      if (scoreRange !== "all") {
+        const s = scores.get(creator.id)?.score ?? null;
+        if (s == null) return false;
+        if (scoreRange === "top" && s < 70) return false;
+        if (scoreRange === "avg" && (s < 40 || s > 69)) return false;
+        if (scoreRange === "low" && s > 39) return false;
+      }
+      if (platformFilter !== "All") {
+        const cs = campaignGroups.get(creator.id) ?? [];
+        const set = new Set(cs.map((c) => c.platform));
+        const hasYT = set.has("YouTube") || set.has("YB Shorts");
+        const hasIG = set.has("Instagram") || set.has("Story");
+        if (platformFilter === "YouTube" && !hasYT) return false;
+        if (platformFilter === "Instagram" && !hasIG) return false;
+        if (platformFilter === "Both" && !(hasYT && hasIG)) return false;
+      }
       return !query || normalize(creator.name).includes(query) || normalize(creator.contact_person ?? "").includes(query);
     });
-  }, [country, influencers, search, status]);
+  }, [country, influencers, search, status, scoreRange, platformFilter, scores, campaignGroups]);
 
   const sorted = useMemo(() => {
     const list = [...filtered];
