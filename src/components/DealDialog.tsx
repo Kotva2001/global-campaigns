@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { toastError } from "@/lib/toast-helpers";
 import { recalcDealSplit, linkCampaignsToDeal } from "@/lib/deals";
+import { searchProducts } from "@/lib/product-search";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -81,7 +82,7 @@ export const DealDialog = ({ open, onOpenChange, influencerId, editing, onSaved 
     setShowResults(false);
   }, [editing, open]);
 
-  // Debounced server-side search (name or SKU, diacritics-insensitive via unaccent-style fallback using ilike on both fields)
+  // Diacritics- and case-insensitive search via the `search_products` RPC.
   useEffect(() => {
     if (!open) return;
     const q = productSearch.trim();
@@ -91,24 +92,14 @@ export const DealDialog = ({ open, onOpenChange, influencerId, editing, onSaved 
       return;
     }
     setSearching(true);
+    let cancelled = false;
     const handle = setTimeout(async () => {
-      // Split into words; each word must match (AND) against name OR sku.
-      // For each word we also try a diacritics-stripped variant (OR within the word).
-      const words = q.split(/\s+/).filter(Boolean);
-      let query = supabase.from("products").select("*");
-      for (const w of words) {
-        const stripped = w.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        const variants = Array.from(new Set([w, stripped]));
-        const orFilter = variants
-          .flatMap((v) => [`name.ilike.%${v}%`, `sku.ilike.%${v}%`])
-          .join(",");
-        query = query.or(orFilter);
-      }
-      const { data, error } = await query.order("name").limit(20);
-      if (!error) setProductResults((data ?? []) as ProductRecord[]);
+      const data = await searchProducts(q, 20);
+      if (cancelled) return;
+      setProductResults(data);
       setSearching(false);
     }, 250);
-    return () => clearTimeout(handle);
+    return () => { cancelled = true; clearTimeout(handle); };
   }, [productSearch, open]);
 
   const pickProduct = (p: ProductRecord) => {
