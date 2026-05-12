@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { lovable } from "@/integrations/lovable";
+import { supabase } from "@/integrations/supabase/client";
+import { clearAuthRedirectFromUrl, isForbiddenAuthError } from "@/lib/authRedirect";
 import { UserRoleProvider, useUserRole } from "@/hooks/useUserRole";
 import { AccessDenied } from "@/components/AccessDenied";
 
@@ -29,14 +31,31 @@ const SignInScreen = () => {
       redirect_uri: window.location.origin,
     });
     if (result.error) {
+      if (isForbiddenAuthError(result.error)) {
+        await supabase.auth.signOut();
+        clearAuthRedirectFromUrl();
+      }
       setSubmitting(false);
       toast({
         title: "Sign-in failed",
         description: result.error.message ?? "Could not sign in with Google.",
         variant: "destructive",
       });
+      return;
     }
-    // If redirected, browser navigates away. Otherwise tokens are set.
+    if (result.redirected) return;
+
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data.user) {
+      await supabase.auth.signOut();
+      clearAuthRedirectFromUrl();
+      setSubmitting(false);
+      toast({
+        title: "Sign-in failed",
+        description: "The returned Google session could not be validated. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
