@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Viewer role: hide all mutating actions (Add / Edit / Delete / Approve / Dismiss). */
+html[data-role="viewer"] [data-mutate] { display: none !important; }
+
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
 */
