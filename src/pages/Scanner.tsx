@@ -28,6 +28,12 @@ import { notifyScannerChanged, notifyAlertsChanged } from "@/lib/badge-events";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { FlagIcon, hasFlag } from "@/components/FlagIcon";
+import { Search } from "lucide-react";
+import type { ProductRecord } from "@/types/product";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type ScanSettings = {
   id: string;
