@@ -388,8 +388,8 @@ const Creators = () => {
   };
 
   return (
-    <div>
-      <header className="border-b border-border bg-background/80 backdrop-blur">
+    <div className="relative">
+      <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="flex items-center justify-between gap-4 px-6 py-4">
           <div>
             <h1 className="page-title text-lg">Creators</h1>
