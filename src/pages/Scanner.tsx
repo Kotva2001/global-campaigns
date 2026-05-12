@@ -30,7 +30,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { FlagIcon, hasFlag } from "@/components/FlagIcon";
 import { Search } from "lucide-react";
 import type { ProductRecord } from "@/types/product";
-import { normalize } from "@/lib/normalize";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -851,17 +850,7 @@ function ApproveDialog({
   const [showResults, setShowResults] = useState(false);
   const [pendingProductChange, setPendingProductChange] = useState<null | (() => void)>(null);
   const [saving, setSaving] = useState(false);
-  const [allProducts, setAllProducts] = useState<ProductRecord[]>([]);
-
-  // Load all products once when dialog opens (small table; enables diacritics-insensitive client-side filter)
-  useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
-    void supabase.from("products").select("*").order("name").limit(2000).then(({ data }) => {
-      if (!cancelled && data) setAllProducts(data as ProductRecord[]);
-    });
-    return () => { cancelled = true; };
-  }, [open]);
+  // Server-side product search (same approach as the Products page; works against the full 11k+ catalog).
 
   useEffect(() => {
     if (detection) {
@@ -897,7 +886,8 @@ function ApproveDialog({
     if (!costEditedManually) setCost(String(autoCost));
   }, [autoCost, collab, costEditedManually]);
 
-  // Diacritics-insensitive client-side filter (matches the rest of the app)
+  // Server-side search: split into words, each word must match name OR sku (ilike).
+  // For diacritics, query both the raw word and a stripped variant so "sitko" finds "Sítko".
   useEffect(() => {
     if (!open) return;
     const q = search.trim();
@@ -907,17 +897,30 @@ function ApproveDialog({
       return;
     }
     setSearching(true);
-    const handle = setTimeout(() => {
-      const words = normalize(q).split(/\s+/).filter(Boolean);
-      const filtered = allProducts.filter((p) => {
-        const hay = `${normalize(p.name)} ${normalize(p.sku ?? "")}`;
-        return words.every((w) => hay.includes(w));
-      }).slice(0, 30);
-      setResults(filtered);
+    let cancelled = false;
+    const handle = setTimeout(async () => {
+      const words = q.split(/\s+/).filter(Boolean);
+      let query = supabase.from("products").select("*").order("name").limit(20);
+      for (const w of words) {
+        const stripped = w.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const variants = Array.from(new Set([w, stripped]));
+        const orFilter = variants
+          .flatMap((v) => [`name.ilike.%${v}%`, `sku.ilike.%${v}%`])
+          .join(",");
+        query = query.or(orFilter);
+      }
+      const { data, error } = await query;
+      if (cancelled) return;
+      if (error) {
+        console.error("Product search failed", error);
+        setResults([]);
+      } else {
+        setResults((data ?? []) as ProductRecord[]);
+      }
       setSearching(false);
-    }, 150);
-    return () => clearTimeout(handle);
-  }, [search, open, allProducts]);
+    }, 200);
+    return () => { cancelled = true; clearTimeout(handle); };
+  }, [search, open]);
 
   const applyProductMutation = (mutate: () => void) => {
     if (costEditedManually && collab !== "organic") {
