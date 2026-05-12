@@ -201,7 +201,7 @@ export const DataTable = ({ rows, onChanged, onAddCampaign, onEditCampaign }: Pr
     { id: "engagement", header: () => <div className="text-right">Engagement</div>, accessorKey: "engagementRate", cell: ({ getValue }) => <div className="text-right tabular-nums text-muted-foreground">{formatPercent(getValue() as number | null)}</div> },
     { id: "revenue", header: () => <div className="text-right">Revenue</div>, accessorKey: "purchaseRevenue", cell: ({ row, getValue }) => <div className={cn("text-right tabular-nums", (getValue() as number | null) ? "font-bold text-success" : "text-muted-foreground")}>{formatCurrency(getValue() as number | null, row.original.currency)}</div> },
     { id: "conversion", header: () => <div className="text-right">Conv. %</div>, accessorKey: "conversionRate", cell: ({ getValue }) => <div className="text-right tabular-nums text-muted-foreground">{formatPercent(getValue() as number | null)}</div> },
-    { id: "actions", header: "", cell: ({ row }) => <div className="flex justify-end gap-1"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEditCampaign?.(row.original)}><Edit3 className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteCampaign(row.original)}><Trash2 className="h-4 w-4" /></Button></div>, enableSorting: false },
+    { id: "actions", header: "", cell: ({ row }) => <div data-mutate className="flex justify-end gap-1"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEditCampaign?.(row.original)}><Edit3 className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteCampaign(row.original)}><Trash2 className="h-4 w-4" /></Button></div>, enableSorting: false },
   ], [onChanged, onEditCampaign, selected]);
 
   const table = useReactTable({
@@ -220,7 +220,7 @@ export const DataTable = ({ rows, onChanged, onAddCampaign, onEditCampaign }: Pr
       <div className="mb-3 flex items-center justify-between gap-3">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">All Campaigns</h2>
         <div className="flex gap-2">
-          <Button variant="default" size="sm" className="gap-2" onClick={onAddCampaign}><Plus className="h-4 w-4" /> Add</Button>
+          <Button data-mutate variant="default" size="sm" className="gap-2" onClick={onAddCampaign}><Plus className="h-4 w-4" /> Add</Button>
           <Button variant="secondary" size="sm" className="gap-2" onClick={() => exportCsv(rows)}><Download className="h-4 w-4" /> Export CSV</Button>
         </div>
       </div>
@@ -262,8 +262,8 @@ export const DataTable = ({ rows, onChanged, onAddCampaign, onEditCampaign }: Pr
       {selectedIds.length > 0 && (
         <div className="fixed bottom-5 left-1/2 z-40 flex -translate-x-1/2 items-center gap-3 rounded-md border border-border bg-card px-4 py-3 shadow-lg">
           <span className="text-sm font-medium">{selectedIds.length} selected</span>
-          <Button variant="destructive" size="sm" onClick={() => setBulkDeleteOpen(true)}>Delete selected ({selectedIds.length})</Button>
-          <Select value={bulkCollab} onValueChange={bulkUpdateCollab}><SelectTrigger className="w-[210px]"><SelectValue placeholder="Update collaboration type" /></SelectTrigger><SelectContent>{COLLAB_TYPES.map((type) => <SelectItem key={type} value={type}>{type}</SelectItem>)}</SelectContent></Select>
+          <Button data-mutate variant="destructive" size="sm" onClick={() => setBulkDeleteOpen(true)}>Delete selected ({selectedIds.length})</Button>
+          <Select value={bulkCollab} onValueChange={bulkUpdateCollab}><SelectTrigger data-mutate className="w-[210px]"><SelectValue placeholder="Update collaboration type" /></SelectTrigger><SelectContent>{COLLAB_TYPES.map((type) => <SelectItem key={type} value={type}>{type}</SelectItem>)}</SelectContent></Select>
           <Button variant="secondary" size="sm" className="gap-2" onClick={() => exportCsv(selectedRows)}><Download className="h-4 w-4" /> Export selected</Button>
         </div>
       )}

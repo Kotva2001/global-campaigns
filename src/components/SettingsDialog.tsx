@@ -10,6 +10,8 @@ import type { SheetConfig } from "@/hooks/useSheetData";
 import { ImportFromSheets } from "./ImportFromSheets";
 import { DuplicateCleanup } from "./DuplicateCleanup";
 import { ExchangeRateSettings } from "./ExchangeRateSettings";
+import { UserManagement } from "./UserManagement";
+import { AdminOnly } from "@/hooks/useUserRole";
 
 interface Props {
   open: boolean;
@@ -81,6 +83,9 @@ export const SettingsDialog = ({ open, onOpenChange, config, onSave }: Props) =>
           <ExchangeRateSettings />
           <ImportFromSheets />
           <DuplicateCleanup />
+          <AdminOnly>
+            <UserManagement />
+          </AdminOnly>
         </div>
 
         <DialogFooter>

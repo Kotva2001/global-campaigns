@@ -98,7 +98,7 @@ const Dashboard = () => {
                 <SelectContent><SelectItem value="CZK">CZK</SelectItem><SelectItem value="EUR">EUR</SelectItem></SelectContent>
               </Select>
             </div>
-            <Button size="sm" onClick={() => { setEditingCampaign(null); setCampaignInfluencerId(null); setCampaignOpen(true); }} className="btn-neon-cyan gap-2">
+            <Button data-mutate size="sm" onClick={() => { setEditingCampaign(null); setCampaignInfluencerId(null); setCampaignOpen(true); }} className="btn-neon-cyan gap-2">
               <Plus className="h-4 w-4" />
               Add Campaign
             </Button>

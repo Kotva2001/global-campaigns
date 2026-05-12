@@ -396,8 +396,8 @@ const Creators = () => {
             <p className="text-xs text-muted-foreground">Roster of influencers across markets</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="secondary" className="btn-neon-pink gap-2" onClick={openMerge} disabled={selectedCreators.length !== 2}><Merge className="h-4 w-4" /> Merge creators</Button>
-            <Button className="btn-neon-cyan gap-2" onClick={openCreate}><Plus className="h-4 w-4" /> Add Creator</Button>
+            <Button data-mutate variant="secondary" className="btn-neon-pink gap-2" onClick={openMerge} disabled={selectedCreators.length !== 2}><Merge className="h-4 w-4" /> Merge creators</Button>
+            <Button data-mutate className="btn-neon-cyan gap-2" onClick={openCreate}><Plus className="h-4 w-4" /> Add Creator</Button>
           </div>
         </div>
         <div className="flex gap-2 overflow-x-auto px-6 pb-3">
@@ -728,10 +728,10 @@ const CreatorCard = ({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={(event) => { event.stopPropagation(); onOpen(); }}><ExternalLink className="mr-2 h-4 w-4" /> View campaigns</DropdownMenuItem>
-              <DropdownMenuItem onClick={(event) => { event.stopPropagation(); onEdit(); }}><Pencil className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
-              <DropdownMenuItem onClick={(event) => { event.stopPropagation(); onTogglePause(); }}>{creator.status === "active" ? <><PauseCircle className="mr-2 h-4 w-4" /> Pause</> : <><PlayCircle className="mr-2 h-4 w-4" /> Resume</>}</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={(event) => { event.stopPropagation(); onDelete(); }} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
+              <DropdownMenuItem data-mutate onClick={(event) => { event.stopPropagation(); onEdit(); }}><Pencil className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
+              <DropdownMenuItem data-mutate onClick={(event) => { event.stopPropagation(); onTogglePause(); }}>{creator.status === "active" ? <><PauseCircle className="mr-2 h-4 w-4" /> Pause</> : <><PlayCircle className="mr-2 h-4 w-4" /> Resume</>}</DropdownMenuItem>
+              <DropdownMenuSeparator data-mutate />
+              <DropdownMenuItem data-mutate onClick={(event) => { event.stopPropagation(); onDelete(); }} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

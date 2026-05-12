@@ -81,7 +81,7 @@ export const DealsSection = ({ influencerId, campaigns, onChanged }: Props) => {
       <div className="mt-5">
         <div className="mb-2 flex items-center justify-between">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Deals</h3>
-          <Button size="sm" variant="secondary" className="gap-2" onClick={() => { setEditing(null); setDialogOpen(true); }}>
+          <Button data-mutate size="sm" variant="secondary" className="gap-2" onClick={() => { setEditing(null); setDialogOpen(true); }}>
             <Plus className="h-4 w-4" /> Add Deal
           </Button>
         </div>
@@ -114,7 +114,7 @@ export const DealsSection = ({ influencerId, campaigns, onChanged }: Props) => {
                         {d.created_at && <><span>·</span><span>{new Date(d.created_at).toLocaleDateString("cs-CZ")}</span></>}
                       </div>
                     </div>
-                    <div className="flex shrink-0 gap-0.5" onClick={(e) => e.stopPropagation()}>
+                    <div data-mutate className="flex shrink-0 gap-0.5" onClick={(e) => e.stopPropagation()}>
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditing(d); setDialogOpen(true); }}>
                         <Edit3 className="h-3.5 w-3.5" />
                       </Button>

@@ -554,7 +554,7 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
                 </Card>
               </div>
 
-              <div className="border-t border-border px-6 py-4">
+              <div data-mutate className="border-t border-border px-6 py-4">
                 <div className="flex items-center gap-2">
                   <Button className="gap-2" onClick={onAddCampaign}><Plus className="h-4 w-4" /> Add Campaign</Button>
                   <Button variant="secondary" className="gap-2" onClick={() => setStoryOpen(true)}>

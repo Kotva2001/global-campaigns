@@ -187,7 +187,7 @@ const RulesTab = () => {
     <>
       <div className="mb-4 flex items-center justify-between">
         <div className="text-sm text-muted-foreground">{rules.length} rule{rules.length === 1 ? "" : "s"}</div>
-        <Button className="gap-2" onClick={() => { setEditing(null); setDialogOpen(true); }}>
+        <Button data-mutate className="gap-2" onClick={() => { setEditing(null); setDialogOpen(true); }}>
           <Plus className="h-4 w-4" /> Add Rule
         </Button>
       </div>
@@ -214,9 +214,9 @@ const RulesTab = () => {
                     Applies to: <span className="text-foreground">{appliesLabel(r)}</span>
                   </div>
                 </div>
-                <Switch checked={!!r.is_active} onCheckedChange={(v) => toggleActive(r, v)} />
+                <Switch data-mutate checked={!!r.is_active} onCheckedChange={(v) => toggleActive(r, v)} />
               </div>
-              <div className="mt-3 flex justify-end gap-1">
+              <div data-mutate className="mt-3 flex justify-end gap-1">
                 <Button variant="ghost" size="sm" className="gap-1" onClick={() => { setEditing(r); setDialogOpen(true); }}>
                   <Pencil className="h-3.5 w-3.5" /> Edit
                 </Button>
