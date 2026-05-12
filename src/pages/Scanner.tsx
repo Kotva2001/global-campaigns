@@ -30,7 +30,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { FlagIcon, hasFlag } from "@/components/FlagIcon";
 import { Search } from "lucide-react";
 import type { ProductRecord } from "@/types/product";
-import { normalize } from "@/lib/normalize";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
