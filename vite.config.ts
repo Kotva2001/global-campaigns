@@ -6,8 +6,8 @@ import { componentTagger } from "lovable-tagger";
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   define: {
-    "import.meta.env.VITE_SUPABASE_URL": JSON.stringify("https://vnggokmmxkiazkgkrdqs.supabase.co"),
-    "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZuZ2dva21teGtpYXprZ2tyZHFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4NTYzMDQsImV4cCI6MjA5MjQzMjMwNH0.Nur-y2ERqUbkO--ZuEJ6McbbjWmB38Z-zYhlQ71VIp4"),
+    "import.meta.env.VITE_SUPABASE_URL": JSON.stringify("https://raxqaaspkqwpekkqiyja.supabase.co"),
+    "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify("sb_publishable_1ytlDMn8mo7mmCVA6MA8Lw_6B46DV5K"),
   },
   server: {
     host: "::",
