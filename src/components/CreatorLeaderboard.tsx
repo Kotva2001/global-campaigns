@@ -118,8 +118,9 @@ export const CreatorLeaderboard = () => {
                 return (
                   <div
                     key={row.creatorId}
+                    onClick={() => navigate(`/creators?focus=${row.creatorId}`)}
                     className={cn(
-                      "group flex items-center gap-3 rounded-lg border border-border/50 bg-background/40 px-3 py-2 transition-all hover:border-primary/40",
+                      "group flex cursor-pointer items-center gap-3 rounded-lg border border-border/50 bg-background/40 px-3 py-2 transition-all hover:border-primary/40 hover:bg-primary/[0.06] hover:shadow-[0_0_16px_-8px_hsl(var(--primary)/0.25)]",
                     )}
                     style={isPodium ? {
                       borderColor: rankMeta.color.replace(")", " / 0.55)").replace("hsl(", "hsla("),
