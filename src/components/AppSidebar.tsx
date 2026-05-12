@@ -17,6 +17,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { useUserRole } from "@/hooks/useUserRole";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface Props {
   onOpenSettings: () => void;
@@ -273,6 +275,7 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
       />
 
       <div className="relative px-3 py-3">
+        <UserCard />
         <Button
           variant="ghost"
           className="sb-item sb-item-settings w-full justify-start gap-3 rounded-lg font-medium"
@@ -322,6 +325,52 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
         <div className="absolute left-1/2 -translate-x-1/2" style={{ bottom: 8, width: 50, height: 1, background: "#ff2d95", opacity: 0.18 }} />
         <div className="absolute left-1/2 -translate-x-1/2" style={{ bottom: 4, width: 40, height: 1, background: "#b44dff", opacity: 0.12 }} />
         <div className="absolute left-1/2 -translate-x-1/2" style={{ bottom: 1, width: 30, height: 1, background: "#b44dff", opacity: 0.07 }} />
+      </div>
+    </div>
+  );
+};
+
+const roleAccent: Record<string, string> = {
+  admin: "#ff2d95",
+  editor: "#00f0ff",
+  viewer: "#7777a0",
+};
+
+const UserCard = () => {
+  const { user, role, displayName, avatarUrl, email } = useUserRole();
+  if (!user) return null;
+  const name = displayName ?? email ?? "User";
+  const initials = (name || "U")
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((s) => s[0]?.toUpperCase() ?? "")
+    .join("") || "U";
+  const accent = roleAccent[role ?? "viewer"] ?? "#7777a0";
+  return (
+    <div
+      className="mb-2 flex items-center gap-2.5 rounded-lg border px-2.5 py-2"
+      style={{
+        borderColor: "rgba(255,255,255,0.08)",
+        background: "rgba(255,255,255,0.02)",
+      }}
+    >
+      <Avatar className="h-8 w-8 shrink-0" style={{ boxShadow: `0 0 8px ${accent}55` }}>
+        {avatarUrl && <AvatarImage src={avatarUrl} alt={name} />}
+        <AvatarFallback style={{ background: accent, color: "#06061a", fontSize: 11, fontWeight: 700 }}>
+          {initials}
+        </AvatarFallback>
+      </Avatar>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-xs font-semibold">{name}</div>
+        <div className="flex items-center gap-1.5 truncate text-[10px] text-muted-foreground">
+          <span
+            className="rounded px-1 py-px text-[9px] font-bold uppercase tracking-wide"
+            style={{ background: `${accent}22`, color: accent }}
+          >
+            {role ?? "—"}
+          </span>
+          <span className="truncate">{email}</span>
+        </div>
       </div>
     </div>
   );
