@@ -30,6 +30,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { FlagIcon, hasFlag } from "@/components/FlagIcon";
 import { Search } from "lucide-react";
 import type { ProductRecord } from "@/types/product";
+import { normalize } from "@/lib/normalize";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -850,6 +851,17 @@ function ApproveDialog({
   const [showResults, setShowResults] = useState(false);
   const [pendingProductChange, setPendingProductChange] = useState<null | (() => void)>(null);
   const [saving, setSaving] = useState(false);
+  const [allProducts, setAllProducts] = useState<ProductRecord[]>([]);
+
+  // Load all products once when dialog opens (small table; enables diacritics-insensitive client-side filter)
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    void supabase.from("products").select("*").order("name").limit(2000).then(({ data }) => {
+      if (!cancelled && data) setAllProducts(data as ProductRecord[]);
+    });
+    return () => { cancelled = true; };
+  }, [open]);
 
   useEffect(() => {
     if (detection) {
@@ -885,7 +897,7 @@ function ApproveDialog({
     if (!costEditedManually) setCost(String(autoCost));
   }, [autoCost, collab, costEditedManually]);
 
-  // Debounced product search
+  // Diacritics-insensitive client-side filter (matches the rest of the app)
   useEffect(() => {
     if (!open) return;
     const q = search.trim();
@@ -895,23 +907,17 @@ function ApproveDialog({
       return;
     }
     setSearching(true);
-    const handle = setTimeout(async () => {
-      const words = q.split(/\s+/).filter(Boolean);
-      let query = supabase.from("products").select("*");
-      for (const w of words) {
-        const stripped = w.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        const variants = Array.from(new Set([w, stripped]));
-        const orFilter = variants
-          .flatMap((v) => [`name.ilike.%${v}%`, `sku.ilike.%${v}%`])
-          .join(",");
-        query = query.or(orFilter);
-      }
-      const { data, error } = await query.order("name").limit(20);
-      if (!error) setResults((data ?? []) as ProductRecord[]);
+    const handle = setTimeout(() => {
+      const words = normalize(q).split(/\s+/).filter(Boolean);
+      const filtered = allProducts.filter((p) => {
+        const hay = `${normalize(p.name)} ${normalize(p.sku ?? "")}`;
+        return words.every((w) => hay.includes(w));
+      }).slice(0, 30);
+      setResults(filtered);
       setSearching(false);
-    }, 250);
+    }, 150);
     return () => clearTimeout(handle);
-  }, [search, open]);
+  }, [search, open, allProducts]);
 
   const applyProductMutation = (mutate: () => void) => {
     if (costEditedManually && collab !== "organic") {
@@ -967,16 +973,20 @@ function ApproveDialog({
     const finalCost = collab === "organic" ? 0 : Number(cost) || 0;
 
     try {
-      // Create deals per product (when an influencer is linked)
+      // Map internal collab kind to the values the database accepts (Title-case, matches existing data).
+      // "organic" has no corresponding deal record — skip deal creation entirely.
+      const collabLabel = collab === "paid" ? "Paid" : collab === "barter" ? "Barter" : null;
+
+      // Create deals per product (when an influencer is linked and this is not organic)
       let firstDealId: string | null = null;
-      if (influencerId && lines.length > 0) {
+      if (influencerId && lines.length > 0 && collabLabel) {
         const dealRows = lines.map((l) => ({
           influencer_id: influencerId,
           product_id: l.product.id,
           deal_name: l.product.name,
-          total_cost: collab === "organic" ? 0 : (Number(l.product.cost) || 0) * l.qty,
+          total_cost: (Number(l.product.cost) || 0) * l.qty,
           currency: (l.product.currency as string) || "CZK",
-          collaboration_type: collab,
+          collaboration_type: collabLabel,
           notes: l.qty > 1 ? `Quantity: ${l.qty}` : null,
         }));
         const { data: insertedDeals, error: dealError } = await supabase
@@ -993,7 +1003,7 @@ function ApproveDialog({
         publish_date: detection.published_at ? detection.published_at.slice(0, 10) : null,
         video_url: detection.video_url,
         video_id: detection.video_id,
-        collaboration_type: collab,
+        collaboration_type: collabLabel ?? "Organic",
         campaign_cost: finalCost,
         currency: "CZK",
         deal_id: firstDealId,
@@ -1027,9 +1037,11 @@ function ApproveDialog({
   return (
     <>
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Approve Detection</DialogTitle></DialogHeader>
-        <div className="space-y-4">
+      <DialogContent className="flex max-h-[85vh] w-[95vw] max-w-2xl flex-col gap-0 p-0 sm:w-full">
+        <DialogHeader className="border-b border-border px-6 py-4">
+          <DialogTitle>Approve Detection</DialogTitle>
+        </DialogHeader>
+        <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
           <div className="space-y-1.5">
             <Label>Campaign name</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={200} />
@@ -1068,7 +1080,7 @@ function ApproveDialog({
             </div>
 
             {lines.length > 0 && (
-              <div className="space-y-1.5">
+              <div className="max-h-[300px] space-y-1.5 overflow-y-auto pr-1">
                 {lines.map((l) => {
                   const unit = Number(l.product.cost) || 0;
                   const lineTotal = collab === "organic" ? 0 : unit * l.qty;
@@ -1183,7 +1195,7 @@ function ApproveDialog({
             </div>
           )}
         </div>
-        <DialogFooter>
+        <DialogFooter className="border-t border-border bg-background px-6 py-4">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
           <Button onClick={save} disabled={saving}>
             {saving && <Loader2 className="h-4 w-4 animate-spin" />} Create campaign
