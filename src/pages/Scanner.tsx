@@ -1037,9 +1037,11 @@ function ApproveDialog({
   return (
     <>
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Approve Detection</DialogTitle></DialogHeader>
-        <div className="space-y-4">
+      <DialogContent className="flex max-h-[85vh] w-[95vw] max-w-2xl flex-col gap-0 p-0 sm:w-full">
+        <DialogHeader className="border-b border-border px-6 py-4">
+          <DialogTitle>Approve Detection</DialogTitle>
+        </DialogHeader>
+        <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
           <div className="space-y-1.5">
             <Label>Campaign name</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={200} />
@@ -1078,7 +1080,7 @@ function ApproveDialog({
             </div>
 
             {lines.length > 0 && (
-              <div className="space-y-1.5">
+              <div className="max-h-[300px] space-y-1.5 overflow-y-auto pr-1">
                 {lines.map((l) => {
                   const unit = Number(l.product.cost) || 0;
                   const lineTotal = collab === "organic" ? 0 : unit * l.qty;
@@ -1193,7 +1195,7 @@ function ApproveDialog({
             </div>
           )}
         </div>
-        <DialogFooter>
+        <DialogFooter className="border-t border-border bg-background px-6 py-4">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
           <Button onClick={save} disabled={saving}>
             {saving && <Loader2 className="h-4 w-4 animate-spin" />} Create campaign
