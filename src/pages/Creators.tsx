@@ -633,7 +633,7 @@ const CreatorCard = ({
         </div>
       )}
       {/* Top row: avatar + identity + actions */}
-      <div className="flex items-start gap-3 pr-12">
+      <div className="flex items-start gap-3 pr-14">
         {/* Avatar */}
         <div className="relative shrink-0">
           <div
@@ -701,11 +701,15 @@ const CreatorCard = ({
           </div>
         </button>
 
-        {/* Actions */}
-        <div className="relative z-10 flex items-center gap-1">
+      </div>
+
+      {/* Top-right corner stack: performance score + quick actions, pinned so they never collide with the identity row */}
+      <div onClick={(e) => e.stopPropagation()} className="absolute right-3 top-3 z-20 flex flex-col items-end gap-1">
+        <PerformanceScoreBadge score={score} size="sm" />
+        <div className="flex items-center gap-1">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-[hsl(var(--glow-cyan))] hover:bg-[hsl(var(--glow-cyan)/0.12)]" onClick={(event) => { event.stopPropagation(); onAddCampaign(); }}>
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-[hsl(var(--glow-cyan))] hover:bg-[hsl(var(--glow-cyan)/0.12)]" onClick={(event) => { event.stopPropagation(); onAddCampaign(); }}>
                 <Plus className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -716,7 +720,7 @@ const CreatorCard = ({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100"
+                className="h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100"
                 onClick={(event) => event.stopPropagation()}
               >
                 <MoreVertical className="h-4 w-4" />
@@ -731,11 +735,6 @@ const CreatorCard = ({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </div>
-
-      {/* Performance score: pinned to top-right corner so it never competes with the identity row */}
-      <div onClick={(e) => e.stopPropagation()} className="absolute right-3 top-3 z-20">
-        <PerformanceScoreBadge score={score} size="sm" />
       </div>
 
       {/* Links (Instagram handles + YouTube channel) */}
