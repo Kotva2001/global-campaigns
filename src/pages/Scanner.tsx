@@ -887,8 +887,9 @@ function ApproveDialog({
     if (!costEditedManually) setCost(String(autoCost));
   }, [autoCost, collab, costEditedManually]);
 
-  // Server-side search: split into words, each word must match name OR sku (ilike).
-  // For diacritics, query both the raw word and a stripped variant so "sitko" finds "Sítko".
+  // Mirror the Products page search exactly: server-side ilike on name/sku/category
+  // (using both the raw term and a diacritic-stripped variant so "sitko" can match
+  // "Sítko"), then a client-side normalize() refinement.
   useEffect(() => {
     if (!open) return;
     const q = search.trim();
@@ -900,24 +901,36 @@ function ApproveDialog({
     setSearching(true);
     let cancelled = false;
     const handle = setTimeout(async () => {
-      const words = q.split(/\s+/).filter(Boolean);
-      let query = supabase.from("products").select("*").order("name").limit(20);
-      for (const w of words) {
-        const stripped = w.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        const variants = Array.from(new Set([w, stripped]));
-        const orFilter = variants
-          .flatMap((v) => [`name.ilike.%${v}%`, `sku.ilike.%${v}%`])
-          .join(",");
-        query = query.or(orFilter);
-      }
-      const { data, error } = await query;
+      const stripped = q.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const variants = Array.from(new Set([q, stripped]));
+      const orFilter = variants
+        .flatMap((v) => [
+          `name.ilike.%${v}%`,
+          `sku.ilike.%${v}%`,
+          `category.ilike.%${v}%`,
+        ])
+        .join(",");
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .or(orFilter)
+        .order("name")
+        .limit(50);
       if (cancelled) return;
       if (error) {
         console.error("Product search failed", error);
         setResults([]);
-      } else {
-        setResults((data ?? []) as ProductRecord[]);
+        setSearching(false);
+        return;
       }
+      // Diacritic-insensitive client-side refinement (same as Products page).
+      const needle = normalize(q);
+      const refined = ((data ?? []) as ProductRecord[]).filter((p) =>
+        normalize(p.name).includes(needle) ||
+        normalize(p.sku ?? "").includes(needle) ||
+        normalize(p.category ?? "").includes(needle),
+      );
+      setResults(refined.slice(0, 20));
       setSearching(false);
     }, 200);
     return () => { cancelled = true; clearTimeout(handle); };
