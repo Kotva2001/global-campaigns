@@ -220,7 +220,7 @@ export const DataTable = ({ rows, onChanged, onAddCampaign, onEditCampaign }: Pr
       <div className="mb-3 flex items-center justify-between gap-3">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">All Campaigns</h2>
         <div className="flex gap-2">
-          <Button variant="default" size="sm" className="gap-2" onClick={onAddCampaign}><Plus className="h-4 w-4" /> Add</Button>
+          <Button data-mutate variant="default" size="sm" className="gap-2" onClick={onAddCampaign}><Plus className="h-4 w-4" /> Add</Button>
           <Button variant="secondary" size="sm" className="gap-2" onClick={() => exportCsv(rows)}><Download className="h-4 w-4" /> Export CSV</Button>
         </div>
       </div>
