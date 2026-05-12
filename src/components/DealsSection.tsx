@@ -81,7 +81,7 @@ export const DealsSection = ({ influencerId, campaigns, onChanged }: Props) => {
       <div className="mt-5">
         <div className="mb-2 flex items-center justify-between">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Deals</h3>
-          <Button size="sm" variant="secondary" className="gap-2" onClick={() => { setEditing(null); setDialogOpen(true); }}>
+          <Button data-mutate size="sm" variant="secondary" className="gap-2" onClick={() => { setEditing(null); setDialogOpen(true); }}>
             <Plus className="h-4 w-4" /> Add Deal
           </Button>
         </div>
