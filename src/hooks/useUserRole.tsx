@@ -60,16 +60,34 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+    // Set up listener BEFORE checking session, so we catch the SIGNED_IN
+    // event triggered when supabase parses the OAuth hash fragment.
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       const u = session?.user ?? null;
       setUser(u);
       void loadRole(u);
+
+      if (event === "SIGNED_IN") {
+        // Clean the OAuth hash from the URL so it doesn't linger.
+        if (window.location.hash.includes("access_token")) {
+          const cleanUrl = window.location.pathname + window.location.search;
+          window.history.replaceState({}, document.title, cleanUrl);
+        }
+        // Redirect to dashboard if currently on root or login.
+        const path = window.location.pathname;
+        if (path === "/" || path === "" || path === "/login") {
+          window.history.replaceState({}, document.title, "/dashboard");
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        }
+      }
     });
+
     void supabase.auth.getSession().then(({ data }) => {
       const u = data.session?.user ?? null;
       setUser(u);
       void loadRole(u);
     });
+
     return () => sub.subscription.unsubscribe();
   }, []);
 
