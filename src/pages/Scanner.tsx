@@ -835,18 +835,126 @@ function ApproveDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  type CollabKind = "paid" | "barter" | "organic";
+  type Line = { product: ProductRecord; qty: number };
+
   const [name, setName] = useState("");
-  const [collab, setCollab] = useState("paid");
+  const [collab, setCollab] = useState<CollabKind>("paid");
+  const [cashPayment, setCashPayment] = useState("0");
   const [cost, setCost] = useState("0");
+  const [costEditedManually, setCostEditedManually] = useState(false);
+  const [lines, setLines] = useState<Line[]>([]);
+  const [search, setSearch] = useState("");
+  const [results, setResults] = useState<ProductRecord[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [pendingProductChange, setPendingProductChange] = useState<null | (() => void)>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (detection) {
       setName(detection.video_title ?? "");
       setCollab("paid");
+      setCashPayment("0");
       setCost("0");
+      setCostEditedManually(false);
+      setLines([]);
+      setSearch("");
+      setResults([]);
     }
   }, [detection]);
+
+  // Compute auto cost from collab + cash + product lines
+  const productSum = useMemo(
+    () => lines.reduce((s, l) => s + (Number(l.product.cost) || 0) * (Number(l.qty) || 0), 0),
+    [lines],
+  );
+  const autoCost = useMemo(() => {
+    if (collab === "organic") return 0;
+    if (collab === "barter") return productSum;
+    return (Number(cashPayment) || 0) + productSum;
+  }, [collab, cashPayment, productSum]);
+
+  // Sync calculated cost into the cost field when not manually edited (or when organic)
+  useEffect(() => {
+    if (collab === "organic") {
+      setCost("0");
+      setCostEditedManually(false);
+      return;
+    }
+    if (!costEditedManually) setCost(String(autoCost));
+  }, [autoCost, collab, costEditedManually]);
+
+  // Debounced product search
+  useEffect(() => {
+    if (!open) return;
+    const q = search.trim();
+    if (q.length < 2) {
+      setResults([]);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    const handle = setTimeout(async () => {
+      const words = q.split(/\s+/).filter(Boolean);
+      let query = supabase.from("products").select("*");
+      for (const w of words) {
+        const stripped = w.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const variants = Array.from(new Set([w, stripped]));
+        const orFilter = variants
+          .flatMap((v) => [`name.ilike.%${v}%`, `sku.ilike.%${v}%`])
+          .join(",");
+        query = query.or(orFilter);
+      }
+      const { data, error } = await query.order("name").limit(20);
+      if (!error) setResults((data ?? []) as ProductRecord[]);
+      setSearching(false);
+    }, 250);
+    return () => clearTimeout(handle);
+  }, [search, open]);
+
+  const applyProductMutation = (mutate: () => void) => {
+    if (costEditedManually && collab !== "organic") {
+      setPendingProductChange(() => mutate);
+    } else {
+      mutate();
+    }
+  };
+
+  const addProduct = (p: ProductRecord) => {
+    applyProductMutation(() => {
+      setLines((prev) => {
+        const idx = prev.findIndex((l) => l.product.id === p.id);
+        if (idx >= 0) {
+          const copy = [...prev];
+          copy[idx] = { ...copy[idx], qty: copy[idx].qty + 1 };
+          return copy;
+        }
+        return [...prev, { product: p, qty: 1 }];
+      });
+    });
+    setSearch("");
+    setResults([]);
+    setShowResults(false);
+  };
+
+  const removeLine = (id: string) => {
+    applyProductMutation(() => setLines((prev) => prev.filter((l) => l.product.id !== id)));
+  };
+
+  const updateQty = (id: string, qty: number) => {
+    applyProductMutation(() =>
+      setLines((prev) => prev.map((l) => (l.product.id === id ? { ...l, qty: Math.max(1, qty) } : l))),
+    );
+  };
+
+  const confirmRecalc = (recalc: boolean) => {
+    if (pendingProductChange) {
+      pendingProductChange();
+      if (recalc) setCostEditedManually(false);
+      setPendingProductChange(null);
+    }
+  };
 
   const save = async () => {
     if (!detection) return;
@@ -856,69 +964,222 @@ function ApproveDialog({
     const comments = detection.comments ?? 0;
     const engagementRate = views > 0 ? ((likes + comments) / views) * 100 : null;
     const influencerId = detection.influencer_id ?? matched?.id ?? null;
-    const { error: campaignError } = await supabase.from("campaigns").insert({
-      campaign_name: name || detection.video_title || null,
-      platform: detection.platform,
-      publish_date: detection.published_at ? detection.published_at.slice(0, 10) : null,
-      video_url: detection.video_url,
-      video_id: detection.video_id,
-      collaboration_type: collab,
-      campaign_cost: Number(cost) || 0,
-      views,
-      likes,
-      comments,
-      engagement_rate: engagementRate,
-      influencer_id: influencerId,
-      detected_automatically: true,
-      detection_source: "scanner",
-      last_stats_update: new Date().toISOString(),
-    });
-    if (campaignError) {
-      toastError("Could not create campaign", campaignError);
+    const finalCost = collab === "organic" ? 0 : Number(cost) || 0;
+
+    try {
+      // Create deals per product (when an influencer is linked)
+      let firstDealId: string | null = null;
+      if (influencerId && lines.length > 0) {
+        const dealRows = lines.map((l) => ({
+          influencer_id: influencerId,
+          product_id: l.product.id,
+          deal_name: l.product.name,
+          total_cost: collab === "organic" ? 0 : (Number(l.product.cost) || 0) * l.qty,
+          currency: (l.product.currency as string) || "CZK",
+          collaboration_type: collab,
+          notes: l.qty > 1 ? `Quantity: ${l.qty}` : null,
+        }));
+        const { data: insertedDeals, error: dealError } = await supabase
+          .from("deals")
+          .insert(dealRows)
+          .select("id");
+        if (dealError) throw dealError;
+        firstDealId = insertedDeals?.[0]?.id ?? null;
+      }
+
+      const { error: campaignError } = await supabase.from("campaigns").insert({
+        campaign_name: name || detection.video_title || null,
+        platform: detection.platform,
+        publish_date: detection.published_at ? detection.published_at.slice(0, 10) : null,
+        video_url: detection.video_url,
+        video_id: detection.video_id,
+        collaboration_type: collab,
+        campaign_cost: finalCost,
+        currency: "CZK",
+        deal_id: firstDealId,
+        views,
+        likes,
+        comments,
+        engagement_rate: engagementRate,
+        influencer_id: influencerId,
+        detected_automatically: true,
+        detection_source: "scanner",
+        last_stats_update: new Date().toISOString(),
+      });
+      if (campaignError) throw campaignError;
+
+      const { error: updateError } = await supabase
+        .from("detected_videos")
+        .update({ status: "approved" })
+        .eq("id", detection.id);
+      if (updateError) throw updateError;
+
+      toast.success("Campaign created");
+      notifyScannerChanged();
+      onSaved();
+    } catch (e) {
+      toastError("Could not create campaign", e);
+    } finally {
       setSaving(false);
-      return;
     }
-    const { error: updateError } = await supabase.from("detected_videos").update({ status: "approved" }).eq("id", detection.id);
-    if (updateError) {
-      toastError("Could not update detection", updateError);
-      setSaving(false);
-      return;
-    }
-    toast.success("Campaign created");
-    setSaving(false);
-    notifyScannerChanged();
-    onSaved();
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
+      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>Approve Detection</DialogTitle></DialogHeader>
         <div className="space-y-4">
-          <div>
+          <div className="space-y-1.5">
             <Label>Campaign name</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={200} />
           </div>
-          <div>
+          <div className="space-y-1.5">
             <Label>Collaboration type</Label>
-            <Select value={collab} onValueChange={setCollab}>
+            <Select value={collab} onValueChange={(v) => { setCollab(v as CollabKind); setCostEditedManually(false); }}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="paid">Paid</SelectItem>
-                <SelectItem value="barter">Barter</SelectItem>
-                <SelectItem value="organic">Organic</SelectItem>
-                <SelectItem value="affiliate">Affiliate</SelectItem>
+                <SelectItem value="paid">Paid — money and/or products</SelectItem>
+                <SelectItem value="barter">Barter — products only</SelectItem>
+                <SelectItem value="organic">Organic — no cost</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <div>
-            <Label>Campaign cost (Kč)</Label>
-            <Input type="number" min="0" value={cost} onChange={(e) => setCost(e.target.value)} />
+
+          {collab === "paid" && (
+            <div className="space-y-1.5">
+              <Label>Cash payment (Kč)</Label>
+              <Input
+                type="number"
+                min="0"
+                value={cashPayment}
+                onChange={(e) => setCashPayment(e.target.value)}
+              />
+            </div>
+          )}
+
+          {/* Product picker */}
+          <div className="space-y-2 rounded-md border border-primary/30 bg-primary/[0.04] p-3 shadow-[0_0_18px_-12px_hsl(var(--primary)/0.6)]">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm">Products</Label>
+              {collab === "organic" && (
+                <span className="text-[11px] text-muted-foreground">Tracked for reference only — no cost for organic.</span>
+              )}
+            </div>
+
+            {lines.length > 0 && (
+              <div className="space-y-1.5">
+                {lines.map((l) => {
+                  const unit = Number(l.product.cost) || 0;
+                  const lineTotal = collab === "organic" ? 0 : unit * l.qty;
+                  return (
+                    <div key={l.product.id} className="flex items-center gap-2 rounded border border-primary/30 bg-background/40 px-2 py-1.5">
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium">{l.product.name}</div>
+                        {l.product.sku && (
+                          <div className="truncate text-[11px] text-muted-foreground">SKU: {l.product.sku} · {unit.toLocaleString()} {l.product.currency}/ea</div>
+                        )}
+                      </div>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={l.qty}
+                        onChange={(e) => updateQty(l.product.id, Number(e.target.value) || 1)}
+                        className="h-8 w-16 shrink-0"
+                      />
+                      <div className="w-24 shrink-0 text-right text-sm tabular-nums">
+                        {collab === "organic" ? "—" : `${lineTotal.toLocaleString()} ${l.product.currency}`}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 shrink-0"
+                        onClick={() => removeLine(l.product.id)}
+                        aria-label="Remove product"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="relative">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setShowResults(true); }}
+                  onFocus={() => setShowResults(true)}
+                  onBlur={() => setTimeout(() => setShowResults(false), 150)}
+                  placeholder={lines.length ? "Add another product…" : "Search products by name or SKU…"}
+                  className="pl-8 border-primary/30 focus-visible:ring-primary/50"
+                />
+              </div>
+              {showResults && search.trim().length >= 2 && (
+                <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-[260px] overflow-y-auto rounded-md border border-primary/40 bg-popover shadow-[0_0_24px_-8px_hsl(var(--primary)/0.6)]">
+                  {searching && results.length === 0 ? (
+                    <div className="px-3 py-2 text-xs text-muted-foreground">Searching…</div>
+                  ) : results.length === 0 ? (
+                    <div className="px-3 py-2 text-xs text-muted-foreground">No products match.</div>
+                  ) : (
+                    results.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onMouseDown={(e) => { e.preventDefault(); addProduct(p); }}
+                        className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm hover:bg-primary/10"
+                      >
+                        <span className="block w-full whitespace-normal break-words leading-snug">{p.name}</span>
+                        {p.sku && (
+                          <span className="block w-full text-xs text-muted-foreground">SKU: {p.sku} · {Number(p.cost).toLocaleString()} {p.currency}</span>
+                        )}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+              {search.trim().length > 0 && search.trim().length < 2 && (
+                <div className="mt-1 text-[11px] text-muted-foreground">Type at least 2 characters…</div>
+              )}
+            </div>
           </div>
+
+          <div className="space-y-1.5">
+            <Label>Campaign cost (Kč)</Label>
+            <Input
+              type="number"
+              min="0"
+              value={cost}
+              onChange={(e) => { setCost(e.target.value); setCostEditedManually(true); }}
+              disabled={collab === "organic"}
+            />
+            {collab === "organic" ? (
+              <p className="text-[11px] text-muted-foreground">Organic posts have no cost.</p>
+            ) : costEditedManually ? (
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-warning">Edited manually — auto-calculation disabled.</span>
+                <button
+                  type="button"
+                  className="text-primary underline-offset-2 hover:underline"
+                  onClick={() => setCostEditedManually(false)}
+                >
+                  Recalculate
+                </button>
+              </div>
+            ) : (
+              <p className="text-[11px] text-muted-foreground">
+                Auto: {collab === "paid" ? "cash + products" : "sum of products"} = {autoCost.toLocaleString()} Kč
+              </p>
+            )}
+          </div>
+
           {!matched && (
             <div className="flex items-start gap-2 rounded border border-warning/40 bg-warning/10 p-3 text-sm">
               <AlertCircle className="h-4 w-4 shrink-0 text-warning" />
-              <span>No matching creator. Campaign will be created without an influencer link.</span>
+              <span>No matching creator. Campaign will be created without an influencer link{lines.length > 0 ? " — and product deals will not be created." : ""}.</span>
             </div>
           )}
         </div>
@@ -930,6 +1191,22 @@ function ApproveDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={!!pendingProductChange} onOpenChange={(o) => { if (!o) setPendingProductChange(null); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Recalculate campaign cost?</AlertDialogTitle>
+          <AlertDialogDescription>
+            You manually edited the campaign cost. Updating products will normally recalculate the total. Keep your manual value or recalculate from products?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => confirmRecalc(false)}>Keep manual</AlertDialogCancel>
+          <AlertDialogAction onClick={() => confirmRecalc(true)}>Recalculate</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
 
