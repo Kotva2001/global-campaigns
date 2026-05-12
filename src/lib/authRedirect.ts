@@ -68,13 +68,13 @@ export const logAuthStartupConfig = () => {
   console.info("[Auth] Supabase client config", {
     supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
     publishableKey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-    configuredFlowType: "pkce",
+    configuredFlowType: "implicit",
     detectedUrlFlowType: redirectInfo.urlFlowType,
     hasHashAccessToken: redirectInfo.hasHashAccessToken,
     hasPkceCode: redirectInfo.hasPkceCode,
   });
 
-  if (redirectInfo.hasHashAccessToken) {
-    console.warn("[Auth] Implicit hash token detected while the generated client is configured for PKCE.");
+  if (redirectInfo.hasPkceCode) {
+    console.warn("[Auth] PKCE ?code= detected while the generated client is configured for implicit flow.");
   }
 };
