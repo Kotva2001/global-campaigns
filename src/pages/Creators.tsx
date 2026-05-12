@@ -455,21 +455,19 @@ const Creators = () => {
             </SelectContent>
           </Select>
         </div>
-        <div className="px-6 pb-4">
-          <div
-            className="flex flex-wrap items-center gap-x-5 gap-y-1 rounded-lg px-4 py-2.5 text-xs"
-            style={{ background: "hsl(248 50% 9% / 0.7)", border: "1px solid hsl(var(--glow-cyan) / 0.18)" }}
-          >
-            <span><span className="neon-number text-sm">{summary.totalCreators}</span> <span className="stat-label ml-1">creators</span></span>
-            <span className="text-muted-foreground/40">·</span>
-            <span><span className="neon-number text-sm">{summary.totalCampaigns}</span> <span className="stat-label ml-1">campaigns</span></span>
-            <span className="text-muted-foreground/40">·</span>
-            <span><span className="neon-number text-sm">{formatCompact(summary.totalViews)}</span> <span className="stat-label ml-1">total views</span></span>
-          </div>
-        </div>
       </header>
 
-      <div className="px-6 py-6">
+      <div className="px-6 pt-6 pb-6">
+        <div
+          className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-1 rounded-lg px-4 py-2.5 text-xs"
+          style={{ background: "hsl(248 50% 9% / 0.7)", border: "1px solid hsl(var(--glow-cyan) / 0.18)" }}
+        >
+          <span><span className="neon-number text-sm">{summary.totalCreators}</span> <span className="stat-label ml-1">creators</span></span>
+          <span className="text-muted-foreground/40">·</span>
+          <span><span className="neon-number text-sm">{summary.totalCampaigns}</span> <span className="stat-label ml-1">campaigns</span></span>
+          <span className="text-muted-foreground/40">·</span>
+          <span><span className="neon-number text-sm">{formatCompact(summary.totalViews)}</span> <span className="stat-label ml-1">total views</span></span>
+        </div>
         {loading ? <CreatorGridSkeleton /> : sorted.length === 0 ? <EmptyState country={country} onAdd={openCreate} /> : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {sorted.map((creator, i) => (
