@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ProductDialog } from "@/components/ProductDialog";
 import { formatCurrency } from "@/lib/formatters";
-import { normalize } from "@/lib/normalize";
+import { searchProducts } from "@/lib/product-search";
 import type { ProductRecord } from "@/types/product";
 
 const Products = () => {
@@ -43,21 +43,22 @@ const Products = () => {
 
   const load = async () => {
     setLoading(true);
+    const trimmed = search.trim();
+    if (trimmed) {
+      // Diacritics-insensitive search via RPC (no pagination — capped to 200 results).
+      const data = await searchProducts(trimmed, 200);
+      setProducts(data);
+      setTotalCount(data.length);
+      setLoading(false);
+      return;
+    }
     const from = (page - 1) * PAGE_SIZE;
     const to = page * PAGE_SIZE - 1;
-    const trimmed = search.trim();
-    let query = supabase
+    const { data, error, count } = await supabase
       .from("products")
       .select("*", { count: "exact" })
-      .order("name");
-    if (trimmed) {
-      // Server-side ilike on name/sku/category. Diacritic-insensitive client filter still applied below for the fetched page.
-      const pattern = `%${trimmed}%`;
-      query = query.or(
-        `name.ilike.${pattern},sku.ilike.${pattern},category.ilike.${pattern}`,
-      );
-    }
-    const { data, error, count } = await query.range(from, to);
+      .order("name")
+      .range(from, to);
     if (error) toastError("Could not load products", error);
     setProducts((data ?? []) as ProductRecord[]);
     setTotalCount(count ?? 0);
@@ -69,16 +70,8 @@ const Products = () => {
   // Reset to page 1 whenever the search query changes
   useEffect(() => { setPage(1); }, [search]);
 
-  // Diacritic-insensitive client-side refinement on the current page
-  const filtered = useMemo(() => {
-    const q = normalize(search.trim());
-    if (!q) return products;
-    return products.filter((p) =>
-      normalize(p.name).includes(q) ||
-      normalize(p.sku ?? "").includes(q) ||
-      normalize(p.category ?? "").includes(q),
-    );
-  }, [products, search]);
+  // Server-side RPC handles diacritics; just display what we got back.
+  const filtered = products;
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
