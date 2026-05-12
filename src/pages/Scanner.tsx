@@ -887,9 +887,8 @@ function ApproveDialog({
     if (!costEditedManually) setCost(String(autoCost));
   }, [autoCost, collab, costEditedManually]);
 
-  // Mirror the Products page search exactly: server-side ilike on name/sku/category
-  // (using both the raw term and a diacritic-stripped variant so "sitko" can match
-  // "Sítko"), then a client-side normalize() refinement.
+  // Diacritics- and case-insensitive search via the `search_products` RPC
+  // (Postgres `unaccent` extension). Multi-word: words joined with `%`.
   useEffect(() => {
     if (!open) return;
     const q = search.trim();
@@ -901,36 +900,9 @@ function ApproveDialog({
     setSearching(true);
     let cancelled = false;
     const handle = setTimeout(async () => {
-      const stripped = q.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      const variants = Array.from(new Set([q, stripped]));
-      const orFilter = variants
-        .flatMap((v) => [
-          `name.ilike.%${v}%`,
-          `sku.ilike.%${v}%`,
-          `category.ilike.%${v}%`,
-        ])
-        .join(",");
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .or(orFilter)
-        .order("name")
-        .limit(50);
+      const data = await searchProducts(q, 20);
       if (cancelled) return;
-      if (error) {
-        console.error("Product search failed", error);
-        setResults([]);
-        setSearching(false);
-        return;
-      }
-      // Diacritic-insensitive client-side refinement (same as Products page).
-      const needle = normalize(q);
-      const refined = ((data ?? []) as ProductRecord[]).filter((p) =>
-        normalize(p.name).includes(needle) ||
-        normalize(p.sku ?? "").includes(needle) ||
-        normalize(p.category ?? "").includes(needle),
-      );
-      setResults(refined.slice(0, 20));
+      setResults(data);
       setSearching(false);
     }, 200);
     return () => { cancelled = true; clearTimeout(handle); };
