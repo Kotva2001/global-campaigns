@@ -262,8 +262,8 @@ export const DataTable = ({ rows, onChanged, onAddCampaign, onEditCampaign }: Pr
       {selectedIds.length > 0 && (
         <div className="fixed bottom-5 left-1/2 z-40 flex -translate-x-1/2 items-center gap-3 rounded-md border border-border bg-card px-4 py-3 shadow-lg">
           <span className="text-sm font-medium">{selectedIds.length} selected</span>
-          <Button variant="destructive" size="sm" onClick={() => setBulkDeleteOpen(true)}>Delete selected ({selectedIds.length})</Button>
-          <Select value={bulkCollab} onValueChange={bulkUpdateCollab}><SelectTrigger className="w-[210px]"><SelectValue placeholder="Update collaboration type" /></SelectTrigger><SelectContent>{COLLAB_TYPES.map((type) => <SelectItem key={type} value={type}>{type}</SelectItem>)}</SelectContent></Select>
+          <Button data-mutate variant="destructive" size="sm" onClick={() => setBulkDeleteOpen(true)}>Delete selected ({selectedIds.length})</Button>
+          <Select value={bulkCollab} onValueChange={bulkUpdateCollab}><SelectTrigger data-mutate className="w-[210px]"><SelectValue placeholder="Update collaboration type" /></SelectTrigger><SelectContent>{COLLAB_TYPES.map((type) => <SelectItem key={type} value={type}>{type}</SelectItem>)}</SelectContent></Select>
           <Button variant="secondary" size="sm" className="gap-2" onClick={() => exportCsv(selectedRows)}><Download className="h-4 w-4" /> Export selected</Button>
         </div>
       )}
