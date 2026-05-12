@@ -101,7 +101,7 @@ const Products = () => {
             <h1 className="text-lg font-bold tracking-tight">Products</h1>
             <p className="text-xs text-muted-foreground">Catalog of products promoted in campaigns</p>
           </div>
-          <Button className="gap-2" onClick={() => { setEditing(null); setDialogOpen(true); }}>
+          <Button data-mutate className="gap-2" onClick={() => { setEditing(null); setDialogOpen(true); }}>
             <Plus className="h-4 w-4" /> Add Product
           </Button>
         </div>
@@ -128,7 +128,7 @@ const Products = () => {
             <Card className="border-dashed border-border bg-card/40 p-10 text-center">
               <Package className="mx-auto h-8 w-8 text-muted-foreground" />
               <div className="mt-2 text-sm font-medium">No products yet</div>
-              <Button className="mt-4 gap-2" onClick={() => { setEditing(null); setDialogOpen(true); }}>
+              <Button data-mutate className="mt-4 gap-2" onClick={() => { setEditing(null); setDialogOpen(true); }}>
                 <Plus className="h-4 w-4" /> Add your first product
               </Button>
             </Card>
@@ -156,11 +156,11 @@ const Products = () => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenuItem onClick={() => { setEditing(product); setDialogOpen(true); }}>
+                      <DropdownMenuItem data-mutate onClick={() => { setEditing(product); setDialogOpen(true); }}>
                         <Pencil className="mr-2 h-4 w-4" /> Edit
                       </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
+                      <DropdownMenuSeparator data-mutate />
+                      <DropdownMenuItem data-mutate
                         onClick={(e) => { e.stopPropagation(); setConfirmDelete(product); }}
                         className="text-destructive focus:text-destructive"
                       >
