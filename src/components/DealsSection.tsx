@@ -114,7 +114,7 @@ export const DealsSection = ({ influencerId, campaigns, onChanged }: Props) => {
                         {d.created_at && <><span>·</span><span>{new Date(d.created_at).toLocaleDateString("cs-CZ")}</span></>}
                       </div>
                     </div>
-                    <div className="flex shrink-0 gap-0.5" onClick={(e) => e.stopPropagation()}>
+                    <div data-mutate className="flex shrink-0 gap-0.5" onClick={(e) => e.stopPropagation()}>
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditing(d); setDialogOpen(true); }}>
                         <Edit3 className="h-3.5 w-3.5" />
                       </Button>
