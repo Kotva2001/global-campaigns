@@ -735,7 +735,7 @@ function DetectionQueue({
 
               <div className="mt-4 flex flex-wrap gap-2">
                 {duplicates.has(d.id) ? (
-                  <Button
+                  <Button data-mutate
                     size="sm"
                     onClick={() => setApprove(d)}
                     style={{
@@ -748,11 +748,11 @@ function DetectionQueue({
                     <AlertCircle className="h-4 w-4" /> Approve & Add
                   </Button>
                 ) : (
-                  <Button size="sm" onClick={() => setApprove(d)} className="btn-neon-green">
+                  <Button data-mutate size="sm" onClick={() => setApprove(d)} className="btn-neon-green">
                     <CheckCircle2 className="h-4 w-4" /> Approve & Add
                   </Button>
                 )}
-                <Button
+                <Button data-mutate
                   size="sm"
                   onClick={() => dismiss(d.id)}
                   className="scanner-dismiss-button btn-neon-red"
