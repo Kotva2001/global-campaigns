@@ -104,11 +104,40 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
 
     const detectSession = async () => {
       const redirectInfo = getAuthRedirectInfo();
+      console.info("[Auth] detectSession start", {
+        hash: window.location.hash,
+        search: window.location.search,
+        redirectInfo,
+      });
       try {
-        const { data, error } = await supabase.auth.getSession();
+        let { data, error } = await supabase.auth.getSession();
+        console.info("[Auth] getSession result", { data, error });
+
+        let u = data?.session?.user ?? null;
+
+        // Fallback: manually extract tokens from hash if getSession didn't pick them up
+        if (!u && redirectInfo.hasHashAccessToken) {
+          const hashParams = new URLSearchParams(window.location.hash.substring(1));
+          const access_token = hashParams.get("access_token");
+          const refresh_token = hashParams.get("refresh_token");
+          console.info("[Auth] Attempting manual setSession from hash", {
+            hasAccessToken: Boolean(access_token),
+            hasRefreshToken: Boolean(refresh_token),
+          });
+          if (access_token && refresh_token) {
+            const manual = await supabase.auth.setSession({ access_token, refresh_token });
+            console.info("[Auth] Manual setSession result", manual);
+            if (!manual.error) {
+              u = manual.data.session?.user ?? null;
+              error = null;
+            } else {
+              error = manual.error;
+            }
+          }
+        }
+
         if (error) throw error;
 
-        const u = data.session?.user ?? null;
         if (redirectInfo.hasAuthParams && !u) {
           console.warn("[Auth] OAuth redirect params were present but no valid session was restored; clearing stale auth URL.");
           await supabase.auth.signOut();
