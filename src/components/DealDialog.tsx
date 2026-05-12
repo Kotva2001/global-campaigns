@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { toastError } from "@/lib/toast-helpers";
 import { recalcDealSplit, linkCampaignsToDeal } from "@/lib/deals";
+import { searchProducts } from "@/lib/product-search";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
