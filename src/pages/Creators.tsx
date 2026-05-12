@@ -633,7 +633,7 @@ const CreatorCard = ({
         </div>
       )}
       {/* Top row: avatar + identity + actions */}
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-3 pr-14">
         {/* Avatar */}
         <div className="relative shrink-0">
           <div
@@ -668,14 +668,14 @@ const CreatorCard = ({
 
         {/* Identity */}
         <button className="min-w-0 flex-1 text-left">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
             {FLAG_COMPONENTS[creator.country]
               ? <FlagIcon code={creator.country} width={24} height={16} />
               : <span className="text-[24px] leading-none shrink-0">{COUNTRY_FLAGS[creator.country] ?? "🏳️"}</span>}
-            <div className="truncate text-base font-bold text-white">{creator.name}</div>
+            <div className="min-w-0 flex-1 truncate text-base font-bold text-white">{creator.name}</div>
             {recentlyActive && (
               <span
-                className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider"
+                className="inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
                 style={{
                   background: "hsl(var(--success) / 0.12)",
                   color: "hsl(var(--success))",
@@ -689,11 +689,11 @@ const CreatorCard = ({
               </span>
             )}
           </div>
-          <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
             <span className="font-medium tracking-wider">{creator.country}</span>
             <span className="text-muted-foreground/40">·</span>
             <span
-              className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold", meta.cls)}
+              className={cn("inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold", meta.cls)}
             >
               <span className="h-1.5 w-1.5 rounded-full" style={{ background: meta.dot, boxShadow: `0 0 6px ${meta.dot}` }} />
               {meta.label}
@@ -701,14 +701,15 @@ const CreatorCard = ({
           </div>
         </button>
 
-        {/* Actions */}
-        <div className="relative z-10 flex items-center gap-1">
-          <div onClick={(e) => e.stopPropagation()} className="mr-1">
-            <PerformanceScoreBadge score={score} size="sm" />
-          </div>
+      </div>
+
+      {/* Top-right corner stack: performance score + quick actions, pinned so they never collide with the identity row */}
+      <div onClick={(e) => e.stopPropagation()} className="absolute right-3 top-3 z-20 flex flex-col items-end gap-1">
+        <PerformanceScoreBadge score={score} size="sm" />
+        <div className="flex items-center gap-1">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-[hsl(var(--glow-cyan))] hover:bg-[hsl(var(--glow-cyan)/0.12)]" onClick={(event) => { event.stopPropagation(); onAddCampaign(); }}>
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-[hsl(var(--glow-cyan))] hover:bg-[hsl(var(--glow-cyan)/0.12)]" onClick={(event) => { event.stopPropagation(); onAddCampaign(); }}>
                 <Plus className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -719,7 +720,7 @@ const CreatorCard = ({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100"
+                className="h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100"
                 onClick={(event) => event.stopPropagation()}
               >
                 <MoreVertical className="h-4 w-4" />
