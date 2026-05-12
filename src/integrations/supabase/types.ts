@@ -483,6 +483,25 @@ export type Database = {
           removed_campaigns: number
         }[]
       }
+      search_products: {
+        Args: { max_results?: number; search_term: string }
+        Returns: {
+          category: string | null
+          cost: number
+          created_at: string
+          currency: string
+          id: string
+          name: string
+          sku: string | null
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "products"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
     }
     Enums: {
       [_ in never]: never
