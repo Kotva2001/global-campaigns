@@ -13,6 +13,7 @@ export type AppRole = "admin" | "editor" | "viewer";
 type Ctx = {
   user: User | null;
   role: AppRole | null;
+  isOwner: boolean;
   displayName: string | null;
   avatarUrl: string | null;
   email: string | null;
@@ -23,6 +24,7 @@ type Ctx = {
 const UserRoleContext = createContext<Ctx>({
   user: null,
   role: null,
+  isOwner: false,
   displayName: null,
   avatarUrl: null,
   email: null,
@@ -34,6 +36,7 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
+  const [isOwner, setIsOwner] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const loadRole = async (u: User | null) => {
@@ -41,6 +44,7 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
       setUser(null);
       setRole(null);
       setDisplayName(null);
+      setIsOwner(false);
       setLoading(false);
       return;
     }
@@ -50,17 +54,18 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
       const { data: claimed, error: claimError } = await supabase.rpc("claim_user_role" as never);
       if (claimError) throw claimError;
 
-      let row = (claimed as { role?: AppRole; display_name?: string | null } | null) ?? null;
+      let row = (claimed as { role?: AppRole; display_name?: string | null; is_owner?: boolean } | null) ?? null;
       if (!row) {
         const { data, error } = await supabase
           .from("user_roles")
-          .select("role, display_name")
+          .select("role, display_name, is_owner")
           .eq("user_id", u.id)
           .maybeSingle();
         if (error) throw error;
         row = data as typeof row;
       }
       setRole((row?.role as AppRole) ?? null);
+      setIsOwner(Boolean(row?.is_owner));
       setDisplayName(
         (row?.display_name as string | null) ??
           (u.user_metadata?.full_name as string | undefined) ??
@@ -76,6 +81,7 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
       }
       setRole(null);
       setDisplayName(null);
+      setIsOwner(false);
     } finally {
       setLoading(false);
     }
@@ -174,6 +180,7 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
   const value: Ctx = {
     user,
     role,
+    isOwner,
     displayName,
     avatarUrl: (user?.user_metadata?.avatar_url as string | undefined) ?? null,
     email: user?.email ?? null,
@@ -190,6 +197,7 @@ export const useCanEdit = () => {
   return role === "admin" || role === "editor";
 };
 export const useIsAdmin = () => useUserRole().role === "admin";
+export const useIsOwner = () => useUserRole().isOwner;
 
 /** Renders children only if the current user can edit (admin/editor). */
 export const CanEdit = ({ children }: { children: ReactNode }) => {
@@ -201,4 +209,10 @@ export const CanEdit = ({ children }: { children: ReactNode }) => {
 export const AdminOnly = ({ children }: { children: ReactNode }) => {
   const isAdmin = useIsAdmin();
   return isAdmin ? <>{children}</> : null;
+};
+
+/** Renders children only for the single super-admin owner. */
+export const OwnerOnly = ({ children }: { children: ReactNode }) => {
+  const isOwner = useIsOwner();
+  return isOwner ? <>{children}</> : null;
 };
