@@ -977,7 +977,7 @@ function ApproveDialog({
           influencer_id: influencerId,
           product_id: l.product.id,
           deal_name: l.product.name,
-          total_cost: (Number(l.product.cost) || 0) * l.qty,
+          total_cost: getProductPurchaseCost(l.product).value * l.qty,
           currency: (l.product.currency as string) || "CZK",
           collaboration_type: collabLabel,
           notes: l.qty > 1 ? `Quantity: ${l.qty}` : null,
@@ -1075,12 +1075,22 @@ function ApproveDialog({
             {lines.length > 0 && (
               <div className="max-h-[300px] space-y-1.5 overflow-y-auto pr-1">
                 {lines.map((l) => {
-                  const unit = Number(l.product.cost) || 0;
+                  const { value: unit, usedFallback } = getProductPurchaseCost(l.product);
                   const lineTotal = collab === "organic" ? 0 : unit * l.qty;
                   return (
                     <div key={l.product.id} className="flex items-center gap-2 rounded border border-primary/30 bg-background/40 px-2 py-1.5">
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-medium">{l.product.name}</div>
+                        <div className="flex items-center gap-1 truncate text-sm font-medium">
+                          <span className="truncate">{l.product.name}</span>
+                          {usedFallback && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                              </TooltipTrigger>
+                              <TooltipContent>Using retail price — purchase price not set</TooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
                         {l.product.sku && (
                           <div className="truncate text-[11px] text-muted-foreground">SKU: {l.product.sku} · {unit.toLocaleString()} {l.product.currency}/ea</div>
                         )}
@@ -1137,9 +1147,17 @@ function ApproveDialog({
                         onMouseDown={(e) => { e.preventDefault(); addProduct(p); }}
                         className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm hover:bg-primary/10"
                       >
-                        <span className="block w-full whitespace-normal break-words leading-snug">{p.name}</span>
+                        <span className="flex w-full items-center gap-1 whitespace-normal break-words leading-snug">
+                          <span>{p.name}</span>
+                          <span className="ml-auto shrink-0 text-xs font-semibold tabular-nums text-primary">
+                            {getProductPurchaseCost(p).value.toLocaleString()} {p.currency}
+                          </span>
+                          {getProductPurchaseCost(p).usedFallback && (
+                            <AlertTriangle className="h-3 w-3 shrink-0 text-amber-500" aria-label="Using retail price" />
+                          )}
+                        </span>
                         {p.sku && (
-                          <span className="block w-full text-xs text-muted-foreground">SKU: {p.sku} · {Number(p.cost).toLocaleString()} {p.currency}</span>
+                          <span className="block w-full text-xs text-muted-foreground">SKU: {p.sku}</span>
                         )}
                       </button>
                     ))
