@@ -631,19 +631,16 @@ All colors MUST be HSL.
   50% { transform: translateY(-3px); }
 }
 
-/* 3. PRODUCTS — glow + crate lid opens */
+/* 3. PRODUCTS — glow + burst open (whole icon bounce) */
 .sb-item:hover .nav-products {
+  animation: products-burst 0.6s ease-in-out;
   filter: drop-shadow(0 0 10px #ff6b2b);
 }
-.sb-item:hover .nav-products .crate-lid {
-  animation: crate-lid-open 0.8s ease-in-out;
-  transform-origin: center bottom;
-}
-@keyframes crate-lid-open {
-  0% { transform: perspective(60px) rotateX(0deg); }
-  25% { transform: perspective(60px) rotateX(-40deg); }
-  75% { transform: perspective(60px) rotateX(-40deg); }
-  100% { transform: perspective(60px) rotateX(0deg); }
+@keyframes products-burst {
+  0% { transform: scale(1) translateY(0); }
+  30% { transform: scale(1.2) translateY(-2px); }
+  55% { transform: scale(0.95) translateY(1px); }
+  100% { transform: scale(1) translateY(0); }
 }
 
 /* 4. ANALYTICS — glow + grow from bottom */
