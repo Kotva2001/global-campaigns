@@ -8,7 +8,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { clearAuthRedirectFromUrl, isForbiddenAuthError } from "@/lib/authRedirect";
 import { UserRoleProvider, useUserRole } from "@/hooks/useUserRole";
 import { AccessDenied } from "@/components/AccessDenied";
-import { PixelCharacter, type PixelSection } from "@/components/PixelCharacter";
 
 interface Props {
   children: React.ReactNode;
@@ -25,11 +24,9 @@ const GoogleIcon = () => (
 
 const SignInScreen = () => {
   const [submitting, setSubmitting] = useState(false);
-  const [charSection, setCharSection] = useState<PixelSection>("login");
 
   const handleGoogle = async () => {
     setSubmitting(true);
-    setCharSection("login-go");
     const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
     });
@@ -87,9 +84,6 @@ const SignInScreen = () => {
         className="relative w-full max-w-sm border-border p-8"
         style={{ background: "rgba(10,10,30,0.85)", backdropFilter: "blur(8px)" }}
       >
-        <div className="mb-4 flex justify-center">
-          <PixelCharacter section={charSection} width={120} />
-        </div>
         <div className="mb-6 flex flex-col items-center gap-2 text-center">
           <span className="relative flex h-3 w-3">
             <span className="absolute inset-0 animate-ping rounded-full bg-cyan-400 opacity-75" />

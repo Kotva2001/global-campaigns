@@ -19,7 +19,6 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { PixelCharacter, type PixelSection } from "@/components/PixelCharacter";
 
 interface Props {
   onOpenSettings: () => void;
@@ -99,15 +98,6 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
   const counts = useBadgeCounts();
   const ticker = useTickerStats();
   const location = useLocation();
-
-  const routeToSection = (path: string): PixelSection => {
-    if (path.startsWith("/creators")) return "creators";
-    if (path.startsWith("/products")) return "products";
-    if (path.startsWith("/analytics")) return "analytics";
-    if (path.startsWith("/alerts")) return "alerts";
-    if (path.startsWith("/scanner")) return "scanner";
-    return "dashboard";
-  };
 
   return (
     <div
@@ -238,12 +228,6 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
               />
               <Icon className="sb-icon shrink-0" style={{ width: 20, height: 20 }} />
               <span className="sb-label flex-1 font-medium">{item.label}</span>
-
-              {active && (
-                <span className="ml-1 inline-flex items-center justify-center" aria-hidden>
-                  <PixelCharacter section={routeToSection(item.to)} width={32} />
-                </span>
-              )}
 
               {badge > 0 && (
                 <span
