@@ -28,206 +28,158 @@ interface Props {
   width?: number;
 }
 
-const GRID_W = 18;
-const GRID_H = 24;
+const GRID_W = 12;
+const GRID_H = 16;
 
-// Base humanoid silhouette: head, neck, torso, legs, feet (no arms).
-// Arms + props are layered per pose so each section can articulate them.
-const BASE: Array<[number, number]> = (() => {
-  const p: Array<[number, number]> = [];
-  // head 4x3
-  for (let x = 7; x <= 10; x++) for (let y = 2; y <= 4; y++) p.push([x, y]);
-  // neck
-  p.push([8, 5], [9, 5]);
-  // torso 6x7
-  for (let x = 6; x <= 11; x++) for (let y = 6; y <= 12; y++) p.push([x, y]);
-  // legs
-  for (let y = 13; y <= 18; y++) {
-    p.push([7, y], [8, y], [9, y], [10, y]);
-  }
-  // feet
-  p.push([6, 19], [7, 19], [10, 19], [11, 19]);
-  return p;
-})();
+type Cell = [number, number];
+type Cells = Cell[];
 
-// Arm helpers (relative to torso)
-const armDown = (side: "L" | "R"): Array<[number, number]> => {
-  const x = side === "L" ? 5 : 12;
-  return [
-    [x, 6],
-    [x, 7],
-    [x, 8],
-    [x, 9],
-    [x, 10],
-  ];
-};
-const armOut = (side: "L" | "R"): Array<[number, number]> => {
-  const baseX = side === "L" ? 5 : 12;
-  const tipX = side === "L" ? 4 : 13;
-  return [
-    [baseX, 6],
-    [baseX, 7],
-    [tipX, 7],
-    [tipX, 8],
-  ];
-};
-const armUp = (side: "L" | "R"): Array<[number, number]> => {
-  const x = side === "L" ? 5 : 12;
-  return [
-    [x, 6],
-    [x, 5],
-    [x, 4],
-    [x, 3],
-  ];
-};
-const armForward = (side: "L" | "R"): Array<[number, number]> => {
-  const baseX = side === "L" ? 5 : 12;
-  const midX = side === "L" ? 4 : 13;
-  return [
-    [baseX, 6],
-    [baseX, 7],
-    [midX, 8],
-    [midX, 9],
-  ];
-};
-const armChin = (side: "R"): Array<[number, number]> => {
-  // arm bent up to chin (under head)
-  return [
-    [12, 6],
-    [12, 5],
-    [11, 5],
-    [10, 5],
-  ];
-};
-
-// Small props (same color, monochrome)
-const propClipboard = (): Array<[number, number]> => [
-  [3, 8], [4, 8],
-  [3, 9], [4, 9],
-  [3, 10], [4, 10],
+// Side-view silhouette facing right (no front arm — added per pose)
+const HEAD: Cells = [
+  [2, 0], [3, 0], [4, 0], [5, 0],
+  [2, 1], [3, 1], [4, 1], [5, 1],
+  [2, 2], [3, 2], [4, 2], [5, 2], [6, 2], // nose bump at x=6
+  [2, 3], [3, 3], [4, 3], [5, 3],
 ];
-const propPen = (): Array<[number, number]> => [
-  [14, 9], [14, 10],
+const NECK: Cells = [[3, 4], [4, 4]];
+const TORSO: Cells = [
+  [2, 5], [3, 5], [4, 5],
+  [2, 6], [3, 6], [4, 6],
+  [2, 7], [3, 7], [4, 7],
+  [2, 8], [3, 8], [4, 8],
 ];
-const propBoxItem = (): Array<[number, number]> => [
-  [3, 7], [4, 7],
-  [3, 8], [4, 8],
+const WAIST: Cells = [[2, 9], [3, 9], [4, 9]];
+const LEGS_STAND: Cells = [
+  [2, 10], [2, 11], [2, 12], [2, 13],
+  [4, 10], [4, 11], [4, 12], [4, 13],
+  [1, 14], [2, 14], [3, 14], [4, 14], [5, 14],
 ];
-const propMag = (): Array<[number, number]> => [
-  // small circle
-  [14, 7], [15, 7],
-  [13, 8], [16, 8],
-  [13, 9], [16, 9],
-  [14, 10], [15, 10],
-];
-const propWrench = (): Array<[number, number]> => [
-  [14, 9],
-  [13, 10], [14, 10],
+const LEGS_STEP: Cells = [
+  [2, 10], [2, 11], [3, 12], [3, 13],
+  [4, 10], [4, 11], [4, 12], [5, 13],
+  [1, 14], [2, 14], [3, 14], [4, 14], [5, 14], [6, 14],
 ];
 
-// Translate pose by (dx, dy)
-const shift = (cells: Array<[number, number]>, dx: number, dy: number): Array<[number, number]> =>
+const BASE_A: Cells = [...HEAD, ...NECK, ...TORSO, ...WAIST, ...LEGS_STAND];
+const BASE_B: Cells = [...HEAD, ...NECK, ...TORSO, ...WAIST, ...LEGS_STEP];
+
+// Arms (front arm only — back arm hidden behind torso for side view)
+const armDown: Cells = [[5, 6], [5, 7], [5, 8]];
+const armForward: Cells = [[5, 6], [6, 7], [7, 7]];
+const armForwardLow: Cells = [[5, 6], [6, 8], [7, 8]];
+const armUp: Cells = [[5, 5], [5, 4], [6, 3]];
+const armChin: Cells = [[5, 6], [6, 5], [5, 4]];
+const armPoint: Cells = [[5, 5], [6, 4], [7, 3]];
+
+// Tiny props (same color, monochrome)
+const propClipboard: Cells = [
+  [8, 7], [9, 7],
+  [8, 8], [9, 8],
+  [8, 9], [9, 9],
+];
+const propPen: Cells = [[8, 7]];
+const propPenLow: Cells = [[8, 8]];
+const propBoxItem: Cells = [[8, 3], [9, 3]];
+const propMag: Cells = [
+  [8, 6], [9, 6],
+  [8, 7], [9, 7],
+];
+const propMagFar: Cells = [
+  [9, 6], [10, 6],
+  [9, 7], [10, 7],
+];
+const propWrench: Cells = [[8, 7], [9, 6]];
+const propWrenchTilt: Cells = [[8, 6], [9, 7]];
+
+const shift = (cells: Cells, dx: number, dy: number): Cells =>
   cells.map(([x, y]) => [x + dx, y + dy]);
 
-const merge = (...layers: Array<Array<[number, number]>>): Array<[number, number]> => {
+const merge = (...layers: Cells[]): Cells => {
   const seen = new Set<string>();
-  const out: Array<[number, number]> = [];
+  const out: Cells = [];
   for (const layer of layers) {
     for (const [x, y] of layer) {
-      const key = `${x},${y}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
+      const k = `${x},${y}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
       out.push([x, y]);
     }
   }
   return out;
 };
 
-type Frame = Array<[number, number]>;
-type Pose = { start: Frame; idleA: Frame; idleB: Frame };
+type Pose = { start: Cells; idleA: Cells; idleB: Cells };
 
 const POSES: Record<PixelSection, Pose> = {
   dashboard: {
-    // arm extends with clipboard
-    start: merge(BASE, armDown("L"), armForward("R"), propClipboard()),
-    idleA: merge(BASE, armDown("L"), armDown("R"), propClipboard()),
-    idleB: merge(shift(BASE, 0, -1), armDown("L"), armDown("R"), shift(propClipboard(), 0, -1)),
+    start: merge(BASE_A, armForward, propClipboard),
+    idleA: merge(BASE_A, armForward, propClipboard),
+    idleB: merge(shift(BASE_A, 0, -1), shift(armForward, 0, -1), shift(propClipboard, 0, -1)),
   },
   creators: {
-    // both arms up
-    start: merge(BASE, armUp("L"), armUp("R")),
-    idleA: merge(BASE, armDown("L"), armOut("R"), propPen()),
-    idleB: merge(BASE, armDown("L"), armUp("R"), shift(propPen(), -1, -2)),
+    start: merge(BASE_A, armUp),
+    idleA: merge(BASE_A, armForward, propPen),
+    idleB: merge(BASE_A, armForwardLow, propPenLow),
   },
   products: {
-    // arms forward (opening box)
-    start: merge(BASE, armForward("L"), armForward("R")),
-    idleA: merge(BASE, armForward("L"), armUp("R"), propBoxItem()),
-    idleB: merge(shift(BASE, 1, 0), armForward("L"), armUp("R"), shift(propBoxItem(), 1, 0)),
+    start: merge(BASE_A, armForward),
+    idleA: merge(BASE_A, armUp, propBoxItem),
+    idleB: merge(shift(BASE_A, 1, 0), shift(armUp, 1, 0), shift(propBoxItem, 1, 0)),
   },
   analytics: {
-    // hand to chin
-    start: merge(BASE, armDown("L"), armChin("R")),
-    idleA: merge(BASE, armDown("L"), armChin("R")),
-    idleB: merge(BASE, armDown("L"), armUp("R")),
+    start: merge(BASE_A, armChin),
+    idleA: merge(BASE_A, armChin),
+    idleB: merge(BASE_A, armPoint),
   },
   alerts: {
-    // jump up
-    start: merge(shift(BASE, 0, -3), armOut("L"), armOut("R")),
-    idleA: merge(BASE, armDown("L"), armDown("R")),
-    idleB: merge(BASE, armDown("L"), armDown("R")), // head turn implied by tiny shift
+    start: merge(shift(BASE_A, 0, -2), armDown),
+    idleA: merge(BASE_A, armDown),
+    idleB: merge(BASE_B, armDown),
   },
   scanner: {
-    // arm with magnifier extended
-    start: merge(BASE, armDown("L"), armForward("R"), propMag()),
-    idleA: merge(BASE, armDown("L"), armForward("R"), propMag()),
-    idleB: merge(BASE, armDown("L"), armForward("R"), shift(propMag(), -2, 0)),
+    start: merge(BASE_A, armForward, propMag),
+    idleA: merge(BASE_A, armForward, propMag),
+    idleB: merge(BASE_A, shift(armForward, 1, 0), propMagFar),
   },
   settings: {
-    // wrench
-    start: merge(BASE, armDown("L"), armForward("R"), propWrench()),
-    idleA: merge(BASE, armDown("L"), armForward("R"), propWrench()),
-    idleB: merge(BASE, armDown("L"), armOut("R"), shift(propWrench(), 0, -2)),
+    start: merge(BASE_A, armForward, propWrench),
+    idleA: merge(BASE_A, armForward, propWrench),
+    idleB: merge(BASE_A, armForward, propWrenchTilt),
   },
   login: {
-    // waving
-    start: merge(BASE, armUp("L"), armDown("R")),
-    idleA: merge(BASE, armUp("L"), armDown("R")),
-    idleB: merge(BASE, armOut("L"), armDown("R")),
+    start: merge(BASE_A, armUp),
+    idleA: merge(BASE_A, armUp),
+    idleB: merge(BASE_B, armDown),
   },
   "login-go": {
-    start: merge(shift(BASE, 0, -4), armOut("L"), armOut("R")),
-    idleA: merge(shift(BASE, 6, 0), armForward("L"), armForward("R")),
-    idleB: merge(shift(BASE, 6, 0), armForward("L"), armForward("R")),
+    start: merge(shift(BASE_A, 0, -3), armUp),
+    idleA: merge(BASE_B, armForward),
+    idleB: merge(BASE_B, armForward),
   },
 };
 
-const cellsToShadow = (cells: Frame, px: number, color: string): string => {
-  return cells
-    .map(([x, y]) => `${x * px}px ${y * px}px 0 0 ${color}`)
-    .join(", ");
-};
+const cellsToShadow = (cells: Cells, px: number, color: string): string =>
+  cells.map(([x, y]) => `${x * px}px ${y * px}px 0 0 ${color}`).join(", ");
 
-export const PixelCharacter = ({ section, width = 88 }: Props) => {
+export const PixelCharacter = ({ section, width = 32 }: Props) => {
   const [phase, setPhase] = useState<"start" | "idle">("start");
   const [renderedSection, setRenderedSection] = useState<PixelSection>(section);
   const [transitioning, setTransitioning] = useState(false);
 
-  // On section change: fade out, swap, fade in, play start, then idle
   useEffect(() => {
     if (section === renderedSection) return;
     setTransitioning(true);
-    const t1 = window.setTimeout(() => {
+    const t = window.setTimeout(() => {
       setRenderedSection(section);
       setPhase("start");
       setTransitioning(false);
     }, 150);
-    return () => window.clearTimeout(t1);
+    return () => window.clearTimeout(t);
   }, [section, renderedSection]);
 
   useEffect(() => {
     setPhase("start");
-    const t = window.setTimeout(() => setPhase("idle"), 1200);
+    const t = window.setTimeout(() => setPhase("idle"), 1100);
     return () => window.clearTimeout(t);
   }, [renderedSection]);
 
@@ -264,8 +216,6 @@ export const PixelCharacter = ({ section, width = 88 }: Props) => {
       aria-hidden
     >
       <div className="pxc-glow" />
-      <div className="pxc-floor" />
-      {/* Each layer is one 1x1 px element painted entirely with box-shadows */}
       <div
         className="pxc-pixel pxc-layer-start"
         style={{ width: px, height: px, boxShadow: shadows.start }}
