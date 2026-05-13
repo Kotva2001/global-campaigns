@@ -5,8 +5,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { UserRoleProvider, useUserRole } from "@/hooks/useUserRole";
 
-const GOOGLE_CLIENT_ID =
-  "95933012598-tm1jm164g1nom1nhvbpp8l3rigilome2.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string;
 
 declare global {
   interface Window {
