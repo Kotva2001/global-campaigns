@@ -63,33 +63,46 @@ const LEGS_STEP: Cells = [
 const BASE_A: Cells = [...HEAD, ...NECK, ...TORSO, ...WAIST, ...LEGS_STAND];
 const BASE_B: Cells = [...HEAD, ...NECK, ...TORSO, ...WAIST, ...LEGS_STEP];
 
-// Arms (front arm only — back arm hidden behind torso for side view)
-const armDown: Cells = [[5, 6], [5, 7], [5, 8]];
-const armForward: Cells = [[5, 6], [6, 7], [7, 7]];
-const armForwardLow: Cells = [[5, 6], [6, 8], [7, 8]];
-const armUp: Cells = [[5, 5], [5, 4], [6, 3]];
-const armChin: Cells = [[5, 6], [6, 5], [5, 4]];
-const armPoint: Cells = [[5, 5], [6, 4], [7, 3]];
+// Arms (front arm only — back arm hidden behind torso for side view).
+// Shoulder pivot is around (5,5).
+const armDownLow: Cells = [[5, 6], [5, 7], [5, 8], [5, 9]];     // hand at hip
+const armChest: Cells = [[5, 6], [6, 6], [7, 7], [7, 8]];        // hand forward at chest
+const armChestHigh: Cells = [[5, 5], [6, 5], [7, 6], [7, 7]];    // hand forward, raised
+const armForward: Cells = [[5, 6], [6, 6], [7, 6], [8, 6]];      // straight out
+const armForwardFar: Cells = [[5, 6], [6, 6], [7, 6], [8, 6], [9, 6]]; // extended
+const armUpHigh: Cells = [[5, 5], [5, 4], [5, 3], [6, 2]];       // hand way up
+const armChin: Cells = [[5, 6], [6, 5], [6, 4]];                 // bent up to chin
+const armPointUp: Cells = [[5, 5], [6, 4], [7, 3], [8, 2]];      // diagonal point
+const armSweepNear: Cells = [[5, 6], [6, 7], [7, 8]];            // sweep near body
+const armSweepFar: Cells = [[5, 6], [6, 6], [7, 6], [8, 7], [9, 8]]; // sweep extended
+const armWrenchA: Cells = [[5, 6], [6, 5], [7, 5]];              // wrench up-right
+const armWrenchB: Cells = [[5, 6], [6, 7], [7, 7]];              // wrench down-right
 
 // Tiny props (same color, monochrome)
-const propClipboard: Cells = [
-  [8, 7], [9, 7],
-  [8, 8], [9, 8],
-  [8, 9], [9, 9],
+const propClipboardChest: Cells = [
+  [8, 7], [9, 7], [10, 7],
+  [8, 8], [9, 8], [10, 8],
+  [8, 9], [9, 9], [10, 9],
 ];
-const propPen: Cells = [[8, 7]];
-const propPenLow: Cells = [[8, 8]];
-const propBoxItem: Cells = [[8, 3], [9, 3]];
-const propMag: Cells = [
-  [8, 6], [9, 6],
-  [8, 7], [9, 7],
+const propPenHigh: Cells = [[8, 6]];
+const propPenLow: Cells = [[8, 9]];
+const propBoxItem: Cells = [[6, 1], [7, 1], [8, 1]];             // item held high
+const propBoxItemTilt: Cells = [[7, 2], [8, 2], [9, 2]];
+const propMagSmall: Cells = [
+  [9, 7], [10, 7],
+  [9, 8], [10, 8],
+];
+const propMagBig: Cells = [
+  [9, 6], [10, 6], [11, 6],
+  [9, 7], [10, 7], [11, 7],
+  [9, 8], [10, 8], [11, 8],
 ];
 const propMagFar: Cells = [
-  [9, 6], [10, 6],
-  [9, 7], [10, 7],
+  [10, 7], [11, 7],
+  [10, 8], [11, 8],
 ];
-const propWrench: Cells = [[8, 7], [9, 6]];
-const propWrenchTilt: Cells = [[8, 6], [9, 7]];
+const propWrenchA: Cells = [[8, 5], [8, 4]];                     // wrench pointing up
+const propWrenchB: Cells = [[8, 7], [8, 8]];                     // wrench pointing down
 
 const shift = (cells: Cells, dx: number, dy: number): Cells =>
   cells.map(([x, y]) => [x + dx, y + dy]);
@@ -112,47 +125,54 @@ type Pose = { start: Cells; idleA: Cells; idleB: Cells };
 
 const POSES: Record<PixelSection, Pose> = {
   dashboard: {
-    start: merge(BASE_A, armForward, propClipboard),
-    idleA: merge(BASE_A, armForward, propClipboard),
-    idleB: merge(shift(BASE_A, 0, -1), shift(armForward, 0, -1), shift(propClipboard, 0, -1)),
+    // arm comes up from hip, then bobs head down to read
+    start: merge(BASE_A, armDownLow),
+    idleA: merge(BASE_A, armChest, propClipboardChest),
+    idleB: merge(shift(HEAD, 0, 2), shift(NECK, 0, 2), TORSO, WAIST, LEGS_STAND, armChest, propClipboardChest),
   },
   creators: {
-    start: merge(BASE_A, armUp),
-    idleA: merge(BASE_A, armForward, propPen),
-    idleB: merge(BASE_A, armForwardLow, propPenLow),
+    // both arms up wave then big scribble (hand high vs low) + head tilt
+    start: merge(BASE_A, armUpHigh),
+    idleA: merge(BASE_A, armChestHigh, propPenHigh, propClipboardChest),
+    idleB: merge(shift(HEAD, 0, 1), shift(NECK, 0, 1), TORSO, WAIST, LEGS_STAND, armChest, propPenLow, propClipboardChest),
   },
   products: {
+    // arms wide, then item raised; head tilts side to side
     start: merge(BASE_A, armForward),
-    idleA: merge(BASE_A, armUp, propBoxItem),
-    idleB: merge(shift(BASE_A, 1, 0), shift(armUp, 1, 0), shift(propBoxItem, 1, 0)),
+    idleA: merge(BASE_A, armUpHigh, propBoxItem),
+    idleB: merge(shift(HEAD, 1, 0), NECK, TORSO, WAIST, LEGS_STAND, armUpHigh, propBoxItemTilt),
   },
   analytics: {
+    // hand to chin, then point upward at chart
     start: merge(BASE_A, armChin),
     idleA: merge(BASE_A, armChin),
-    idleB: merge(BASE_A, armPoint),
+    idleB: merge(BASE_A, armPointUp),
   },
   alerts: {
-    start: merge(shift(BASE_A, 0, -2), armDown),
-    idleA: merge(BASE_A, armDown),
-    idleB: merge(BASE_B, armDown),
+    // big jump on start; idle: whole body shifts left then right
+    start: merge(shift(BASE_A, 0, -6), armDownLow),
+    idleA: merge(shift(BASE_A, -1, 0), shift(armDownLow, -1, 0)),
+    idleB: merge(shift(BASE_B, 1, 0), shift(armDownLow, 1, 0)),
   },
   scanner: {
-    start: merge(BASE_A, armForward, propMag),
-    idleA: merge(BASE_A, armForward, propMag),
-    idleB: merge(BASE_A, shift(armForward, 1, 0), propMagFar),
+    // mag sweeps near -> far AND occasionally zooms big
+    start: merge(BASE_A, armSweepNear, propMagSmall),
+    idleA: merge(BASE_A, armSweepNear, propMagSmall),
+    idleB: merge(BASE_A, armSweepFar, propMagBig),
   },
   settings: {
-    start: merge(BASE_A, armForward, propWrench),
-    idleA: merge(BASE_A, armForward, propWrench),
-    idleB: merge(BASE_A, armForward, propWrenchTilt),
+    // wrench rotates: up-right then down-right (with prop flipping)
+    start: merge(BASE_A, armForward, propWrenchA),
+    idleA: merge(BASE_A, armWrenchA, propWrenchA),
+    idleB: merge(BASE_A, armWrenchB, propWrenchB),
   },
   login: {
-    start: merge(BASE_A, armUp),
-    idleA: merge(BASE_A, armUp),
-    idleB: merge(BASE_B, armDown),
+    start: merge(BASE_A, armUpHigh),
+    idleA: merge(BASE_A, armUpHigh),
+    idleB: merge(BASE_B, armDownLow),
   },
   "login-go": {
-    start: merge(shift(BASE_A, 0, -3), armUp),
+    start: merge(shift(BASE_A, 0, -6), armUpHigh),
     idleA: merge(BASE_B, armForward),
     idleB: merge(BASE_B, armForward),
   },
