@@ -1,61 +1,103 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
-import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
-import { clearAuthRedirectFromUrl, isForbiddenAuthError } from "@/lib/authRedirect";
 import { UserRoleProvider, useUserRole } from "@/hooks/useUserRole";
+
+const GOOGLE_CLIENT_ID =
+  "95933012598-tm1jm164g1nom1nhvbpp8l3rigilome2.apps.googleusercontent.com";
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (config: {
+            client_id: string;
+            callback: (response: { credential: string }) => void;
+            auto_select?: boolean;
+            use_fedcm_for_prompt?: boolean;
+          }) => void;
+          renderButton: (
+            el: HTMLElement,
+            options: Record<string, unknown>,
+          ) => void;
+          prompt: () => void;
+          cancel: () => void;
+        };
+      };
+    };
+  }
+}
 
 interface Props {
   children: React.ReactNode;
 }
 
-const GoogleIcon = () => (
-  <svg viewBox="0 0 48 48" className="h-5 w-5" aria-hidden>
-    <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8a12 12 0 1 1 0-24c3 0 5.8 1.1 7.9 3l5.7-5.7A20 20 0 1 0 44 24c0-1.2-.1-2.3-.4-3.5z"/>
-    <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 13 24 13c3 0 5.8 1.1 7.9 3l5.7-5.7A20 20 0 0 0 6.3 14.7z"/>
-    <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2A12 12 0 0 1 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5A20 20 0 0 0 24 44z"/>
-    <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.1 5.6l6.2 5.2C40.7 36.5 44 30.8 44 24c0-1.2-.1-2.3-.4-3.5z"/>
-  </svg>
-);
-
 const SignInScreen = () => {
-  const [submitting, setSubmitting] = useState(false);
+  const buttonRef = useRef<HTMLDivElement | null>(null);
+  const [signingIn, setSigningIn] = useState(false);
+  const [ready, setReady] = useState(false);
 
-  const handleGoogle = async () => {
-    setSubmitting(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) {
-      if (isForbiddenAuthError(result.error)) {
-        await supabase.auth.signOut();
-        clearAuthRedirectFromUrl();
+  useEffect(() => {
+    let cancelled = false;
+    let attempts = 0;
+
+    const handleCredential = async (response: { credential: string }) => {
+      setSigningIn(true);
+      try {
+        const { error } = await supabase.auth.signInWithIdToken({
+          provider: "google",
+          token: response.credential,
+        });
+        if (error) {
+          console.error("[Auth] signInWithIdToken failed", error);
+          toast({
+            title: "Sign-in failed",
+            description: error.message ?? "Could not validate Google credential.",
+            variant: "destructive",
+          });
+          setSigningIn(false);
+        }
+        // onAuthStateChange in UserRoleProvider handles the rest.
+      } catch (e) {
+        console.error("[Auth] signInWithIdToken threw", e);
+        setSigningIn(false);
       }
-      setSubmitting(false);
-      toast({
-        title: "Sign-in failed",
-        description: result.error.message ?? "Could not sign in with Google.",
-        variant: "destructive",
-      });
-      return;
-    }
-    if (result.redirected) return;
+    };
 
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) {
-      await supabase.auth.signOut();
-      clearAuthRedirectFromUrl();
-      setSubmitting(false);
-      toast({
-        title: "Sign-in failed",
-        description: "The returned Google session could not be validated. Please try again.",
-        variant: "destructive",
+    const init = () => {
+      if (cancelled) return;
+      const g = window.google;
+      if (!g?.accounts?.id || !buttonRef.current) {
+        if (attempts++ < 100) {
+          setTimeout(init, 100);
+        }
+        return;
+      }
+      g.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleCredential,
+        auto_select: false,
       });
-    }
-  };
+      g.accounts.id.renderButton(buttonRef.current, {
+        theme: "filled_black",
+        size: "large",
+        width: 300,
+        shape: "pill",
+        text: "signin_with",
+        logo_alignment: "center",
+      });
+      setReady(true);
+    };
+
+    init();
+    return () => {
+      cancelled = true;
+      window.google?.accounts?.id?.cancel?.();
+    };
+  }, []);
 
   return (
     <div
@@ -109,16 +151,18 @@ const SignInScreen = () => {
           </p>
         </div>
 
-        <Button
-          type="button"
-          onClick={handleGoogle}
-          disabled={submitting}
-          className="w-full gap-3 bg-white font-semibold text-slate-900 hover:bg-white/90"
-          style={{ height: 44, boxShadow: "0 0 24px rgba(0,240,255,0.18)" }}
+        <div
+          className="flex min-h-[44px] items-center justify-center"
+          style={{ filter: "drop-shadow(0 0 18px rgba(0,240,255,0.35))" }}
         >
-          <GoogleIcon />
-          {submitting ? "Redirecting…" : "Sign in with Google"}
-        </Button>
+          <div ref={buttonRef} />
+          {!ready && (
+            <div className="text-xs text-muted-foreground">Loading Google…</div>
+          )}
+          {signingIn && (
+            <div className="absolute text-xs text-muted-foreground">Signing in…</div>
+          )}
+        </div>
 
         <p className="mt-4 text-center text-[11px] text-muted-foreground">
           Access restricted to invited team members.
