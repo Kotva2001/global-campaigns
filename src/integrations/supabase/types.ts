@@ -477,6 +477,7 @@ export type Database = {
           display_name: string | null
           email: string
           id: string
+          is_owner: boolean
           last_login_at: string | null
           role: Database["public"]["Enums"]["app_role"]
           updated_at: string
@@ -487,6 +488,7 @@ export type Database = {
           display_name?: string | null
           email: string
           id?: string
+          is_owner?: boolean
           last_login_at?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string
@@ -497,6 +499,7 @@ export type Database = {
           display_name?: string | null
           email?: string
           id?: string
+          is_owner?: boolean
           last_login_at?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string
@@ -517,6 +520,7 @@ export type Database = {
           display_name: string | null
           email: string
           id: string
+          is_owner: boolean
           last_login_at: string | null
           role: Database["public"]["Enums"]["app_role"]
           updated_at: string
@@ -540,6 +544,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_owner: { Args: { _user_id: string }; Returns: boolean }
       remove_duplicate_import_data: {
         Args: never
         Returns: {

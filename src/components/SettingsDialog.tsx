@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
   DialogHeader, DialogTitle,
@@ -11,7 +12,8 @@ import { ImportFromSheets } from "./ImportFromSheets";
 import { DuplicateCleanup } from "./DuplicateCleanup";
 import { ExchangeRateSettings } from "./ExchangeRateSettings";
 import { UserManagement } from "./UserManagement";
-import { AdminOnly } from "@/hooks/useUserRole";
+import { AdminOnly, OwnerOnly, useIsOwner } from "@/hooks/useUserRole";
+import { useAutoHide } from "@/hooks/useAutoHide";
 
 interface Props {
   open: boolean;
@@ -23,6 +25,8 @@ interface Props {
 export const SettingsDialog = ({ open, onOpenChange, config, onSave }: Props) => {
   const [sheetId, setSheetId] = useState(config.sheetId);
   const [apiKey, setApiKey] = useState(config.apiKey);
+  const isOwner = useIsOwner();
+  const [showKey, setShowKey] = useAutoHide(10000);
 
   useEffect(() => {
     setSheetId(config.sheetId);
@@ -45,43 +49,53 @@ export const SettingsDialog = ({ open, onOpenChange, config, onSave }: Props) =>
         </DialogHeader>
 
         <div className="space-y-6 py-2">
-          <div className="space-y-4 rounded-lg border p-4">
-            <div>
-              <h3 className="text-base font-semibold">Google Sheets configuration</h3>
-              <p className="text-xs text-muted-foreground">
-                Stored locally in your browser. Used to fetch all 11 country tabs.
-              </p>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="sheetId">Spreadsheet ID</Label>
-              <Input
-                id="sheetId"
-                value={sheetId}
-                onChange={(e) => setSheetId(e.target.value)}
-                placeholder="1AbCdEfGhIjKlMnOp…"
-                className="font-mono text-xs"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="apiKey">Google API key</Label>
-              <Input
-                id="apiKey"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="AIza…"
-                className="font-mono text-xs"
-                type="password"
-              />
-            </div>
-            <div className="flex justify-end">
-              <Button onClick={submit} disabled={!sheetId || !apiKey} size="sm">
-                Save & fetch
-              </Button>
-            </div>
-          </div>
-
           <ExchangeRateSettings />
-          <ImportFromSheets />
+
+          <OwnerOnly>
+            <div className="space-y-4 rounded-lg border border-warning/40 bg-warning/5 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-semibold">API Keys & Secrets</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Owner-only. Google Sheets credentials used to fetch all 11 country tabs. Hides automatically after 10 seconds.
+                  </p>
+                </div>
+                <Button type="button" variant="ghost" size="icon" onClick={() => setShowKey((v) => !v)} aria-label={showKey ? "Hide keys" : "Show keys"}>
+                  {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="sheetId">Spreadsheet ID</Label>
+                <Input
+                  id="sheetId"
+                  value={showKey ? sheetId : (sheetId ? "••••••••••••••••" : "")}
+                  onChange={(e) => setSheetId(e.target.value)}
+                  placeholder="1AbCdEfGhIjKlMnOp…"
+                  className="font-mono text-xs"
+                  readOnly={!showKey}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="apiKey">Google API key</Label>
+                <Input
+                  id="apiKey"
+                  value={showKey ? apiKey : (apiKey ? "••••••••••••••••" : "")}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="AIza…"
+                  className="font-mono text-xs"
+                  type={showKey ? "text" : "password"}
+                  readOnly={!showKey}
+                />
+              </div>
+              <div className="flex justify-end">
+                <Button onClick={submit} disabled={!sheetId || !apiKey} size="sm">
+                  Save & fetch
+                </Button>
+              </div>
+            </div>
+          </OwnerOnly>
+
+          {isOwner && <ImportFromSheets />}
           <DuplicateCleanup />
           <AdminOnly>
             <UserManagement />
