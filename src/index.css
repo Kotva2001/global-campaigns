@@ -600,6 +600,8 @@ All colors MUST be HSL.
   align-items: center;
   justify-content: center;
   position: relative;
+  width: 20px;
+  height: 20px;
 }
 
 /* Active section permanent glow */
@@ -607,142 +609,84 @@ All colors MUST be HSL.
   filter: drop-shadow(0 0 5px var(--accent));
 }
 
-/* 1. DASHBOARD — tiles scatter/pop */
+/* 1. DASHBOARD — glow + double pulse */
 .sb-item:hover .nav-icon-dashboard {
+  animation: dash-pulse 0.6s ease-in-out;
   filter: drop-shadow(0 0 10px #00f0ff);
 }
-.sb-item:hover .nav-icon-dashboard svg {
-  animation: dash-scatter 0.6s ease-in-out;
-}
-@keyframes dash-scatter {
-  0%, 100% { transform: scale(1) rotate(0deg); }
-  20% { transform: scale(1.2) rotate(4deg); }
-  40% { transform: scale(0.85) rotate(-4deg); }
-  60% { transform: scale(1.1) rotate(2deg); }
-  80% { transform: scale(0.95) rotate(-1deg); }
+@keyframes dash-pulse {
+  0%, 100% { transform: scale(1); }
+  25% { transform: scale(1.15); }
+  50% { transform: scale(1); }
+  75% { transform: scale(1.15); }
 }
 
-/* 2. CREATORS — wave motion */
+/* 2. CREATORS — glow + gentle bounce */
 .sb-item:hover .nav-icon-creators {
+  animation: creators-bounce 0.6s ease-in-out;
   filter: drop-shadow(0 0 10px #ff2d95);
 }
-.sb-item:hover .nav-icon-creators svg {
-  animation: creators-wave 0.6s ease-in-out;
-  transform-origin: bottom center;
-}
-@keyframes creators-wave {
-  0%, 100% { transform: rotate(0deg); }
-  20% { transform: rotate(-14deg); }
-  40% { transform: rotate(12deg); }
-  60% { transform: rotate(-7deg); }
-  80% { transform: rotate(3deg); }
+@keyframes creators-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
 }
 
-/* 3. PRODUCTS — lid opens upward */
+/* 3. PRODUCTS — glow + tilt open */
 .sb-item:hover .nav-icon-products {
+  animation: products-tilt 0.7s ease-in-out;
   filter: drop-shadow(0 0 10px #ff6b2b);
 }
-.sb-item:hover .nav-icon-products svg {
-  animation: products-lid 0.7s ease-in-out;
-  transform-origin: bottom center;
-}
-@keyframes products-lid {
-  0%, 100% { transform: perspective(50px) rotateX(0deg); }
-  50% { transform: perspective(50px) rotateX(-30deg); }
+@keyframes products-tilt {
+  0%, 100% { transform: perspective(60px) rotateX(0deg); }
+  50% { transform: perspective(60px) rotateX(-20deg); }
 }
 
-/* 4. ANALYTICS — bars grow from zero */
+/* 4. ANALYTICS — glow + grow from bottom */
 .sb-item:hover .nav-icon-analytics {
+  animation: analytics-grow 0.6s ease-in-out;
+  transform-origin: bottom center;
   filter: drop-shadow(0 0 10px #b44dff);
 }
-.sb-item:hover .nav-icon-analytics svg {
-  animation: analytics-grow 0.7s ease-in-out;
-  transform-origin: bottom center;
-}
 @keyframes analytics-grow {
-  0% { transform: scaleY(0.2); }
-  55% { transform: scaleY(1.15); }
+  0% { transform: scaleY(0.5); }
+  60% { transform: scaleY(1.1); }
   100% { transform: scaleY(1); }
 }
 
-/* 5. ALERTS — bell rings + particle */
+/* 5. ALERTS — glow + bell swing */
 .sb-item:hover .nav-icon-alerts {
+  animation: alerts-swing 0.7s ease-in-out;
+  transform-origin: top center;
   filter: drop-shadow(0 0 10px #ff3366);
 }
-.sb-item:hover .nav-icon-alerts svg {
-  animation: alerts-ring 0.7s ease-in-out;
-  transform-origin: top center;
-}
-@keyframes alerts-ring {
+@keyframes alerts-swing {
   0%, 100% { transform: rotate(0deg); }
-  15% { transform: rotate(20deg); }
-  30% { transform: rotate(-18deg); }
-  45% { transform: rotate(14deg); }
-  60% { transform: rotate(-9deg); }
-  80% { transform: rotate(4deg); }
-}
-/* Particle dot */
-.nav-icon-alerts::after {
-  content: '';
-  position: absolute;
-  top: 1px;
-  right: 1px;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: #ff3366;
-  opacity: 0;
-  pointer-events: none;
-  box-shadow: 0 0 4px #ff3366;
-}
-.sb-item:hover .nav-icon-alerts::after {
-  animation: alerts-particle 0.7s ease-out;
-}
-@keyframes alerts-particle {
-  0% { opacity: 1; transform: translate(0, 0) scale(1); }
-  100% { opacity: 0; transform: translate(12px, -10px) scale(0.15); }
+  15% { transform: rotate(-15deg); }
+  35% { transform: rotate(15deg); }
+  55% { transform: rotate(-10deg); }
+  75% { transform: rotate(10deg); }
 }
 
-/* 6. SCANNER — radar sweep line */
+/* 6. SCANNER — glow + spin */
 .sb-item:hover .nav-icon-scanner {
+  animation: scanner-spin 0.7s ease-in-out;
   filter: drop-shadow(0 0 10px #39ff14);
 }
-.nav-icon-scanner::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 2px;
-  height: 45%;
-  background: linear-gradient(to top, #39ff14, transparent);
-  transform-origin: bottom center;
-  transform: translate(-50%, -100%) rotate(0deg);
-  opacity: 0;
-  pointer-events: none;
-  border-radius: 1px;
-  z-index: 2;
-}
-.sb-item:hover .nav-icon-scanner::before {
-  animation: scanner-sweep 0.8s linear;
-  opacity: 0.85;
-}
-@keyframes scanner-sweep {
-  from { transform: translate(-50%, -100%) rotate(0deg); }
-  to { transform: translate(-50%, -100%) rotate(360deg); }
-}
-
-/* 7. SETTINGS — gear rotates one full turn */
-.sb-item:hover .nav-icon-settings {
-  filter: drop-shadow(0 0 10px #999999);
-}
-.sb-item:hover .nav-icon-settings svg {
-  animation: settings-gear 0.8s ease-in-out;
-}
-@keyframes settings-gear {
+@keyframes scanner-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
-/* Override old infinite spin */
+
+/* 7. SETTINGS — glow + slow rotate */
+.sb-item:hover .nav-icon-settings {
+  animation: settings-rotate 0.6s ease-in-out;
+  filter: drop-shadow(0 0 10px #999999);
+}
+@keyframes settings-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(180deg); }
+}
+/* Override old infinite spin on settings gear */
 .sb-item-settings:hover .sb-icon-spin {
   animation: none;
 }
