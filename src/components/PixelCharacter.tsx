@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export type PixelSection =
   | "dashboard"
@@ -13,14 +13,14 @@ export type PixelSection =
 
 const SECTION_COLORS: Record<PixelSection, string> = {
   dashboard: "#00f0ff",
-  creators: "#ff2d95",
-  products: "#ff6b2b",
-  analytics: "#b44dff",
-  alerts: "#ffae00",
-  scanner: "#39ff14",
-  settings: "#cfd2ff",
-  login: "#00f0ff",
-  "login-go": "#39ff14",
+  creators: "#ff2d78",
+  products: "#ff4757",
+  analytics: "#a855f7",
+  alerts: "#f59e0b",
+  scanner: "#10b981",
+  settings: "#94a3b8",
+  login: "#ffffff",
+  "login-go": "#ffffff",
 };
 
 interface Props {
@@ -28,193 +28,258 @@ interface Props {
   width?: number;
 }
 
-/**
- * Tiny pixel-art companion. Pure inline SVG + CSS keyframes.
- * Body color follows the active section's accent. Each section
- * plays a START animation (~1.2s) then loops an IDLE animation.
- */
+const GRID_W = 18;
+const GRID_H = 24;
+
+// Base humanoid silhouette: head, neck, torso, legs, feet (no arms).
+// Arms + props are layered per pose so each section can articulate them.
+const BASE: Array<[number, number]> = (() => {
+  const p: Array<[number, number]> = [];
+  // head 4x3
+  for (let x = 7; x <= 10; x++) for (let y = 2; y <= 4; y++) p.push([x, y]);
+  // neck
+  p.push([8, 5], [9, 5]);
+  // torso 6x7
+  for (let x = 6; x <= 11; x++) for (let y = 6; y <= 12; y++) p.push([x, y]);
+  // legs
+  for (let y = 13; y <= 18; y++) {
+    p.push([7, y], [8, y], [9, y], [10, y]);
+  }
+  // feet
+  p.push([6, 19], [7, 19], [10, 19], [11, 19]);
+  return p;
+})();
+
+// Arm helpers (relative to torso)
+const armDown = (side: "L" | "R"): Array<[number, number]> => {
+  const x = side === "L" ? 5 : 12;
+  return [
+    [x, 6],
+    [x, 7],
+    [x, 8],
+    [x, 9],
+    [x, 10],
+  ];
+};
+const armOut = (side: "L" | "R"): Array<[number, number]> => {
+  const baseX = side === "L" ? 5 : 12;
+  const tipX = side === "L" ? 4 : 13;
+  return [
+    [baseX, 6],
+    [baseX, 7],
+    [tipX, 7],
+    [tipX, 8],
+  ];
+};
+const armUp = (side: "L" | "R"): Array<[number, number]> => {
+  const x = side === "L" ? 5 : 12;
+  return [
+    [x, 6],
+    [x, 5],
+    [x, 4],
+    [x, 3],
+  ];
+};
+const armForward = (side: "L" | "R"): Array<[number, number]> => {
+  const baseX = side === "L" ? 5 : 12;
+  const midX = side === "L" ? 4 : 13;
+  return [
+    [baseX, 6],
+    [baseX, 7],
+    [midX, 8],
+    [midX, 9],
+  ];
+};
+const armChin = (side: "R"): Array<[number, number]> => {
+  // arm bent up to chin (under head)
+  return [
+    [12, 6],
+    [12, 5],
+    [11, 5],
+    [10, 5],
+  ];
+};
+
+// Small props (same color, monochrome)
+const propClipboard = (): Array<[number, number]> => [
+  [3, 8], [4, 8],
+  [3, 9], [4, 9],
+  [3, 10], [4, 10],
+];
+const propPen = (): Array<[number, number]> => [
+  [14, 9], [14, 10],
+];
+const propBoxItem = (): Array<[number, number]> => [
+  [3, 7], [4, 7],
+  [3, 8], [4, 8],
+];
+const propMag = (): Array<[number, number]> => [
+  // small circle
+  [14, 7], [15, 7],
+  [13, 8], [16, 8],
+  [13, 9], [16, 9],
+  [14, 10], [15, 10],
+];
+const propWrench = (): Array<[number, number]> => [
+  [14, 9],
+  [13, 10], [14, 10],
+];
+
+// Translate pose by (dx, dy)
+const shift = (cells: Array<[number, number]>, dx: number, dy: number): Array<[number, number]> =>
+  cells.map(([x, y]) => [x + dx, y + dy]);
+
+const merge = (...layers: Array<Array<[number, number]>>): Array<[number, number]> => {
+  const seen = new Set<string>();
+  const out: Array<[number, number]> = [];
+  for (const layer of layers) {
+    for (const [x, y] of layer) {
+      const key = `${x},${y}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push([x, y]);
+    }
+  }
+  return out;
+};
+
+type Frame = Array<[number, number]>;
+type Pose = { start: Frame; idleA: Frame; idleB: Frame };
+
+const POSES: Record<PixelSection, Pose> = {
+  dashboard: {
+    // arm extends with clipboard
+    start: merge(BASE, armDown("L"), armForward("R"), propClipboard()),
+    idleA: merge(BASE, armDown("L"), armDown("R"), propClipboard()),
+    idleB: merge(shift(BASE, 0, -1), armDown("L"), armDown("R"), shift(propClipboard(), 0, -1)),
+  },
+  creators: {
+    // both arms up
+    start: merge(BASE, armUp("L"), armUp("R")),
+    idleA: merge(BASE, armDown("L"), armOut("R"), propPen()),
+    idleB: merge(BASE, armDown("L"), armUp("R"), shift(propPen(), -1, -2)),
+  },
+  products: {
+    // arms forward (opening box)
+    start: merge(BASE, armForward("L"), armForward("R")),
+    idleA: merge(BASE, armForward("L"), armUp("R"), propBoxItem()),
+    idleB: merge(shift(BASE, 1, 0), armForward("L"), armUp("R"), shift(propBoxItem(), 1, 0)),
+  },
+  analytics: {
+    // hand to chin
+    start: merge(BASE, armDown("L"), armChin("R")),
+    idleA: merge(BASE, armDown("L"), armChin("R")),
+    idleB: merge(BASE, armDown("L"), armUp("R")),
+  },
+  alerts: {
+    // jump up
+    start: merge(shift(BASE, 0, -3), armOut("L"), armOut("R")),
+    idleA: merge(BASE, armDown("L"), armDown("R")),
+    idleB: merge(BASE, armDown("L"), armDown("R")), // head turn implied by tiny shift
+  },
+  scanner: {
+    // arm with magnifier extended
+    start: merge(BASE, armDown("L"), armForward("R"), propMag()),
+    idleA: merge(BASE, armDown("L"), armForward("R"), propMag()),
+    idleB: merge(BASE, armDown("L"), armForward("R"), shift(propMag(), -2, 0)),
+  },
+  settings: {
+    // wrench
+    start: merge(BASE, armDown("L"), armForward("R"), propWrench()),
+    idleA: merge(BASE, armDown("L"), armForward("R"), propWrench()),
+    idleB: merge(BASE, armDown("L"), armOut("R"), shift(propWrench(), 0, -2)),
+  },
+  login: {
+    // waving
+    start: merge(BASE, armUp("L"), armDown("R")),
+    idleA: merge(BASE, armUp("L"), armDown("R")),
+    idleB: merge(BASE, armOut("L"), armDown("R")),
+  },
+  "login-go": {
+    start: merge(shift(BASE, 0, -4), armOut("L"), armOut("R")),
+    idleA: merge(shift(BASE, 6, 0), armForward("L"), armForward("R")),
+    idleB: merge(shift(BASE, 6, 0), armForward("L"), armForward("R")),
+  },
+};
+
+const cellsToShadow = (cells: Frame, px: number, color: string): string => {
+  return cells
+    .map(([x, y]) => `${x * px}px ${y * px}px 0 0 ${color}`)
+    .join(", ");
+};
+
 export const PixelCharacter = ({ section, width = 88 }: Props) => {
   const [phase, setPhase] = useState<"start" | "idle">("start");
-  const [dissolveKey, setDissolveKey] = useState(0);
   const [renderedSection, setRenderedSection] = useState<PixelSection>(section);
+  const [transitioning, setTransitioning] = useState(false);
 
-  // When section changes: dissolve, then swap, then play start, then idle
+  // On section change: fade out, swap, fade in, play start, then idle
   useEffect(() => {
     if (section === renderedSection) return;
-    setPhase("start");
-    setDissolveKey((k) => k + 1);
-    const t1 = window.setTimeout(() => setRenderedSection(section), 320);
+    setTransitioning(true);
+    const t1 = window.setTimeout(() => {
+      setRenderedSection(section);
+      setPhase("start");
+      setTransitioning(false);
+    }, 150);
     return () => window.clearTimeout(t1);
   }, [section, renderedSection]);
 
-  // After start animation, switch to idle loop
   useEffect(() => {
     setPhase("start");
-    const t = window.setTimeout(() => setPhase("idle"), 1300);
+    const t = window.setTimeout(() => setPhase("idle"), 1200);
     return () => window.clearTimeout(t);
   }, [renderedSection]);
 
-  const accent = SECTION_COLORS[renderedSection];
+  const px = Math.max(2, Math.floor(width / GRID_W));
+  const color = SECTION_COLORS[renderedSection];
+  const pose = POSES[renderedSection];
+
+  const shadows = useMemo(
+    () => ({
+      start: cellsToShadow(pose.start, px, color),
+      idleA: cellsToShadow(pose.idleA, px, color),
+      idleB: cellsToShadow(pose.idleB, px, color),
+    }),
+    [pose, px, color],
+  );
+
+  const stageW = GRID_W * px;
+  const stageH = GRID_H * px;
 
   return (
     <div
-      className="pxc-wrap"
+      className="pxc-stage"
       style={
         {
-          width,
-          height: width,
-          ["--pxc-accent" as any]: accent,
+          width: stageW,
+          height: stageH,
+          ["--pxc-accent" as any]: color,
+          opacity: transitioning ? 0 : 1,
+          transition: "opacity 0.15s ease-out",
         } as React.CSSProperties
       }
       data-section={renderedSection}
       data-phase={phase}
       aria-hidden
     >
-      {/* Neon glow halo */}
       <div className="pxc-glow" />
-      {/* Floor reflection */}
       <div className="pxc-floor" />
-
-      <div key={dissolveKey} className="pxc-dissolve">
-        <Sprite section={renderedSection} />
-      </div>
+      {/* Each layer is one 1x1 px element painted entirely with box-shadows */}
+      <div
+        className="pxc-pixel pxc-layer-start"
+        style={{ width: px, height: px, boxShadow: shadows.start }}
+      />
+      <div
+        className="pxc-pixel pxc-layer-a"
+        style={{ width: px, height: px, boxShadow: shadows.idleA }}
+      />
+      <div
+        className="pxc-pixel pxc-layer-b"
+        style={{ width: px, height: px, boxShadow: shadows.idleB }}
+      />
     </div>
   );
-};
-
-/** A 16x16 grid of "pixels". Scaled up via container width. */
-const Sprite = ({ section }: { section: PixelSection }) => {
-  return (
-    <svg
-      className="pxc-svg"
-      viewBox="0 0 16 20"
-      shapeRendering="crispEdges"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      {/* Head */}
-      <g className="pxc-head">
-        {/* skin */}
-        <rect x="6" y="2" width="4" height="3" fill="#f5c8a1" />
-        {/* hair */}
-        <rect x="5" y="1" width="6" height="2" fill="#3a2a1a" />
-        <rect x="5" y="2" width="1" height="1" fill="#3a2a1a" />
-        <rect x="10" y="2" width="1" height="1" fill="#3a2a1a" />
-        {/* eyes */}
-        <rect className="pxc-eye pxc-eye-l" x="6" y="3" width="1" height="1" fill="#0a0a1a" />
-        <rect className="pxc-eye pxc-eye-r" x="9" y="3" width="1" height="1" fill="#0a0a1a" />
-        {/* mouth */}
-        <rect x="7" y="4" width="2" height="1" fill="#7a3a3a" />
-      </g>
-
-      {/* Body (accent color) */}
-      <g className="pxc-body">
-        <rect x="5" y="5" width="6" height="5" fill="var(--pxc-accent)" />
-        {/* shading */}
-        <rect x="5" y="9" width="6" height="1" fill="rgba(0,0,0,0.25)" />
-        {/* belt */}
-        <rect x="5" y="10" width="6" height="1" fill="#1a1a2a" />
-      </g>
-
-      {/* Legs */}
-      <g className="pxc-legs">
-        <rect x="5" y="11" width="2" height="3" fill="#1a1a3a" />
-        <rect x="9" y="11" width="2" height="3" fill="#1a1a3a" />
-        <rect x="5" y="14" width="2" height="1" fill="#0a0a1a" />
-        <rect x="9" y="14" width="2" height="1" fill="#0a0a1a" />
-      </g>
-
-      {/* Arms */}
-      <g className="pxc-arm pxc-arm-l">
-        <rect x="3" y="6" width="2" height="3" fill="var(--pxc-accent)" />
-        <rect x="3" y="9" width="2" height="1" fill="#f5c8a1" />
-      </g>
-      <g className="pxc-arm pxc-arm-r">
-        <rect x="11" y="6" width="2" height="3" fill="var(--pxc-accent)" />
-        <rect x="11" y="9" width="2" height="1" fill="#f5c8a1" />
-      </g>
-
-      {/* Section-specific prop */}
-      <Prop section={section} />
-    </svg>
-  );
-};
-
-const Prop = ({ section }: { section: PixelSection }) => {
-  switch (section) {
-    case "dashboard":
-      return (
-        <g className="pxc-prop pxc-prop-clipboard">
-          <rect x="1" y="9" width="3" height="4" fill="#d8a55a" />
-          <rect x="1" y="9" width="3" height="1" fill="#5a3a1a" />
-          <rect x="2" y="10" width="1" height="1" fill="#fff" />
-          <rect x="2" y="11" width="1" height="1" fill="#fff" />
-        </g>
-      );
-    case "creators":
-      return (
-        <g className="pxc-prop pxc-prop-pen">
-          <rect x="1" y="9" width="3" height="4" fill="#d8a55a" />
-          <rect x="2" y="10" width="1" height="1" fill="#fff" />
-          <rect x="2" y="11" width="1" height="1" fill="#fff" />
-          <rect className="pxc-pen" x="12" y="8" width="1" height="2" fill="#ff2d95" />
-          <rect className="pxc-pen" x="12" y="10" width="1" height="1" fill="#1a1a2a" />
-        </g>
-      );
-    case "products":
-      return (
-        <g className="pxc-prop pxc-prop-box">
-          <rect className="pxc-box-lid" x="1" y="9" width="3" height="1" fill="#7a4a2a" />
-          <rect x="1" y="10" width="3" height="3" fill="#a86a3a" />
-          <rect x="2" y="11" width="1" height="1" fill="#ffe06a" />
-        </g>
-      );
-    case "analytics":
-      return (
-        <g className="pxc-prop pxc-prop-glasses">
-          <rect x="6" y="3" width="1" height="1" fill="#b44dff" />
-          <rect x="9" y="3" width="1" height="1" fill="#b44dff" />
-          <rect x="7" y="3" width="2" height="1" fill="#b44dff" opacity="0.6" />
-        </g>
-      );
-    case "alerts":
-      return (
-        <g className="pxc-prop pxc-prop-bang">
-          <rect className="pxc-bang" x="13" y="2" width="1" height="3" fill="#ffae00" />
-          <rect className="pxc-bang" x="13" y="6" width="1" height="1" fill="#ffae00" />
-        </g>
-      );
-    case "scanner":
-      return (
-        <g className="pxc-prop pxc-prop-mag">
-          <rect x="12" y="8" width="2" height="2" fill="none" stroke="#39ff14" strokeWidth="0.5" />
-          <rect x="13" y="9" width="1" height="1" fill="#39ff14" opacity="0.4" />
-          <rect x="14" y="10" width="1" height="2" fill="#39ff14" />
-        </g>
-      );
-    case "settings":
-      return (
-        <g className="pxc-prop pxc-prop-wrench">
-          <rect x="12" y="8" width="1" height="3" fill="#cfd2ff" />
-          <rect x="11" y="7" width="3" height="1" fill="#cfd2ff" />
-        </g>
-      );
-    case "login":
-      return (
-        <g className="pxc-prop pxc-prop-wave">
-          {/* watch on left arm */}
-          <rect x="3" y="10" width="2" height="1" fill="#cfd2ff" />
-        </g>
-      );
-    case "login-go":
-      return (
-        <g className="pxc-prop pxc-prop-dust">
-          <rect x="2" y="13" width="1" height="1" fill="#fff" opacity="0.7" />
-          <rect x="13" y="13" width="1" height="1" fill="#fff" opacity="0.7" />
-        </g>
-      );
-    default:
-      return null;
-  }
 };
 
 export default PixelCharacter;
