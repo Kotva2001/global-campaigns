@@ -7,7 +7,6 @@ import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
 import { clearAuthRedirectFromUrl, isForbiddenAuthError } from "@/lib/authRedirect";
 import { UserRoleProvider, useUserRole } from "@/hooks/useUserRole";
-import { AccessDenied } from "@/components/AccessDenied";
 
 interface Props {
   children: React.ReactNode;
@@ -130,7 +129,7 @@ const SignInScreen = () => {
 };
 
 const RoleGate = ({ children }: Props) => {
-  const { user, role, email, loading } = useUserRole();
+  const { user, loading } = useUserRole();
 
   if (loading) {
     return (
@@ -141,7 +140,6 @@ const RoleGate = ({ children }: Props) => {
   }
 
   if (!user) return <SignInScreen />;
-  if (!role) return <AccessDenied email={email} />;
 
   return <>{children}</>;
 };
