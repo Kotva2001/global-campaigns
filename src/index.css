@@ -643,10 +643,10 @@ All colors MUST be HSL.
 
 .pxc-stage[data-phase="idle"] .pxc-layer-start { opacity: 0; }
 .pxc-stage[data-phase="idle"] .pxc-layer-a {
-  animation: pxc-frame-a 2.4s steps(1) infinite;
+  animation: pxc-frame-a 1.4s steps(1) infinite;
 }
 .pxc-stage[data-phase="idle"] .pxc-layer-b {
-  animation: pxc-frame-b 2.4s steps(1) infinite;
+  animation: pxc-frame-b 1.4s steps(1) infinite;
 }
 @keyframes pxc-frame-a {
   0%, 49% { opacity: 1; }
@@ -660,31 +660,19 @@ All colors MUST be HSL.
 /* Per-section idle pacing tweaks */
 .pxc-stage[data-section="creators"][data-phase="idle"] .pxc-layer-a,
 .pxc-stage[data-section="creators"][data-phase="idle"] .pxc-layer-b {
-  animation-duration: 0.6s;
+  animation-duration: 0.7s;
 }
 .pxc-stage[data-section="settings"][data-phase="idle"] .pxc-layer-a,
 .pxc-stage[data-section="settings"][data-phase="idle"] .pxc-layer-b {
-  animation-duration: 0.5s;
+  animation-duration: 0.9s;
 }
 .pxc-stage[data-section="scanner"][data-phase="idle"] .pxc-layer-a,
 .pxc-stage[data-section="scanner"][data-phase="idle"] .pxc-layer-b {
-  animation-duration: 2.2s;
+  animation-duration: 1.8s;
 }
 .pxc-stage[data-section="alerts"][data-phase="idle"] .pxc-layer-a,
 .pxc-stage[data-section="alerts"][data-phase="idle"] .pxc-layer-b {
-  animation-duration: 0.45s;
-}
-.pxc-stage[data-section="dashboard"][data-phase="idle"] .pxc-layer-a,
-.pxc-stage[data-section="dashboard"][data-phase="idle"] .pxc-layer-b {
-  animation-duration: 2.0s;
-}
-.pxc-stage[data-section="products"][data-phase="idle"] .pxc-layer-a,
-.pxc-stage[data-section="products"][data-phase="idle"] .pxc-layer-b {
-  animation-duration: 1.6s;
-}
-.pxc-stage[data-section="analytics"][data-phase="idle"] .pxc-layer-a,
-.pxc-stage[data-section="analytics"][data-phase="idle"] .pxc-layer-b {
-  animation-duration: 2.6s;
+  animation-duration: 0.5s;
 }
 .pxc-stage[data-section="login"][data-phase="idle"] .pxc-layer-a,
 .pxc-stage[data-section="login"][data-phase="idle"] .pxc-layer-b {
