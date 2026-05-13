@@ -610,7 +610,7 @@ All colors MUST be HSL.
 }
 
 /* 1. DASHBOARD — glow + double pulse */
-.sb-item:hover .nav-icon-dashboard {
+.sb-item:hover .nav-dashboard {
   animation: dash-pulse 0.6s ease-in-out;
   filter: drop-shadow(0 0 10px #00f0ff);
 }
@@ -622,7 +622,7 @@ All colors MUST be HSL.
 }
 
 /* 2. CREATORS — glow + gentle bounce */
-.sb-item:hover .nav-icon-creators {
+.sb-item:hover .nav-creators {
   animation: creators-bounce 0.6s ease-in-out;
   filter: drop-shadow(0 0 10px #ff2d95);
 }
@@ -632,7 +632,7 @@ All colors MUST be HSL.
 }
 
 /* 3. PRODUCTS — glow + tilt open */
-.sb-item:hover .nav-icon-products {
+.sb-item:hover .nav-products {
   animation: products-tilt 0.7s ease-in-out;
   filter: drop-shadow(0 0 10px #ff6b2b);
 }
@@ -642,7 +642,7 @@ All colors MUST be HSL.
 }
 
 /* 4. ANALYTICS — glow + grow from bottom */
-.sb-item:hover .nav-icon-analytics {
+.sb-item:hover .nav-analytics {
   animation: analytics-grow 0.6s ease-in-out;
   transform-origin: bottom center;
   filter: drop-shadow(0 0 10px #b44dff);
@@ -654,7 +654,7 @@ All colors MUST be HSL.
 }
 
 /* 5. ALERTS — glow + bell swing */
-.sb-item:hover .nav-icon-alerts {
+.sb-item:hover .nav-alerts {
   animation: alerts-swing 0.7s ease-in-out;
   transform-origin: top center;
   filter: drop-shadow(0 0 10px #ff3366);
@@ -668,7 +668,7 @@ All colors MUST be HSL.
 }
 
 /* 6. SCANNER — glow + spin */
-.sb-item:hover .nav-icon-scanner {
+.sb-item:hover .nav-scanner {
   animation: scanner-spin 0.7s ease-in-out;
   filter: drop-shadow(0 0 10px #39ff14);
 }
@@ -678,7 +678,7 @@ All colors MUST be HSL.
 }
 
 /* 7. SETTINGS — glow + slow rotate */
-.sb-item:hover .nav-icon-settings {
+.sb-item:hover .nav-settings {
   animation: settings-rotate 0.6s ease-in-out;
   filter: drop-shadow(0 0 10px #999999);
 }
@@ -692,7 +692,7 @@ All colors MUST be HSL.
 }
 
 /* Logout hover glow */
-.sb-item:hover .nav-icon-logout {
+.sb-item:hover .nav-logout {
   filter: drop-shadow(0 0 10px #ff3366);
 }
 
