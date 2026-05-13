@@ -28,6 +28,8 @@ import { notifyScannerChanged, notifyAlertsChanged } from "@/lib/badge-events";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { FlagIcon, hasFlag } from "@/components/FlagIcon";
+import { useIsOwner } from "@/hooks/useUserRole";
+import { useAutoHide } from "@/hooks/useAutoHide";
 import { searchProducts } from "@/lib/product-search";
 import { Search } from "lucide-react";
 import type { ProductRecord } from "@/types/product";
