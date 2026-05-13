@@ -1239,14 +1239,16 @@ function SettingsForm({ settings, onSaved }: { settings: ScanSettings; onSaved: 
 
   const save = async () => {
     setSaving(true);
-    const payload: Record<string, unknown> = {
+    const base = {
       brand_keywords: keywords,
       scan_frequency_minutes: freq,
       stats_refresh_frequency_minutes: statsFreq,
       platforms_to_scan: platforms,
       auto_add_known_influencers: autoApprove,
     };
-    if (isOwner) payload.youtube_api_key = apiKey || null;
+    const payload = isOwner
+      ? { ...base, youtube_api_key: apiKey || null }
+      : base;
     const { error } = await supabase.from("scan_settings").update(payload).eq("id", settings.id);
     setSaving(false);
     if (error) toastError("Could not save settings", error);
