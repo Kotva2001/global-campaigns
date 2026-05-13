@@ -870,7 +870,7 @@ function ApproveDialog({
 
   // Compute auto cost from collab + cash + product lines
   const productSum = useMemo(
-    () => lines.reduce((s, l) => s + (Number(l.product.cost) || 0) * (Number(l.qty) || 0), 0),
+    () => lines.reduce((s, l) => s + getProductPurchaseCost(l.product).value * (Number(l.qty) || 0), 0),
     [lines],
   );
   const autoCost = useMemo(() => {
