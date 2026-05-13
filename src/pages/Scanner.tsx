@@ -31,6 +31,7 @@ import { FlagIcon, hasFlag } from "@/components/FlagIcon";
 import { useIsOwner } from "@/hooks/useUserRole";
 import { useAutoHide } from "@/hooks/useAutoHide";
 import { searchProducts } from "@/lib/product-search";
+import { getProductPurchaseCost } from "@/lib/productCost";
 import { Search } from "lucide-react";
 import type { ProductRecord } from "@/types/product";
 import {
