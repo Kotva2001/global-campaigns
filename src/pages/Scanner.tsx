@@ -1224,7 +1224,8 @@ function SettingsForm({ settings, onSaved }: { settings: ScanSettings; onSaved: 
   const [autoApprove, setAutoApprove] = useState(!!settings.auto_add_known_influencers);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
-  const [showKey, setShowKey] = useState(false);
+  const [showKey, setShowKey] = useAutoHide(10000);
+  const isOwner = useIsOwner();
 
   const addKw = () => {
     const v = kwInput.trim();
@@ -1238,14 +1239,15 @@ function SettingsForm({ settings, onSaved }: { settings: ScanSettings; onSaved: 
 
   const save = async () => {
     setSaving(true);
-    const { error } = await supabase.from("scan_settings").update({
+    const payload: Record<string, unknown> = {
       brand_keywords: keywords,
-      youtube_api_key: apiKey || null,
       scan_frequency_minutes: freq,
       stats_refresh_frequency_minutes: statsFreq,
       platforms_to_scan: platforms,
       auto_add_known_influencers: autoApprove,
-    }).eq("id", settings.id);
+    };
+    if (isOwner) payload.youtube_api_key = apiKey || null;
+    const { error } = await supabase.from("scan_settings").update(payload).eq("id", settings.id);
     setSaving(false);
     if (error) toastError("Could not save settings", error);
     else { toast.success("Settings saved"); onSaved(); }
@@ -1299,25 +1301,28 @@ function SettingsForm({ settings, onSaved }: { settings: ScanSettings; onSaved: 
           </div>
         </div>
 
-        <div>
-          <Label className="section-heading">YouTube API key</Label>
-          <div className="mt-2 flex gap-2">
-            <Input
-              className="input-neon"
-              type={showKey ? "text" : "password"}
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="AIza…"
-              maxLength={200}
-            />
-            <Button type="button" variant="secondary" size="icon" onClick={() => setShowKey((v) => !v)} aria-label={showKey ? "Hide API key" : "Show API key"}>
-              {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </Button>
-            <Button type="button" variant="secondary" onClick={testKey} disabled={testing}>
-              {testing && <Loader2 className="h-4 w-4 animate-spin" />} Test
-            </Button>
+        {isOwner && (
+          <div className="rounded-lg border border-warning/40 bg-warning/5 p-4">
+            <Label className="section-heading">YouTube API key <span className="ml-2 text-xs font-normal text-muted-foreground">(owner-only · auto-hides after 10s)</span></Label>
+            <div className="mt-2 flex gap-2">
+              <Input
+                className="input-neon"
+                type={showKey ? "text" : "password"}
+                value={showKey ? apiKey : (apiKey ? "••••••••••••••••" : "")}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="AIza…"
+                maxLength={200}
+                readOnly={!showKey}
+              />
+              <Button type="button" variant="secondary" size="icon" onClick={() => setShowKey((v) => !v)} aria-label={showKey ? "Hide API key" : "Show API key"}>
+                {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+              <Button type="button" variant="secondary" onClick={testKey} disabled={testing || !showKey}>
+                {testing && <Loader2 className="h-4 w-4 animate-spin" />} Test
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="grid gap-4 md:grid-cols-2">
           <div>
