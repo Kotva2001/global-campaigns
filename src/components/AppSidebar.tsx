@@ -27,7 +27,7 @@ interface Props {
 type NavItem = {
   to: string;
   label: string;
-  icon: typeof LayoutDashboard;
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   badgeKey: null | "alerts" | "scanner";
   accent: string;
   description: string;
