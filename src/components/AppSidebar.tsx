@@ -19,7 +19,6 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { PixelCharacter, type PixelSection } from "@/components/PixelCharacter";
 
 interface Props {
   onOpenSettings: () => void;
