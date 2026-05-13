@@ -36,7 +36,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, badgeKey: null, accent: "#00f0ff", description: "Overview & KPIs" },
   { to: "/creators", label: "Creators", icon: Users, badgeKey: null, accent: "#ff2d95", description: "Influencer roster" },
-  { to: "/products", label: "Products", icon: Package, badgeKey: null, accent: "#ff6b2b", description: "Product catalog" },
+  { to: "/products", label: "Products", icon: CrateIcon, badgeKey: null, accent: "#ff6b2b", description: "Product catalog" },
   { to: "/analytics", label: "Analytics", icon: BarChart3, badgeKey: null, accent: "#b44dff", description: "Charts & insights" },
   { to: "/alerts", label: "Alerts", icon: Bell, badgeKey: "alerts", accent: "#ff3366", description: "Threshold rules" },
   { to: "/scanner", label: "Scanner", icon: Radar, badgeKey: "scanner", accent: "#39ff14", description: "Brand mentions" },
