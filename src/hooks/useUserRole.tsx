@@ -1,12 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  clearAuthRedirectFromUrl,
-  getAuthRedirectInfo,
-  isForbiddenAuthError,
-  logAuthStartupConfig,
-} from "@/lib/authRedirect";
 
 export type AppRole = "admin" | "editor" | "viewer";
 
@@ -74,11 +68,6 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
       );
     } catch (error) {
       console.error("[Auth] Failed to load user role", error);
-      if (isForbiddenAuthError(error)) {
-        await supabase.auth.signOut();
-        clearAuthRedirectFromUrl();
-        setUser(null);
-      }
       setRole(null);
       setDisplayName(null);
       setIsOwner(false);
@@ -88,18 +77,12 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    logAuthStartupConfig();
-
-    // Set up listener BEFORE checking session, so we catch the SIGNED_IN
-    // event triggered when supabase parses the OAuth hash fragment.
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       const u = session?.user ?? null;
       setUser(u);
       void loadRole(u);
 
       if (event === "SIGNED_IN") {
-        clearAuthRedirectFromUrl();
-        // Redirect to dashboard if currently on root or login.
         const path = window.location.pathname;
         if (path === "/" || path === "" || path === "/login") {
           window.history.replaceState({}, document.title, "/dashboard");
@@ -108,64 +91,12 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
       }
     });
 
-    const detectSession = async () => {
-      const redirectInfo = getAuthRedirectInfo();
-      console.info("[Auth] detectSession start", {
-        hash: window.location.hash,
-        search: window.location.search,
-        redirectInfo,
-      });
-      try {
-        let { data, error } = await supabase.auth.getSession();
-        console.info("[Auth] getSession result", { data, error });
-
-        let u = data?.session?.user ?? null;
-
-        // Fallback: manually extract tokens from hash if getSession didn't pick them up
-        if (!u && redirectInfo.hasHashAccessToken) {
-          const hashParams = new URLSearchParams(window.location.hash.substring(1));
-          const access_token = hashParams.get("access_token");
-          const refresh_token = hashParams.get("refresh_token");
-          console.info("[Auth] Attempting manual setSession from hash", {
-            hasAccessToken: Boolean(access_token),
-            hasRefreshToken: Boolean(refresh_token),
-          });
-          if (access_token && refresh_token) {
-            const manual = await supabase.auth.setSession({ access_token, refresh_token });
-            console.info("[Auth] Manual setSession result", manual);
-            if (!manual.error) {
-              u = manual.data.session?.user ?? null;
-              error = null;
-            } else {
-              error = manual.error;
-            }
-          }
-        }
-
-        if (error) throw error;
-
-        if (redirectInfo.hasAuthParams && !u) {
-          console.warn("[Auth] OAuth redirect params were present but no valid session was restored; clearing stale auth URL.");
-          await supabase.auth.signOut();
-          clearAuthRedirectFromUrl();
-          await loadRole(null);
-          return;
-        }
-
-        if (redirectInfo.hasAuthParams) clearAuthRedirectFromUrl();
-        setUser(u);
-        await loadRole(u);
-      } catch (error) {
-        console.error("[Auth] Session detection failed", error);
-        if (redirectInfo.hasAuthParams || isForbiddenAuthError(error)) {
-          await supabase.auth.signOut();
-          clearAuthRedirectFromUrl();
-        }
-        await loadRole(null);
-      }
-    };
-
-    void detectSession();
+    void (async () => {
+      const { data } = await supabase.auth.getSession();
+      const u = data.session?.user ?? null;
+      setUser(u);
+      await loadRole(u);
+    })();
 
     return () => sub.subscription.unsubscribe();
   }, []);
