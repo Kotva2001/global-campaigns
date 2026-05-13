@@ -99,7 +99,6 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
   const counts = useBadgeCounts();
   const ticker = useTickerStats();
   const location = useLocation();
-  const [settingsHover, setSettingsHover] = useState(false);
 
   const routeToSection = (path: string): PixelSection => {
     if (path.startsWith("/creators")) return "creators";
@@ -109,7 +108,6 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
     if (path.startsWith("/scanner")) return "scanner";
     return "dashboard";
   };
-  const section: PixelSection = settingsHover ? "settings" : routeToSection(location.pathname);
 
   return (
     <div
@@ -241,6 +239,12 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
               <Icon className="sb-icon shrink-0" style={{ width: 20, height: 20 }} />
               <span className="sb-label flex-1 font-medium">{item.label}</span>
 
+              {active && (
+                <span className="ml-1 inline-flex items-center justify-center" aria-hidden>
+                  <PixelCharacter section={routeToSection(item.to)} width={32} />
+                </span>
+              )}
+
               {badge > 0 && (
                 <span
                   className={cn(
@@ -287,16 +291,11 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
       />
 
       <div className="relative px-3 py-3">
-        <div className="mb-3 flex justify-center">
-          <PixelCharacter section={section} width={88} />
-        </div>
         <UserCard />
         <Button
           variant="ghost"
           className="sb-item sb-item-settings w-full justify-start gap-3 rounded-lg font-medium"
           style={{ height: 40, paddingLeft: 12, fontSize: 13 }}
-          onMouseEnter={() => setSettingsHover(true)}
-          onMouseLeave={() => setSettingsHover(false)}
           onClick={() => {
             onOpenSettings();
             onNavigate?.();
