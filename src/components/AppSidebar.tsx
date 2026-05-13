@@ -226,7 +226,9 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
                   boxShadow: `0 0 6px ${item.accent}`,
                 }}
               />
-              <Icon className="sb-icon shrink-0" style={{ width: 20, height: 20 }} />
+              <span className={`nav-icon-wrap nav-${item.label.toLowerCase()}`}>
+                <Icon className="sb-icon shrink-0" style={{ width: 20, height: 20 }} />
+              </span>
               <span className="sb-label flex-1 font-medium">{item.label}</span>
 
               {badge > 0 && (
@@ -285,7 +287,9 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
             onNavigate?.();
           }}
         >
-          <SettingsIcon className="sb-icon sb-icon-spin shrink-0" style={{ width: 18, height: 18 }} />
+          <span className="nav-icon-wrap nav-settings">
+            <SettingsIcon className="sb-icon sb-icon-spin shrink-0" style={{ width: 18, height: 18 }} />
+          </span>
           <span className="sb-label">Settings</span>
         </Button>
         <Button
@@ -297,7 +301,9 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
             onNavigate?.();
           }}
         >
-          <DoorOpen className="sb-icon shrink-0" style={{ width: 18, height: 18 }} />
+          <span className="nav-icon-wrap nav-logout">
+            <DoorOpen className="sb-icon shrink-0" style={{ width: 18, height: 18 }} />
+          </span>
           <span className="sb-label">Logout</span>
         </Button>
       </div>
