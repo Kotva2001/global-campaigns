@@ -33,6 +33,7 @@ import { useAutoHide } from "@/hooks/useAutoHide";
 import { searchProducts } from "@/lib/product-search";
 import { getProductPurchaseCost } from "@/lib/productCost";
 import { Search } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import type { ProductRecord } from "@/types/product";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
