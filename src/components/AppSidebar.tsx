@@ -229,12 +229,6 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
               <Icon className="sb-icon shrink-0" style={{ width: 20, height: 20 }} />
               <span className="sb-label flex-1 font-medium">{item.label}</span>
 
-              {active && (
-                <span className="ml-1 inline-flex items-center justify-center" aria-hidden>
-                  <PixelCharacter section={routeToSection(item.to)} width={32} />
-                </span>
-              )}
-
               {badge > 0 && (
                 <span
                   className={cn(
