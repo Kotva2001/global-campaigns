@@ -9,10 +9,10 @@ import {
   Settings as SettingsIcon,
   Menu,
   LogOut,
-  Package,
   ChevronRight,
   DoorOpen,
 } from "lucide-react";
+import { CrateIcon } from "@/components/icons/CrateIcon";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
