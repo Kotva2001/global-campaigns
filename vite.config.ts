@@ -8,7 +8,7 @@ export default defineConfig(({ mode }) => ({
   define: {
     "import.meta.env.VITE_SUPABASE_URL": JSON.stringify("https://vnggokmmxkiazkgkrdqs.supabase.co"),
     "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZuZ2dva21teGtpYXprZ2tyZHFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4NTYzMDQsImV4cCI6MjA5MjQzMjMwNH0.Nur-y2ERqUbkO--ZuEJ6McbbjWmB38Z-zYhlQ71VIp4"),
-    "import.meta.env.VITE_GOOGLE_CLIENT_ID": JSON.stringify(process.env._googleaccounts || ""),
+    "import.meta.env.VITE_GOOGLE_CLIENT_ID": JSON.stringify("95933012598-tm1jm164g1nom1nhvbpp8i3rigiiome2.apps.googleusercontent.com"),
   },
   server: {
     host: "::",
