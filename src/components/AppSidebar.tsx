@@ -99,15 +99,6 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
   const ticker = useTickerStats();
   const location = useLocation();
 
-  const routeToSection = (path: string): PixelSection => {
-    if (path.startsWith("/creators")) return "creators";
-    if (path.startsWith("/products")) return "products";
-    if (path.startsWith("/analytics")) return "analytics";
-    if (path.startsWith("/alerts")) return "alerts";
-    if (path.startsWith("/scanner")) return "scanner";
-    return "dashboard";
-  };
-
   return (
     <div
       className="relative flex h-full w-full flex-col text-foreground overflow-hidden"
