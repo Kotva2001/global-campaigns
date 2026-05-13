@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, ChevronLeft, ChevronRight, MoreVertical, Package, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, MoreVertical, Package, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { toastError } from "@/lib/toast-helpers";
@@ -27,7 +27,6 @@ import {
 import { ProductDialog } from "@/components/ProductDialog";
 import { formatCurrency } from "@/lib/formatters";
 import { searchProducts } from "@/lib/product-search";
-import { getProductPurchaseCost } from "@/lib/productCost";
 import type { ProductRecord } from "@/types/product";
 
 const Products = () => {
