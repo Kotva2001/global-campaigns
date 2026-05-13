@@ -32,6 +32,7 @@ export const ProductDialog = ({ open, onOpenChange, editing, onSaved }: Props) =
   const [name, setName] = useState("");
   const [sku, setSku] = useState("");
   const [cost, setCost] = useState("");
+  const [purchasePrice, setPurchasePrice] = useState("");
   const [currency, setCurrency] = useState<ProductCurrency>("CZK");
   const [category, setCategory] = useState("");
   const [saving, setSaving] = useState(false);
@@ -41,6 +42,7 @@ export const ProductDialog = ({ open, onOpenChange, editing, onSaved }: Props) =
     setName(editing?.name ?? "");
     setSku(editing?.sku ?? "");
     setCost(editing ? String(editing.cost) : "");
+    setPurchasePrice(editing?.purchase_price != null ? String(editing.purchase_price) : "");
     setCurrency((editing?.currency as ProductCurrency) ?? "CZK");
     setCategory(editing?.category ?? "");
   }, [editing, open]);
@@ -56,11 +58,22 @@ export const ProductDialog = ({ open, onOpenChange, editing, onSaved }: Props) =
       toast.error("Enter a valid cost");
       return;
     }
+    const trimmedPurchase = purchasePrice.trim();
+    let purchaseNumber: number | null = null;
+    if (trimmedPurchase !== "") {
+      const n = Number(trimmedPurchase);
+      if (!Number.isFinite(n) || n < 0) {
+        toast.error("Enter a valid purchase price");
+        return;
+      }
+      purchaseNumber = n;
+    }
     setSaving(true);
     const payload = {
       name: trimmedName,
       sku: sku.trim() || null,
       cost: costNumber,
+      purchase_price: purchaseNumber,
       currency,
       category: category.trim() || null,
     };
@@ -90,8 +103,9 @@ export const ProductDialog = ({ open, onOpenChange, editing, onSaved }: Props) =
           </div>
           <div className="grid grid-cols-[1fr_120px] gap-3">
             <div className="grid gap-1.5">
-              <Label htmlFor="product-cost">Cost *</Label>
+              <Label htmlFor="product-cost">Retail price *</Label>
               <Input id="product-cost" type="number" min="0" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="0" />
+              <span className="text-[11px] text-muted-foreground">What customers pay</span>
             </div>
             <div className="grid gap-1.5">
               <Label>Currency</Label>
@@ -103,6 +117,19 @@ export const ProductDialog = ({ open, onOpenChange, editing, onSaved }: Props) =
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="product-purchase">Our cost (purchase price)</Label>
+            <Input
+              id="product-purchase"
+              type="number"
+              min="0"
+              step="0.01"
+              value={purchasePrice}
+              onChange={(e) => setPurchasePrice(e.target.value)}
+              placeholder="What we pay (used for campaign costs)"
+            />
+            <span className="text-[11px] text-muted-foreground">Used for deal & campaign cost calculations. Falls back to retail price if empty.</span>
           </div>
           <div className="grid gap-1.5">
             <Label htmlFor="product-category">Category</Label>

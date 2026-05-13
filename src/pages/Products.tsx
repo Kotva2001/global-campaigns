@@ -170,10 +170,20 @@ const Products = () => {
                   </DropdownMenu>
                 </div>
                 <div className="mt-4 flex items-end justify-between gap-3">
-                  <div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Cost</div>
-                    <div className="mt-0.5 text-lg font-bold tabular-nums">
-                      {formatCurrency(product.cost, product.currency)}
+                  <div className="space-y-1">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Retail</div>
+                      <div className="mt-0.5 text-base font-bold tabular-nums">
+                        {formatCurrency(product.cost, product.currency)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Our cost</div>
+                      <div className="mt-0.5 flex items-center gap-1 text-sm font-semibold tabular-nums text-foreground">
+                        {product.purchase_price != null
+                          ? formatCurrency(product.purchase_price, product.currency)
+                          : <span className="text-muted-foreground">—</span>}
+                      </div>
                     </div>
                   </div>
                   {product.category && (

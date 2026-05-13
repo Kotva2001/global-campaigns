@@ -37,6 +37,7 @@ interface DealRow {
 interface ProductRow {
   id: string;
   cost: number | string | null;
+  purchase_price: number | string | null;
   currency: string | null;
 }
 
@@ -97,7 +98,7 @@ export const CreatorPerformancePanel = ({ creatorId }: Props) => {
         const dealRows = (deals ?? []) as DealRow[];
         const productIds = Array.from(new Set(dealRows.map((d) => d.product_id).filter(Boolean))) as string[];
         const { data: products } = productIds.length
-          ? await supabase.from("products").select("id,cost,currency").in("id", productIds)
+          ? await supabase.from("products").select("id,cost,purchase_price,currency").in("id", productIds)
           : { data: [] as ProductRow[] };
         const productById = new Map((products ?? []).map((p) => [p.id, p as ProductRow]));
         const dCostMap = new Map<string, number>();
@@ -105,7 +106,10 @@ export const CreatorPerformancePanel = ({ creatorId }: Props) => {
           if (!d.product_id) continue;
           const p = productById.get(d.product_id);
           if (!p) continue;
-          dCostMap.set(d.id, convertCurrency(num(p.cost), normalizeCurrency(p.currency), "CZK", { EUR_CZK: eurCzkRate }));
+          const raw = p.purchase_price != null && p.purchase_price !== ""
+            ? num(p.purchase_price)
+            : num(p.cost);
+          dCostMap.set(d.id, convertCurrency(raw, normalizeCurrency(p.currency), "CZK", { EUR_CZK: eurCzkRate }));
         }
         if (!cancelled) setDealCostMap(dCostMap);
       } catch (e) {

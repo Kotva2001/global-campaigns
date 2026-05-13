@@ -48,6 +48,7 @@ interface DealFetchRow {
 interface ProductFetchRow {
   id: string;
   cost: number | string | null;
+  purchase_price: number | string | null;
   currency: string | null;
 }
 
@@ -96,7 +97,7 @@ const fetchMonthStats = async (
 
   const productIds = Array.from(new Set((deals ?? []).map((d) => d.product_id).filter(Boolean))) as string[];
   const { data: products } = productIds.length
-    ? await supabase.from("products").select("id,cost,currency").in("id", productIds)
+    ? await supabase.from("products").select("id,cost,purchase_price,currency").in("id", productIds)
     : { data: [] as ProductFetchRow[] };
   const productById = new Map((products ?? []).map((p) => [p.id, p as ProductFetchRow]));
 
@@ -124,7 +125,10 @@ const fetchMonthStats = async (
       if (deal?.product_id) {
         const product = productById.get(deal.product_id);
         if (product) {
-          productCost += convertCurrency(num(product.cost), normalizeCurrency(product.currency), "CZK", { EUR_CZK: eurCzkRate });
+          const raw = product.purchase_price != null && product.purchase_price !== ""
+            ? num(product.purchase_price)
+            : num(product.cost);
+          productCost += convertCurrency(raw, normalizeCurrency(product.currency), "CZK", { EUR_CZK: eurCzkRate });
         }
       }
     }

@@ -371,6 +371,7 @@ export type Database = {
           currency: string
           id: string
           name: string
+          purchase_price: number | null
           sku: string | null
           updated_at: string
         }
@@ -381,6 +382,7 @@ export type Database = {
           currency?: string
           id?: string
           name: string
+          purchase_price?: number | null
           sku?: string | null
           updated_at?: string
         }
@@ -391,6 +393,7 @@ export type Database = {
           currency?: string
           id?: string
           name?: string
+          purchase_price?: number | null
           sku?: string | null
           updated_at?: string
         }
@@ -561,6 +564,7 @@ export type Database = {
           currency: string
           id: string
           name: string
+          purchase_price: number | null
           sku: string | null
           updated_at: string
         }[]

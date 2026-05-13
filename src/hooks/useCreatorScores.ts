@@ -39,7 +39,7 @@ export const useCreatorScores = (): State => {
 
         const [{ data: deals }, { data: products }] = await Promise.all([
           supabase.from("deals").select("id,product_id"),
-          supabase.from("products").select("id,cost,currency"),
+          supabase.from("products").select("id,cost,purchase_price,currency"),
         ]);
 
         if (cancelled) return;

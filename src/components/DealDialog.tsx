@@ -4,12 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { toastError } from "@/lib/toast-helpers";
 import { recalcDealSplit, linkCampaignsToDeal } from "@/lib/deals";
 import { searchProducts } from "@/lib/product-search";
+import { getProductPurchaseCost } from "@/lib/productCost";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { X, Search } from "lucide-react";
+import { X, Search, AlertTriangle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -109,7 +110,7 @@ export const DealDialog = ({ open, onOpenChange, influencerId, editing, onSaved 
     setProductResults([]);
     setShowResults(false);
     if (!editing) {
-      setTotalCost(String(p.cost ?? 0));
+      setTotalCost(String(getProductPurchaseCost(p).value));
       setCurrency((p.currency as CurrencyCode) ?? "EUR");
     }
     if (!dealName) setDealName(p.name);
@@ -257,7 +258,15 @@ export const DealDialog = ({ open, onOpenChange, influencerId, editing, onSaved 
                                 onMouseDown={(e) => { e.preventDefault(); pickProduct(p); }}
                                 className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm hover:bg-primary/10"
                               >
-                                <span className="block w-full whitespace-normal break-words leading-snug">{p.name}</span>
+                                <span className="flex w-full items-center gap-1 whitespace-normal break-words leading-snug">
+                                  <span className="flex-1">{p.name}</span>
+                                  <span className="shrink-0 text-xs font-semibold tabular-nums text-primary">
+                                    {getProductPurchaseCost(p).value.toLocaleString()} {p.currency}
+                                  </span>
+                                  {getProductPurchaseCost(p).usedFallback && (
+                                    <AlertTriangle className="h-3 w-3 shrink-0 text-amber-500" aria-label="Using retail price" />
+                                  )}
+                                </span>
                                 {p.sku && (
                                   <span className="block w-full whitespace-normal break-words text-xs text-muted-foreground">
                                     SKU: {p.sku}
@@ -268,6 +277,10 @@ export const DealDialog = ({ open, onOpenChange, influencerId, editing, onSaved 
                             <TooltipContent side="right" className="max-w-sm">
                               <div className="font-medium">{p.name}</div>
                               {p.sku && <div className="text-xs text-muted-foreground">SKU: {p.sku}</div>}
+                              <div className="mt-1 text-xs">
+                                Our cost: <span className="font-semibold">{getProductPurchaseCost(p).value.toLocaleString()} {p.currency}</span>
+                                {getProductPurchaseCost(p).usedFallback && <span className="ml-1 text-amber-500">(retail fallback)</span>}
+                              </div>
                             </TooltipContent>
                           </Tooltip>
                         ))}
