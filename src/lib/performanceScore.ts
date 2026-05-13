@@ -30,6 +30,7 @@ export interface RawDeal {
 export interface RawProduct {
   id: string;
   cost: number | string | null;
+  purchase_price?: number | string | null;
   currency: string | null;
 }
 
@@ -74,7 +75,10 @@ export const computeCreatorScores = (
   // Build product cost map (CZK)
   const productCostCzk = new Map<string, number>();
   for (const p of products) {
-    productCostCzk.set(p.id, convertCurrency(num(p.cost), normalizeCurrency(p.currency), "CZK", { EUR_CZK: eurCzkRate }));
+    const raw = p.purchase_price != null && p.purchase_price !== ""
+      ? num(p.purchase_price)
+      : num(p.cost);
+    productCostCzk.set(p.id, convertCurrency(raw, normalizeCurrency(p.currency), "CZK", { EUR_CZK: eurCzkRate }));
   }
   const dealCost = new Map<string, number>();
   for (const d of deals) {
