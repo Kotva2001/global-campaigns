@@ -12,6 +12,7 @@ import {
   LogOut,
   ChevronRight,
   DoorOpen,
+  KeyRound,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 
 interface Props {
   onOpenSettings: () => void;
@@ -98,6 +100,7 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
   const counts = useBadgeCounts();
   const ticker = useTickerStats();
   const location = useLocation();
+  const [pwOpen, setPwOpen] = useState(false);
 
   return (
     <div
@@ -280,6 +283,17 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
         <UserCard />
         <Button
           variant="ghost"
+          className="sb-item w-full justify-start gap-3 rounded-lg font-medium"
+          style={{ height: 36, paddingLeft: 12, fontSize: 12 }}
+          onClick={() => setPwOpen(true)}
+        >
+          <span className="nav-icon-wrap">
+            <KeyRound className="sb-icon shrink-0" style={{ width: 16, height: 16 }} />
+          </span>
+          <span className="sb-label">Change password</span>
+        </Button>
+        <Button
+          variant="ghost"
           className="sb-item sb-item-settings w-full justify-start gap-3 rounded-lg font-medium"
           style={{ height: 40, paddingLeft: 12, fontSize: 13 }}
           onClick={() => {
@@ -306,6 +320,7 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
           </span>
           <span className="sb-label">Logout</span>
         </Button>
+        <ChangePasswordDialog open={pwOpen} onOpenChange={setPwOpen} />
       </div>
 
       {/* Synthwave sun + reflection */}
