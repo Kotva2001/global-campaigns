@@ -10,7 +10,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, UserPlus, Copy } from "lucide-react";
 import { useUserRole, type AppRole } from "@/hooks/useUserRole";
 
 type Row = {
@@ -30,6 +30,14 @@ export const UserManagement = () => {
   const [newName, setNewName] = useState("");
   const [newRole, setNewRole] = useState<AppRole>("viewer");
   const [adding, setAdding] = useState(false);
+
+  // Create account state
+  const [caEmail, setCaEmail] = useState("");
+  const [caName, setCaName] = useState("");
+  const [caPassword, setCaPassword] = useState("");
+  const [caRole, setCaRole] = useState<AppRole>("viewer");
+  const [creating, setCreating] = useState(false);
+  const [created, setCreated] = useState<{ email: string; password: string } | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -87,6 +95,48 @@ export const UserManagement = () => {
     setRows((r) => r.filter((x) => x.id !== row.id));
   };
 
+  const generatePassword = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+    let out = "";
+    const arr = new Uint32Array(14);
+    crypto.getRandomValues(arr);
+    for (let i = 0; i < arr.length; i++) out += chars[arr[i] % chars.length];
+    setCaPassword(out);
+  };
+
+  const createAccount = async () => {
+    const e = caEmail.trim().toLowerCase();
+    if (!e || caPassword.length < 8) {
+      toast.error("Email and password (min 8 chars) required");
+      return;
+    }
+    setCreating(true);
+    const { data, error } = await supabase.functions.invoke("admin-create-user", {
+      body: {
+        email: e,
+        password: caPassword,
+        display_name: caName.trim() || null,
+        role: caRole,
+      },
+    });
+    setCreating(false);
+    if (error || (data && (data as { error?: string }).error)) {
+      const msg = (data as { error?: string } | null)?.error ?? error?.message ?? "Failed";
+      toast.error("Could not create account", { description: msg });
+      return;
+    }
+    toast.success("Account created");
+    setCreated({ email: e, password: caPassword });
+    setCaEmail(""); setCaName(""); setCaPassword(""); setCaRole("viewer");
+    void load();
+  };
+
+  const copyCreds = async () => {
+    if (!created) return;
+    await navigator.clipboard.writeText(`Email: ${created.email}\nPassword: ${created.password}`);
+    toast.success("Credentials copied");
+  };
+
   return (
     <div className="space-y-4 rounded-lg border p-4">
       <div>
@@ -94,6 +144,70 @@ export const UserManagement = () => {
         <p className="text-xs text-muted-foreground">
           Grant access by adding a Google account email. Roles take effect on next login.
         </p>
+      </div>
+
+      {/* Create Account (admin) */}
+      <div className="space-y-3 rounded-md border border-primary/30 bg-primary/5 p-3">
+        <div className="flex items-center gap-2">
+          <UserPlus className="h-4 w-4 text-primary" />
+          <h4 className="text-sm font-semibold">Create account</h4>
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          Creates an email/password account and assigns a role. Share the credentials with the user; they should change the password on first login.
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <Label className="text-xs">Email</Label>
+            <Input type="email" value={caEmail} onChange={(e) => setCaEmail(e.target.value)} placeholder="user@example.com" />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Display name</Label>
+            <Input value={caName} onChange={(e) => setCaName(e.target.value)} placeholder="Optional" />
+          </div>
+          <div className="space-y-1 col-span-2">
+            <Label className="text-xs">Temporary password</Label>
+            <div className="flex gap-2">
+              <Input value={caPassword} onChange={(e) => setCaPassword(e.target.value)} placeholder="Min 8 characters" className="font-mono text-xs" />
+              <Button type="button" variant="outline" size="sm" onClick={generatePassword}>Generate</Button>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Role</Label>
+            <Select value={caRole} onValueChange={(v) => setCaRole(v as AppRole)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="editor">Editor</SelectItem>
+                <SelectItem value="viewer">Viewer</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-end">
+            <Button onClick={createAccount} disabled={creating || !caEmail || caPassword.length < 8} size="sm" className="w-full gap-1.5">
+              <UserPlus className="h-4 w-4" /> {creating ? "Creating…" : "Create account"}
+            </Button>
+          </div>
+        </div>
+        {created && (
+          <div className="rounded-md border border-success/40 bg-success/5 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-semibold">Account ready — share these credentials</div>
+              <Button type="button" size="sm" variant="ghost" onClick={copyCreds} className="h-7 gap-1.5">
+                <Copy className="h-3.5 w-3.5" /> Copy
+              </Button>
+            </div>
+            <div className="font-mono text-xs space-y-0.5">
+              <div><span className="text-muted-foreground">Email:</span> {created.email}</div>
+              <div><span className="text-muted-foreground">Password:</span> {created.password}</div>
+            </div>
+            <Button type="button" size="sm" variant="ghost" className="h-7" onClick={() => setCreated(null)}>Dismiss</Button>
+          </div>
+        )}
+      </div>
+
+      <div>
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Invite by email (no password)</h4>
+        <p className="text-[11px] text-muted-foreground">Pre-assign a role; user signs in via Google or after an admin creates their password account.</p>
       </div>
 
       <div className="grid grid-cols-[1fr_1fr_140px_auto] gap-2 items-end">
