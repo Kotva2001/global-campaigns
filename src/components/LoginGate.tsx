@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
-import { clearAuthRedirectFromUrl, isForbiddenAuthError } from "@/lib/authRedirect";
 import { UserRoleProvider, useUserRole } from "@/hooks/useUserRole";
 
 interface Props {
@@ -22,36 +23,39 @@ const GoogleIcon = () => (
 );
 
 const SignInScreen = () => {
-  const [submitting, setSubmitting] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   const handleGoogle = async () => {
-    setSubmitting(true);
+    setGoogleLoading(true);
     const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
     });
     if (result.error) {
-      if (isForbiddenAuthError(result.error)) {
-        await supabase.auth.signOut();
-        clearAuthRedirectFromUrl();
-      }
-      setSubmitting(false);
+      setGoogleLoading(false);
       toast({
         title: "Sign-in failed",
         description: result.error.message ?? "Could not sign in with Google.",
         variant: "destructive",
       });
-      return;
     }
-    if (result.redirected) return;
+  };
 
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) {
-      await supabase.auth.signOut();
-      clearAuthRedirectFromUrl();
-      setSubmitting(false);
+  const handleEmailSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !password) return;
+    setEmailLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
+    });
+    setEmailLoading(false);
+    if (error) {
       toast({
         title: "Sign-in failed",
-        description: "The returned Google session could not be validated. Please try again.",
+        description: "Invalid email or password",
         variant: "destructive",
       });
     }
@@ -112,16 +116,64 @@ const SignInScreen = () => {
         <Button
           type="button"
           onClick={handleGoogle}
-          disabled={submitting}
+          disabled={googleLoading || emailLoading}
           className="w-full gap-3 bg-white font-semibold text-slate-900 hover:bg-white/90"
           style={{ height: 44, boxShadow: "0 0 24px rgba(0,240,255,0.18)" }}
         >
           <GoogleIcon />
-          {submitting ? "Redirecting…" : "Sign in with Google"}
+          {googleLoading ? "Redirecting…" : "Sign in with Google"}
         </Button>
 
+        <div className="my-5 flex items-center gap-3">
+          <div className="h-px flex-1" style={{ background: "linear-gradient(90deg, transparent, rgba(0,240,255,0.3))" }} />
+          <span className="text-[10px] uppercase tracking-widest text-muted-foreground">or sign in with email</span>
+          <div className="h-px flex-1" style={{ background: "linear-gradient(90deg, rgba(255,45,149,0.3), transparent)" }} />
+        </div>
+
+        <form onSubmit={handleEmailSignIn} className="space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="email" className="text-xs">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@regals.cz"
+              className="bg-background/40"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="password" className="text-xs">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              className="bg-background/40"
+            />
+          </div>
+          <Button
+            type="submit"
+            disabled={emailLoading || googleLoading || !email || !password}
+            className="w-full font-semibold"
+            style={{
+              height: 42,
+              background: "linear-gradient(90deg, #00f0ff, #ff2d95)",
+              color: "#06061a",
+              boxShadow: "0 0 18px rgba(255,45,149,0.35)",
+            }}
+          >
+            {emailLoading ? "Signing in…" : "Sign In"}
+          </Button>
+        </form>
+
         <p className="mt-4 text-center text-[11px] text-muted-foreground">
-          Access restricted to invited team members.
+          Access restricted to invited team members. Contact an admin for an account.
         </p>
       </Card>
     </div>
