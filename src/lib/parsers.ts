@@ -46,6 +46,7 @@ export const parseRow = (
   country: string,
   rowIndex: number,
 ): CampaignEntry => {
+  // noop
   const offset = detectColumnOffset(row);
   const c = (i: number) => cleanCell(row[i + offset]);
   const fallbackCurrency = defaultCurrencyForCountry(country);
