@@ -41,12 +41,28 @@ const normalizePlatform = (raw: string): Platform => {
   return "YouTube";
 };
 
+/** Accept only Instagram/YouTube/TikTok URLs. Returns "" for labels,
+ *  Drive links, or any non-platform value. */
+export const sanitizeVideoUrl = (raw: string): string => {
+  const s = (raw ?? "").trim();
+  if (!s) return "";
+  if (!/^https?:\/\//i.test(s)) return "";
+  try {
+    const host = new URL(s).hostname.toLowerCase();
+    if (/(^|\.)(instagram\.com|youtube\.com|youtu\.be|tiktok\.com)$/.test(host)) {
+      return s;
+    }
+    return "";
+  } catch {
+    return "";
+  }
+};
+
 export const parseRow = (
   row: unknown[],
   country: string,
   rowIndex: number,
 ): CampaignEntry => {
-  // noop
   const offset = detectColumnOffset(row);
   const c = (i: number) => cleanCell(row[i + offset]);
   const fallbackCurrency = defaultCurrencyForCountry(country);
