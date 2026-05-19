@@ -63,28 +63,26 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
     }
     setLoading(true);
     try {
-      // Claim row by email if not yet linked + update last_login
-      const { data: claimed, error: claimError } = await supabase.rpc("claim_user_role" as never);
-      if (claimError) throw claimError;
-
-      let row = (claimed as { role?: AppRole; display_name?: string | null; is_owner?: boolean } | null) ?? null;
-      if (!row) {
-        const { data, error } = await supabase
-          .from("user_roles")
-          .select("role, display_name, is_owner")
-          .eq("user_id", u.id)
-          .maybeSingle();
-        if (error) throw error;
-        row = data as typeof row;
-      }
-      setRole((row?.role as AppRole) ?? null);
-      setIsOwner(Boolean(row?.is_owner));
+      // Direct query by email (no RPC). RLS allows users to read their own row.
+      const email = (u.email ?? "").toLowerCase();
+      const { data: row, error } = await supabase
+        .from("user_roles")
+        .select("role, display_name, is_owner")
+        .eq("email", email)
+        .maybeSingle();
+      if (error) throw error;
+      const nextRole = (row?.role as AppRole | undefined) ?? null;
+      const nextOwner = Boolean(row?.is_owner);
+      setRole(nextRole);
+      setIsOwner(nextOwner);
       setDisplayName(
-        (row?.display_name as string | null) ??
+        (row?.display_name as string | null | undefined) ??
           (u.user_metadata?.full_name as string | undefined) ??
           (u.user_metadata?.name as string | undefined) ??
           null,
       );
+      // eslint-disable-next-line no-console
+      console.log(`User logged in as: ${email}, role: ${nextRole}, is_owner: ${nextOwner}`);
     } catch (error) {
       console.error("[Auth] Failed to load user role", error);
       setRole(null);
