@@ -59,7 +59,7 @@ export const parseRow = (
     platform: normalizePlatform(c(2)),
     publishDate: c(3),
     publishDateIso: null,
-    videoLink: c(4),
+    videoLink: sanitizeVideoUrl(c(4)),
     collaborationType: c(5),
     currency: detectCurrency(`${c(6)} ${c(14)}`, fallbackCurrency),
     campaignCost: parseCzechNumber(c(6)),

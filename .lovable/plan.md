@@ -1,59 +1,46 @@
-## Plan: Google OAuth + Role-Based Access Control
+## Goal
+Stop the Google Sheets importer from writing non-URL values (e.g. "Stories", arbitrary text, Drive links) into `campaigns.video_url`, and clean up the bad rows already in the database.
 
-### 1. Database (migration)
-Create `app_role` enum (`admin`, `editor`, `viewer`) and `user_roles` table:
-- `id`, `user_id` (uuid, nullable — filled on first login), `email` (text, unique), `display_name`, `role` (app_role), `last_login_at`, `created_at`, `updated_at`
-- RLS: everyone authenticated can SELECT their own row; admins can SELECT/INSERT/UPDATE/DELETE all rows
-- Security definer function `has_role(_user_id uuid, _role app_role)` and `current_user_role()` for RLS without recursion
-- Function `claim_user_role()` — called on login: matches `auth.users.email` to `user_roles.email` where `user_id IS NULL`, fills in `user_id`, updates `last_login_at`
-- Seed initial admin (ask user for email — see below)
+## Root cause
+`src/lib/parsers.ts` maps spreadsheet column 4 to `videoLink`, and `src/components/ImportFromSheets.tsx` (line 288) passes that value straight to `campaigns.video_url`. When a row has "Stories" (or any label) in column 4 instead of an actual Instagram/YouTube URL, the label is persisted.
 
-### 2. Auth migration
-- Enable Google OAuth via Lovable Cloud managed social login (`configure_social_auth` with `providers: ["google"]`, disable `email`)
-- Replace `LoginGate.tsx` email/password form with "Sign in with Google" button using `lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin })`
-- Keep synthwave styling, regals.cz branding
+Current DB damage (audited): 7 rows with `video_url = "Stories"`, 1 row with a `drive.google.com` URL. All other rows are valid Instagram/YouTube/TikTok URLs.
 
-### 3. Role context
-New `src/hooks/useUserRole.ts`:
-- On auth state change: call `claim_user_role()` RPC, then `SELECT role, display_name FROM user_roles WHERE user_id = auth.uid()`
-- Returns `{ user, role, displayName, avatarUrl, loading }`
-- Expose via React context (`UserRoleProvider`) wrapping `<AppLayout>`
+## Changes
 
-### 4. Access gates
-- `LoginGate`: if logged in but no role row → show "Access Denied — Contact administrator" screen with logout button
-- `useCanEdit()` helper: `role === 'admin' || role === 'editor'`
-- `useIsAdmin()` helper
+### 1. `src/lib/parsers.ts`
+Add a small `sanitizeVideoUrl(raw)` helper:
+- Trim.
+- Accept only values that start with `http://` or `https://` AND whose host matches `instagram.com`, `youtube.com`, `youtu.be`, or `tiktok.com` (sub-domains allowed).
+- Reject Google Drive, Google Docs, and any non-URL text. Returns `""`.
 
-### 5. UI hiding (viewers = read-only)
-Wrap or conditionally render Add/Edit/Delete/Approve/Dismiss buttons in:
-- `Dashboard`, `Creators` (Add Creator, edit panels), `Products` (Add Product, edit), `Scanner` (Approve/Dismiss), `Alerts`, `DealsSection`, `CampaignDialog` triggers, `CreatorLeaderboard` actions, `InfluencerDetailPanel`, `DealDialog`, `DealCell`, `ProductDialog`, `CreatorDialog`, `QuickStoryDialog`, `DuplicateCleanup`, `ImportFromSheets`
-- Pattern: `{canEdit && <Button>Add…</Button>}`
+Apply it in `parseRow`:
+```ts
+videoLink: sanitizeVideoUrl(c(4)),
+```
 
-### 6. Sidebar footer
-- Replace plain Logout button with: Google avatar (from `user.user_metadata.avatar_url`), name (`user_metadata.full_name`), email below, then Logout button
-- Show role badge (admin/editor/viewer)
+This keeps `videoLink` as `string` (existing type) — invalid values just become empty.
 
-### 7. User Management (admin only)
-New `src/components/UserManagement.tsx` rendered inside `SettingsDialog`, only when `isAdmin`:
-- Table of all `user_roles` rows: email, display_name, role (select), last_login_at, actions
-- "Add user" form: email + role + optional display_name
-- Edit role inline; Remove button (disabled when row.user_id === current user.id)
-- All mutations via Supabase client (RLS enforces admin-only)
+### 2. `src/components/ImportFromSheets.tsx`
+No mapping change needed once parser is fixed; line 288 already does `r.videoLink || null`, so empty becomes `null`.
 
-### 8. Files
-**Create**
-- `supabase/migrations/<ts>_user_roles.sql`
-- `src/hooks/useUserRole.tsx` (context + hook)
-- `src/components/UserManagement.tsx`
-- `src/components/AccessDenied.tsx`
+Add one defensive guard right before building `campaignRows`: log a warning count of rows whose original column-4 value was dropped, so future imports surface bad sheet data (optional, useful for QA).
 
-**Modify**
-- `src/components/LoginGate.tsx` — Google button + access-denied gate + provider
-- `src/components/AppSidebar.tsx` — avatar/name footer, role badge
-- `src/components/SettingsDialog.tsx` — mount UserManagement when admin
-- `src/components/AppLayout.tsx` — wrap with UserRoleProvider
-- All pages/components with mutating buttons — gate with `canEdit`/`isAdmin`
-- `src/integrations/lovable/*` — auto-generated by `configure_social_auth`
+### 3. Data cleanup migration
+One SQL migration that nulls the 8 bad rows:
+```sql
+UPDATE public.campaigns
+SET video_url = NULL
+WHERE video_url IS NOT NULL
+  AND video_url !~* '^https?://([a-z0-9-]+\.)*(instagram\.com|youtube\.com|youtu\.be|tiktok\.com)/';
+```
+No row deletion — only the malformed `video_url` is cleared so the rest of the campaign data is preserved.
 
-### Question to confirm before running migration
-Need the **initial admin email** to seed into `user_roles` (otherwise the first Google login will be denied with no way to grant roles). Default suggestion: ask user.
+## Out of scope
+- ApproveDialog defensive guard (option 2) — not changing, since `detected_videos.video_url` is already guaranteed-URL from the scanner.
+- Importer UI redesign.
+
+## Verification
+1. Re-run audit query — expect 0 rows with non-platform video_url.
+2. Spot-check a known-good Instagram and YouTube import row remains intact.
+3. Re-import a sheet with a "Stories" label in column E → row inserts with `video_url = NULL` instead of "Stories".
