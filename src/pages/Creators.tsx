@@ -207,6 +207,22 @@ const Creators = () => {
   const [mergeOpen, setMergeOpen] = useState(false);
   const [keepCreatorId, setKeepCreatorId] = useState<string>("");
 
+  /** Open the detail panel and persist the selection in the URL (?id=). */
+  const openDetail = (creator: InfluencerRecord) => {
+    setDetailCreator(creator);
+    const next = new URLSearchParams(searchParams);
+    next.set("id", creator.id);
+    setSearchParams(next, { replace: true });
+  };
+  const closeDetail = () => {
+    setDetailCreator(null);
+    const next = new URLSearchParams(searchParams);
+    if (next.has("id")) {
+      next.delete("id");
+      setSearchParams(next, { replace: true });
+    }
+  };
+
   const load = async () => {
     setLoading(true);
     const [{ data: infl, error: inflError }, { data: camps, error: campError }] = await Promise.all([
@@ -228,15 +244,21 @@ const Creators = () => {
 
   useEffect(() => { void load(); }, []);
 
-  // Open detail panel when navigated to /creators?focus=<id>
+  // Open detail panel when navigated to /creators?focus=<id> or ?id=<id>
   useEffect(() => {
+    if (!influencers.length) return;
     const focusId = searchParams.get("focus");
-    if (!focusId || !influencers.length) return;
-    const target = influencers.find((c) => c.id === focusId);
-    if (target) setDetailCreator(target);
-    const next = new URLSearchParams(searchParams);
-    next.delete("focus");
-    setSearchParams(next, { replace: true });
+    const idParam = searchParams.get("id");
+    const targetId = focusId ?? idParam;
+    if (!targetId) return;
+    const target = influencers.find((c) => c.id === targetId);
+    if (target && target.id !== detailCreator?.id) setDetailCreator(target);
+    if (focusId) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("focus");
+      if (target) next.set("id", target.id);
+      setSearchParams(next, { replace: true });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [influencers]);
 
@@ -482,7 +504,7 @@ const Creators = () => {
                 podium={sortBy === "score" && sortOrder === "desc"}
                 selected={selectedCreators.includes(creator.id)}
                 onSelect={(checked) => toggleSelectedCreator(creator.id, checked)}
-                onOpen={() => setDetailCreator(creator)}
+                onOpen={() => openDetail(creator)}
                 onAddCampaign={() => openCampaign(creator.id)}
                 onEdit={() => { setEditing(creator); setCreatorOpen(true); }}
                 onTogglePause={() => togglePause(creator)}
@@ -495,7 +517,7 @@ const Creators = () => {
 
       <CreatorDialog open={creatorOpen} onOpenChange={setCreatorOpen} editing={editing} onSaved={() => { setCreatorOpen(false); void load(); }} />
       <CampaignDialog open={campaignOpen} onOpenChange={setCampaignOpen} editing={editingCampaign} initialInfluencerId={campaignInfluencerId} onSaved={() => { setCampaignOpen(false); setEditingCampaign(null); void load(); }} />
-      <InfluencerDetailPanel creator={detailCreator} campaigns={detailCreator ? campaignGroups.get(detailCreator.id) ?? [] : []} onClose={() => setDetailCreator(null)} onEditInfluencer={() => { setEditing(detailCreator); setCreatorOpen(true); }} onAddCampaign={() => detailCreator && openCampaign(detailCreator.id)} onEditCampaign={(campaign) => { setEditingCampaign(campaign); setCampaignOpen(true); }} onChanged={load} />
+      <InfluencerDetailPanel creator={detailCreator} campaigns={detailCreator ? campaignGroups.get(detailCreator.id) ?? [] : []} onClose={closeDetail} onEditInfluencer={() => { setEditing(detailCreator); setCreatorOpen(true); }} onAddCampaign={() => detailCreator && openCampaign(detailCreator.id)} onEditCampaign={(campaign) => { setEditingCampaign(campaign); setCampaignOpen(true); }} onChanged={load} />
 
       <AlertDialog open={mergeOpen} onOpenChange={setMergeOpen}>
         <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Merge selected creators?</AlertDialogTitle><AlertDialogDescription>Choose which profile to keep. Campaigns from the other creator will be reassigned before that duplicate is deleted.</AlertDialogDescription></AlertDialogHeader><div className="space-y-2 py-2"><Select value={keepCreatorId} onValueChange={setKeepCreatorId}><SelectTrigger><SelectValue placeholder="Creator to keep" /></SelectTrigger><SelectContent>{selectedCreators.map((id) => { const creator = influencers.find((row) => row.id === id); return creator ? <SelectItem key={id} value={id}>Keep {creator.name} ({creator.country})</SelectItem> : null; })}</SelectContent></Select></div><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={mergeCreators}>Merge creators</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
