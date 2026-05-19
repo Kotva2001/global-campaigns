@@ -203,6 +203,7 @@ export const CampaignDialog = ({ open, onOpenChange, editing, initialInfluencerI
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[92vh] overflow-y-auto border-border bg-card sm:max-w-2xl">
         <DialogHeader>
