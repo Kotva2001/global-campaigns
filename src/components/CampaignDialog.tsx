@@ -279,12 +279,34 @@ export const CampaignDialog = ({ open, onOpenChange, editing, initialInfluencerI
         </Collapsible>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={submit} disabled={saving}>{saving ? "Saving…" : editing ? "Save" : "Add campaign"}</Button>
+          <div className="flex w-full items-center justify-between gap-2">
+            {editing && (
+              <Button variant="ghost" size="sm" className="gap-2 text-destructive hover:text-destructive" onClick={() => setConfirmDelete(true)}>
+                <Trash2 className="h-4 w-4" /> Delete
+              </Button>
+            )}
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+              <Button onClick={submit} disabled={saving}>{saving ? "Saving…" : editing ? "Save" : "Add campaign"}</Button>
+            </div>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+
+    <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete this campaign?</AlertDialogTitle>
+          <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => setConfirmDelete(false)}>Cancel</AlertDialogCancel>
+          <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={deleteCampaign}>Delete</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  </>);
 };
 
 const Field = ({ label, error, required, className, children }: { label: string; error?: string; required?: boolean; className?: string; children: React.ReactNode }) => (
