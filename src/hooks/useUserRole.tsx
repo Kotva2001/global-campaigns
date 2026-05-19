@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import type { User } from "@supabase/supabase-js";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
 export type AppRole = "admin" | "editor" | "viewer";
@@ -51,9 +51,12 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [loading, setLoading] = useState(true);
+  const currentSessionRef = useRef<Session | null>(null);
+  const roleLoadedForUserRef = useRef<string | null>(null);
 
   const loadRole = async (u: User | null) => {
     if (!u) {
+      roleLoadedForUserRef.current = null;
       setUser(null);
       setRole(null);
       setDisplayName(null);
@@ -76,6 +79,7 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
       if (error) throw error;
       const nextRole: AppRole = (row?.role as AppRole | undefined) ?? "viewer";
       const nextOwner = Boolean(row?.is_owner);
+      roleLoadedForUserRef.current = u.id;
       setRole(nextRole);
       setIsOwner(nextOwner);
       setDisplayName(
@@ -105,30 +109,40 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
     // Set up listener BEFORE checking session.
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       const u = session?.user ?? null;
+      const previousSession = currentSessionRef.current;
+      const sameUser = previousSession?.user?.id === u?.id;
+      const sameSession = sameUser && previousSession?.access_token === session?.access_token;
+      currentSessionRef.current = session;
+
       // Avoid reloading role / re-rendering on benign events that fire when
-      // the tab regains focus (TOKEN_REFRESHED, USER_UPDATED, INITIAL_SESSION
-      // for an already-known user). Only react to real sign-in / sign-out.
+      // the tab regains focus. Only sign-out may clear app state. Repeated
+      // sign-in/token events for the same user must preserve mounted children.
       if (event === "SIGNED_OUT") {
-        setUser(null);
-        void loadRole(null);
+        if (previousSession || user) {
+          setUser(null);
+          void loadRole(null);
+        }
         clearAllSessionStorage();
         try { localStorage.removeItem(LAST_ACTIVITY_KEY); } catch { /* */ }
         return;
       }
-      if (event === "SIGNED_IN") {
-        setUser((prev) => (prev?.id === u?.id ? prev : u));
-        if (u && role === null) void loadRole(u);
+      if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
+        if (!sameUser && u) setUser(u);
+        if (u && roleLoadedForUserRef.current !== u.id) void loadRole(u);
         try { localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now())); } catch { /* */ }
         return;
       }
-      if (event === "TOKEN_REFRESHED") {
+      if (event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
+        if (!sameSession && !sameUser && u) setUser(u);
         try { localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now())); } catch { /* */ }
         return;
       }
     });
 
     supabase.auth.getSession().then(({ data }) => {
-      const u = data.session?.user ?? null;
+      const session = data.session ?? null;
+      const u = session?.user ?? null;
+      currentSessionRef.current = session;
       setUser(u);
       void loadRole(u);
     });
@@ -148,7 +162,6 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
         if (Date.now() - last > INACTIVITY_MS) {
           await supabase.auth.signOut();
           clearAllSessionStorage();
-          window.location.reload();
         }
       } catch { /* */ }
     };

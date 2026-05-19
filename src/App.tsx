@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -23,50 +24,56 @@ const queryClient = new QueryClient({
   },
 });
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route
-            path="*"
-            element={
-              <LoginGate>
-                <Routes>
-                  <Route element={<AppLayout />}>
-                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/creators" element={<Creators />} />
-                    <Route path="/products" element={<Products />} />
-                    <Route path="/analytics" element={<Analytics />} />
-                    <Route
-                      path="/alerts"
-                      element={
-                        <RequireRole allow={["admin", "editor"]}>
-                          <Alerts />
-                        </RequireRole>
-                      }
-                    />
-                    <Route
-                      path="/scanner"
-                      element={
-                        <RequireRole allow={["admin", "editor"]}>
-                          <Scanner />
-                        </RequireRole>
-                      }
-                    />
-                  </Route>
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </LoginGate>
-            }
-          />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  useEffect(() => {
+    console.log("APP ROOT RE-MOUNTED");
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route
+              path="*"
+              element={
+                <LoginGate>
+                  <Routes>
+                    <Route element={<AppLayout />}>
+                      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                      <Route path="/dashboard" element={<Dashboard />} />
+                      <Route path="/creators" element={<Creators />} />
+                      <Route path="/products" element={<Products />} />
+                      <Route path="/analytics" element={<Analytics />} />
+                      <Route
+                        path="/alerts"
+                        element={
+                          <RequireRole allow={["admin", "editor"]}>
+                            <Alerts />
+                          </RequireRole>
+                        }
+                      />
+                      <Route
+                        path="/scanner"
+                        element={
+                          <RequireRole allow={["admin", "editor"]}>
+                            <Scanner />
+                          </RequireRole>
+                        }
+                      />
+                    </Route>
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </LoginGate>
+              }
+            />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
