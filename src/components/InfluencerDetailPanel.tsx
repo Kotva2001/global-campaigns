@@ -582,7 +582,7 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this campaign?</AlertDialogTitle>
-            <AlertDialogDescription>Delete this campaign by {deleteCampaign?.influencer} for {deleteCampaign?.campaignName || "—"} on {deleteCampaign?.publishDate || "—"}?</AlertDialogDescription>
+            <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
