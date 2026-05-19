@@ -188,6 +188,20 @@ export const CampaignDialog = ({ open, onOpenChange, editing, initialInfluencerI
     toast.message("Create the influencer on the Creators page first, then add their campaign.");
   };
 
+  const deleteCampaign = async () => {
+    if (!editing) return;
+    setSaving(true);
+    const { error } = await supabase.from("campaigns").delete().eq("id", editing.id);
+    setSaving(false);
+    if (error) {
+      toastError("Could not delete campaign", error);
+      return;
+    }
+    toast.success("Campaign deleted");
+    setConfirmDelete(false);
+    onSaved();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[92vh] overflow-y-auto border-border bg-card sm:max-w-2xl">
