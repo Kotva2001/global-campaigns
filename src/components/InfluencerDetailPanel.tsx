@@ -539,7 +539,7 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
                             <td className="whitespace-nowrap px-3 py-2.5">
                               <div className="flex justify-end gap-1">
                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEditCampaign?.(campaign)}><Edit3 className="h-4 w-4" /></Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100" onClick={() => setDeleteCampaign(campaign)}><Trash2 className="h-4 w-4" /></Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteCampaign(campaign)} aria-label="Delete campaign"><Trash2 className="h-4 w-4" /></Button>
                               </div>
                             </td>
                           </tr>
