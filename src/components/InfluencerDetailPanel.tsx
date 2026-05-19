@@ -536,10 +536,18 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
                             <td className="whitespace-nowrap px-3 py-2.5 text-right"><EditableNumberCell value={campaign.purchaseRevenue} campaignId={campaign.id} field="purchaseRevenue" currency={campaign.currency} formatAs="currency" flashed={!!flashedCells[`${campaign.id}:purchaseRevenue`]} flash={flash} onChanged={onChanged} /></td>
                             <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-muted-foreground">{formatPercent(campaign.engagementRate)}</td>
                             <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-muted-foreground">{formatPercent(campaign.conversionRate)}</td>
-                            <td className="whitespace-nowrap px-3 py-2.5">
+                            <td className="sticky right-0 whitespace-nowrap bg-card px-3 py-2.5 group-hover:bg-card-hover">
                               <div className="flex justify-end gap-1">
                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEditCampaign?.(campaign)}><Edit3 className="h-4 w-4" /></Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteCampaign(campaign)} aria-label="Delete campaign"><Trash2 className="h-4 w-4" /></Button>
+                                <button
+                                  type="button"
+                                  onClick={() => setDeleteCampaign(campaign)}
+                                  aria-label="Delete campaign"
+                                  title="Delete campaign"
+                                  className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-red-500 hover:bg-red-500/10 hover:text-red-600"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
                               </div>
                             </td>
                           </tr>
