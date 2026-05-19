@@ -95,6 +95,7 @@ export const CampaignDialog = ({ open, onOpenChange, editing, initialInfluencerI
   const [saving, setSaving] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
   const [creatorName, setCreatorName] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     if (!open) return;
