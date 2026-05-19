@@ -162,7 +162,6 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
         if (Date.now() - last > INACTIVITY_MS) {
           await supabase.auth.signOut();
           clearAllSessionStorage();
-          window.location.reload();
         }
       } catch { /* */ }
     };
