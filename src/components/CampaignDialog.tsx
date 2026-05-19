@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
-import { CalendarIcon, Plus } from "lucide-react";
+import { CalendarIcon, Plus, Trash2 } from "lucide-react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { toastError } from "@/lib/toast-helpers";
@@ -18,6 +18,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const PLATFORMS: Platform[] = ["YouTube", "Instagram", "YB Shorts", "Story"];
 const COLLAB_TYPES = ["Barter", "Paid", "Gifted", "Affiliate", "Other"];
@@ -91,6 +95,7 @@ export const CampaignDialog = ({ open, onOpenChange, editing, initialInfluencerI
   const [saving, setSaving] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
   const [creatorName, setCreatorName] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -183,7 +188,22 @@ export const CampaignDialog = ({ open, onOpenChange, editing, initialInfluencerI
     toast.message("Create the influencer on the Creators page first, then add their campaign.");
   };
 
+  const deleteCampaign = async () => {
+    if (!editing) return;
+    setSaving(true);
+    const { error } = await supabase.from("campaigns").delete().eq("id", editing.id);
+    setSaving(false);
+    if (error) {
+      toastError("Could not delete campaign", error);
+      return;
+    }
+    toast.success("Campaign deleted");
+    setConfirmDelete(false);
+    onSaved();
+  };
+
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[92vh] overflow-y-auto border-border bg-card sm:max-w-2xl">
         <DialogHeader>
@@ -260,12 +280,34 @@ export const CampaignDialog = ({ open, onOpenChange, editing, initialInfluencerI
         </Collapsible>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={submit} disabled={saving}>{saving ? "Saving…" : editing ? "Save" : "Add campaign"}</Button>
+          <div className="flex w-full items-center justify-between gap-2">
+            {editing && (
+              <Button variant="ghost" size="sm" className="gap-2 text-destructive hover:text-destructive" onClick={() => setConfirmDelete(true)}>
+                <Trash2 className="h-4 w-4" /> Delete
+              </Button>
+            )}
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+              <Button onClick={submit} disabled={saving}>{saving ? "Saving…" : editing ? "Save" : "Add campaign"}</Button>
+            </div>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+
+    <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete this campaign?</AlertDialogTitle>
+          <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => setConfirmDelete(false)}>Cancel</AlertDialogCancel>
+          <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={deleteCampaign}>Delete</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  </>);
 };
 
 const Field = ({ label, error, required, className, children }: { label: string; error?: string; required?: boolean; className?: string; children: React.ReactNode }) => (
