@@ -7,7 +7,7 @@ import { componentTagger } from "lovable-tagger";
 export default defineConfig(({ mode }) => ({
   define: {
     "import.meta.env.VITE_SUPABASE_URL": JSON.stringify("https://vnggokmmxkiazkgkrdqs.supabase.co"),
-    "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJheHFhYXNwa3F3cGVra3FpeWphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2OTI2NDksImV4cCI6MjA5MjI2ODY0OX0.D6oeCOsq0eAslB6u5d6Sem522kDsjqhHmw39GRiJySI"),
+    "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZuZ2dva21teGtpYXprZ2tyZHFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4NTYzMDQsImV4cCI6MjA5MjQzMjMwNH0.Nur-y2ERqUbkO--ZuEJ6McbbjWmB38Z-zYhlQ71VIp4"),
   },
   server: {
     host: "::",
