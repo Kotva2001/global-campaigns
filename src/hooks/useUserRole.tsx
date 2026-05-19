@@ -61,7 +61,10 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    // Only show the loading skeleton on the very first load. Subsequent
+    // refreshes (e.g. TOKEN_REFRESHED when returning to the tab) must not
+    // flip loading back to true, which would unmount the entire app.
+    setLoading((prev) => (role === null ? true : prev));
     try {
       // Direct query by email (no RPC). Default to least-privileged 'viewer' on any failure.
       const email = (u.email ?? "").toLowerCase();
@@ -102,14 +105,25 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
     // Set up listener BEFORE checking session.
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       const u = session?.user ?? null;
-      setUser(u);
-      void loadRole(u);
+      // Avoid reloading role / re-rendering on benign events that fire when
+      // the tab regains focus (TOKEN_REFRESHED, USER_UPDATED, INITIAL_SESSION
+      // for an already-known user). Only react to real sign-in / sign-out.
       if (event === "SIGNED_OUT") {
+        setUser(null);
+        void loadRole(null);
         clearAllSessionStorage();
         try { localStorage.removeItem(LAST_ACTIVITY_KEY); } catch { /* */ }
+        return;
       }
-      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+      if (event === "SIGNED_IN") {
+        setUser((prev) => (prev?.id === u?.id ? prev : u));
+        if (u && role === null) void loadRole(u);
         try { localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now())); } catch { /* */ }
+        return;
+      }
+      if (event === "TOKEN_REFRESHED") {
+        try { localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now())); } catch { /* */ }
+        return;
       }
     });
 
