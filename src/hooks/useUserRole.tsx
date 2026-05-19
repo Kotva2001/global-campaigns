@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import type { User } from "@supabase/supabase-js";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
 export type AppRole = "admin" | "editor" | "viewer";
@@ -51,9 +51,12 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [loading, setLoading] = useState(true);
+  const currentSessionRef = useRef<Session | null>(null);
+  const roleLoadedForUserRef = useRef<string | null>(null);
 
   const loadRole = async (u: User | null) => {
     if (!u) {
+      roleLoadedForUserRef.current = null;
       setUser(null);
       setRole(null);
       setDisplayName(null);
@@ -76,6 +79,7 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
       if (error) throw error;
       const nextRole: AppRole = (row?.role as AppRole | undefined) ?? "viewer";
       const nextOwner = Boolean(row?.is_owner);
+      roleLoadedForUserRef.current = u.id;
       setRole(nextRole);
       setIsOwner(nextOwner);
       setDisplayName(
