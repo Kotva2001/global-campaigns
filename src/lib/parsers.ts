@@ -41,6 +41,23 @@ const normalizePlatform = (raw: string): Platform => {
   return "YouTube";
 };
 
+/** Accept only Instagram/YouTube/TikTok URLs. Returns "" for labels,
+ *  Drive links, or any non-platform value. */
+export const sanitizeVideoUrl = (raw: string): string => {
+  const s = (raw ?? "").trim();
+  if (!s) return "";
+  if (!/^https?:\/\//i.test(s)) return "";
+  try {
+    const host = new URL(s).hostname.toLowerCase();
+    if (/(^|\.)(instagram\.com|youtube\.com|youtu\.be|tiktok\.com)$/.test(host)) {
+      return s;
+    }
+    return "";
+  } catch {
+    return "";
+  }
+};
+
 export const parseRow = (
   row: unknown[],
   country: string,
@@ -59,7 +76,7 @@ export const parseRow = (
     platform: normalizePlatform(c(2)),
     publishDate: c(3),
     publishDateIso: null,
-    videoLink: c(4),
+    videoLink: sanitizeVideoUrl(c(4)),
     collaborationType: c(5),
     currency: detectCurrency(`${c(6)} ${c(14)}`, fallbackCurrency),
     campaignCost: parseCzechNumber(c(6)),
