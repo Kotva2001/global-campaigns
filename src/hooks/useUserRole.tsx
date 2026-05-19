@@ -4,6 +4,25 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type AppRole = "admin" | "editor" | "viewer";
 
+const INACTIVITY_MS = 24 * 60 * 60 * 1000; // 24h
+const LAST_ACTIVITY_KEY = "auth:lastActivity";
+
+export const clearAllSessionStorage = () => {
+  try {
+    // Clear supabase-related and app keys; leave nothing behind.
+    const keep: string[] = [];
+    const drop: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && !keep.includes(k)) drop.push(k);
+    }
+    drop.forEach((k) => localStorage.removeItem(k));
+    sessionStorage.clear();
+  } catch {
+    /* ignore */
+  }
+};
+
 type Ctx = {
   user: User | null;
   role: AppRole | null;
@@ -82,6 +101,13 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
       const u = session?.user ?? null;
       setUser(u);
       void loadRole(u);
+      if (event === "SIGNED_OUT") {
+        clearAllSessionStorage();
+        try { localStorage.removeItem(LAST_ACTIVITY_KEY); } catch { /* */ }
+      }
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        try { localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now())); } catch { /* */ }
+      }
     });
 
     supabase.auth.getSession().then(({ data }) => {
@@ -92,6 +118,33 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
 
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  // Inactivity auto-logout (24h)
+  useEffect(() => {
+    if (!user) return;
+    const touch = () => {
+      try { localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now())); } catch { /* */ }
+    };
+    const check = async () => {
+      try {
+        const last = Number(localStorage.getItem(LAST_ACTIVITY_KEY) ?? Date.now());
+        if (Date.now() - last > INACTIVITY_MS) {
+          await supabase.auth.signOut();
+          clearAllSessionStorage();
+          window.location.reload();
+        }
+      } catch { /* */ }
+    };
+    touch();
+    const events: (keyof WindowEventMap)[] = ["mousemove", "keydown", "click", "scroll", "touchstart"];
+    events.forEach((e) => window.addEventListener(e, touch, { passive: true }));
+    const interval = window.setInterval(check, 60_000);
+    void check();
+    return () => {
+      events.forEach((e) => window.removeEventListener(e, touch));
+      window.clearInterval(interval);
+    };
+  }, [user]);
 
   // Reflect role on <html> for global CSS gating
   useEffect(() => {
