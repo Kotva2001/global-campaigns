@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "./components/AppLayout";
 import { LoginGate } from "./components/LoginGate";
+import { RequireRole } from "./components/RequireRole";
 import Dashboard from "./pages/Dashboard";
 import Scanner from "./pages/Scanner";
 import Creators from "./pages/Creators";
@@ -33,8 +34,22 @@ const App = () => (
                     <Route path="/creators" element={<Creators />} />
                     <Route path="/products" element={<Products />} />
                     <Route path="/analytics" element={<Analytics />} />
-                    <Route path="/alerts" element={<Alerts />} />
-                    <Route path="/scanner" element={<Scanner />} />
+                    <Route
+                      path="/alerts"
+                      element={
+                        <RequireRole allow={["admin", "editor"]}>
+                          <Alerts />
+                        </RequireRole>
+                      }
+                    />
+                    <Route
+                      path="/scanner"
+                      element={
+                        <RequireRole allow={["admin", "editor"]}>
+                          <Scanner />
+                        </RequireRole>
+                      }
+                    />
                   </Route>
                   <Route path="*" element={<NotFound />} />
                 </Routes>
