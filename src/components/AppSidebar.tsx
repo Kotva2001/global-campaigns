@@ -18,7 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { useUserRole } from "@/hooks/useUserRole";
+import { useUserRole, clearAllSessionStorage, type AppRole } from "@/hooks/useUserRole";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 
@@ -33,15 +33,16 @@ type NavItem = {
   badgeKey: null | "alerts" | "scanner";
   accent: string;
   description: string;
+  roles: AppRole[];
 };
 
 const navItems: NavItem[] = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, badgeKey: null, accent: "#00f0ff", description: "Overview & KPIs" },
-  { to: "/creators", label: "Creators", icon: Users, badgeKey: null, accent: "#ff2d95", description: "Influencer roster" },
-  { to: "/products", label: "Products", icon: Package, badgeKey: null, accent: "#ff6b2b", description: "Product catalog" },
-  { to: "/analytics", label: "Analytics", icon: BarChart3, badgeKey: null, accent: "#b44dff", description: "Charts & insights" },
-  { to: "/alerts", label: "Alerts", icon: Bell, badgeKey: "alerts", accent: "#ff3366", description: "Threshold rules" },
-  { to: "/scanner", label: "Scanner", icon: Radar, badgeKey: "scanner", accent: "#39ff14", description: "Brand mentions" },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, badgeKey: null, accent: "#00f0ff", description: "Overview & KPIs", roles: ["admin", "editor", "viewer"] },
+  { to: "/creators", label: "Creators", icon: Users, badgeKey: null, accent: "#ff2d95", description: "Influencer roster", roles: ["admin", "editor", "viewer"] },
+  { to: "/products", label: "Products", icon: Package, badgeKey: null, accent: "#ff6b2b", description: "Product catalog", roles: ["admin", "editor", "viewer"] },
+  { to: "/analytics", label: "Analytics", icon: BarChart3, badgeKey: null, accent: "#b44dff", description: "Charts & insights", roles: ["admin", "editor", "viewer"] },
+  { to: "/alerts", label: "Alerts", icon: Bell, badgeKey: "alerts", accent: "#ff3366", description: "Threshold rules", roles: ["admin", "editor"] },
+  { to: "/scanner", label: "Scanner", icon: Radar, badgeKey: "scanner", accent: "#39ff14", description: "Brand mentions", roles: ["admin", "editor"] },
 ];
 
 const useBadgeCounts = () => {
@@ -101,6 +102,9 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
   const ticker = useTickerStats();
   const location = useLocation();
   const [pwOpen, setPwOpen] = useState(false);
+  const { role } = useUserRole();
+  const visibleNav = navItems.filter((n) => (role ? n.roles.includes(role) : false));
+  const isAdmin = role === "admin";
 
   return (
     <div
@@ -192,7 +196,7 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
 
       {/* Nav */}
       <nav className="relative flex-1 px-3 py-3 space-y-2">
-        {navItems.map((item) => {
+        {visibleNav.map((item) => {
           const Icon = item.icon;
           const active = location.pathname.startsWith(item.to);
           const badge =
@@ -292,6 +296,7 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
           </span>
           <span className="sb-label">Change password</span>
         </Button>
+        {isAdmin && (
         <Button
           variant="ghost"
           className="sb-item sb-item-settings w-full justify-start gap-3 rounded-lg font-medium"
@@ -306,12 +311,14 @@ const SidebarContent = ({ onOpenSettings, onNavigate }: Props & { onNavigate?: (
           </span>
           <span className="sb-label">Settings</span>
         </Button>
+        )}
         <Button
           variant="ghost"
           className="sb-item sb-item-danger mt-1 w-full justify-start gap-3 rounded-lg font-medium"
           style={{ height: 40, paddingLeft: 12, fontSize: 13 }}
           onClick={async () => {
             await supabase.auth.signOut();
+            clearAllSessionStorage();
             onNavigate?.();
           }}
         >
