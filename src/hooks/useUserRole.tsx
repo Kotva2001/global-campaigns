@@ -63,15 +63,15 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
     }
     setLoading(true);
     try {
-      // Direct query by email (no RPC). RLS allows users to read their own row.
+      // Direct query by email (no RPC). Default to least-privileged 'viewer' on any failure.
       const email = (u.email ?? "").toLowerCase();
       const { data: row, error } = await supabase
         .from("user_roles")
         .select("role, display_name, is_owner")
-        .eq("email", email)
+        .ilike("email", email)
         .maybeSingle();
       if (error) throw error;
-      const nextRole = (row?.role as AppRole | undefined) ?? null;
+      const nextRole: AppRole = (row?.role as AppRole | undefined) ?? "viewer";
       const nextOwner = Boolean(row?.is_owner);
       setRole(nextRole);
       setIsOwner(nextOwner);
@@ -82,12 +82,17 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
           null,
       );
       // eslint-disable-next-line no-console
-      console.log(`User logged in as: ${email}, role: ${nextRole}, is_owner: ${nextOwner}`);
+      console.log("Role loaded:", email, nextRole, nextOwner);
     } catch (error) {
       console.error("[Auth] Failed to load user role", error);
-      setRole(null);
-      setDisplayName(null);
+      // SECURITY: default to least-privileged role on failure, never admin.
+      setRole("viewer");
       setIsOwner(false);
+      setDisplayName(
+        (u.user_metadata?.full_name as string | undefined) ??
+          (u.user_metadata?.name as string | undefined) ??
+          null,
+      );
     } finally {
       setLoading(false);
     }
