@@ -207,6 +207,22 @@ const Creators = () => {
   const [mergeOpen, setMergeOpen] = useState(false);
   const [keepCreatorId, setKeepCreatorId] = useState<string>("");
 
+  /** Open the detail panel and persist the selection in the URL (?id=). */
+  const openDetail = (creator: InfluencerRecord) => {
+    setDetailCreator(creator);
+    const next = new URLSearchParams(searchParams);
+    next.set("id", creator.id);
+    setSearchParams(next, { replace: true });
+  };
+  const closeDetail = () => {
+    setDetailCreator(null);
+    const next = new URLSearchParams(searchParams);
+    if (next.has("id")) {
+      next.delete("id");
+      setSearchParams(next, { replace: true });
+    }
+  };
+
   const load = async () => {
     setLoading(true);
     const [{ data: infl, error: inflError }, { data: camps, error: campError }] = await Promise.all([
@@ -228,15 +244,21 @@ const Creators = () => {
 
   useEffect(() => { void load(); }, []);
 
-  // Open detail panel when navigated to /creators?focus=<id>
+  // Open detail panel when navigated to /creators?focus=<id> or ?id=<id>
   useEffect(() => {
+    if (!influencers.length) return;
     const focusId = searchParams.get("focus");
-    if (!focusId || !influencers.length) return;
-    const target = influencers.find((c) => c.id === focusId);
-    if (target) setDetailCreator(target);
-    const next = new URLSearchParams(searchParams);
-    next.delete("focus");
-    setSearchParams(next, { replace: true });
+    const idParam = searchParams.get("id");
+    const targetId = focusId ?? idParam;
+    if (!targetId) return;
+    const target = influencers.find((c) => c.id === targetId);
+    if (target && target.id !== detailCreator?.id) setDetailCreator(target);
+    if (focusId) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("focus");
+      if (target) next.set("id", target.id);
+      setSearchParams(next, { replace: true });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [influencers]);
 
