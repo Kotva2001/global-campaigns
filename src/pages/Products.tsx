@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ProductDialog } from "@/components/ProductDialog";
 import { formatCurrency } from "@/lib/formatters";
-import { searchProducts } from "@/lib/product-search";
 import type { ProductRecord } from "@/types/product";
 
 const Products = () => {
@@ -45,10 +44,14 @@ const Products = () => {
     setLoading(true);
     const trimmed = search.trim();
     if (trimmed) {
-      // Diacritics-insensitive search via RPC (no pagination — capped to 200 results).
-      const data = await searchProducts(trimmed, 200);
-      setProducts(data);
-      setTotalCount(data.length);
+      const { data, error } = await supabase.rpc("search_products", {
+        search_term: trimmed,
+        max_results: 50,
+      });
+      if (error) toastError("Could not search products", error);
+      const rows = (data ?? []) as ProductRecord[];
+      setProducts(rows);
+      setTotalCount(rows.length);
       setLoading(false);
       return;
     }
