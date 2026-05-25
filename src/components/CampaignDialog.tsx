@@ -96,6 +96,9 @@ export const CampaignDialog = ({ open, onOpenChange, editing, initialInfluencerI
   const [statsOpen, setStatsOpen] = useState(false);
   const [creatorName, setCreatorName] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [newInfluencerOpen, setNewInfluencerOpen] = useState(false);
+  const [newInfluencer, setNewInfluencer] = useState({ name: "", instagram: "", country: "CZ", status: "active" });
+  const [creatingInfluencer, setCreatingInfluencer] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -184,8 +187,30 @@ export const CampaignDialog = ({ open, onOpenChange, editing, initialInfluencerI
     onSaved();
   };
 
-  const createCreatorFirst = () => {
-    toast.message("Create the influencer on the Creators page first, then add their campaign.");
+  const createInfluencerInline = async () => {
+    const name = newInfluencer.name.trim();
+    const instagram = newInfluencer.instagram.trim();
+    if (!name) { toast.error("Name is required"); return; }
+    if (!instagram) { toast.error("Instagram handle is required"); return; }
+    setCreatingInfluencer(true);
+    const { data, error } = await supabase.from("influencers").insert({
+      name,
+      country: newInfluencer.country,
+      instagram_handle: [instagram],
+      platforms: ["Instagram"],
+      status: newInfluencer.status,
+    }).select().single();
+    setCreatingInfluencer(false);
+    if (error || !data) {
+      toastError("Could not create influencer", error);
+      return;
+    }
+    const created = data as InfluencerRecord;
+    setInfluencers((prev) => [...prev, created]);
+    setValues((prev) => ({ ...prev, influencerId: created.id, currency: defaultCurrencyForCountry(created.country) }));
+    setNewInfluencer({ name: "", instagram: "", country: "CZ", status: "active" });
+    setNewInfluencerOpen(false);
+    toast.success("Influencer created");
   };
 
   const deleteCampaign = async () => {
@@ -225,8 +250,45 @@ export const CampaignDialog = ({ open, onOpenChange, editing, initialInfluencerI
                   ))}
                 </SelectContent>
               </Select>
-              <Button type="button" variant="secondary" className="shrink-0 gap-2" onClick={createCreatorFirst}><Plus className="h-4 w-4" /> New</Button>
+              <Button type="button" variant="secondary" className="shrink-0 gap-2" onClick={() => setNewInfluencerOpen((v) => !v)}><Plus className="h-4 w-4" /> New</Button>
             </div>
+            {newInfluencerOpen && (
+              <div className="mt-2 space-y-2 rounded-md border border-border bg-muted/30 p-3">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Name *</Label>
+                    <Input value={newInfluencer.name} onChange={(e) => setNewInfluencer({ ...newInfluencer, name: e.target.value })} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Instagram handle *</Label>
+                    <Input value={newInfluencer.instagram} onChange={(e) => setNewInfluencer({ ...newInfluencer, instagram: e.target.value })} placeholder="@handle" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Country *</Label>
+                    <Select value={newInfluencer.country} onValueChange={(country) => setNewInfluencer({ ...newInfluencer, country })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {COUNTRIES.map((c) => <SelectItem key={c} value={c}>{COUNTRY_FLAGS[c]} {c}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Status</Label>
+                    <Select value={newInfluencer.status} onValueChange={(status) => setNewInfluencer({ ...newInfluencer, status })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setNewInfluencerOpen(false)}>Cancel</Button>
+                  <Button type="button" size="sm" onClick={createInfluencerInline} disabled={creatingInfluencer}>{creatingInfluencer ? "Creating…" : "Create influencer"}</Button>
+                </div>
+              </div>
+            )}
           </Field>
 
           <Field label="Campaign/Product Name" className="sm:col-span-2"><Input value={values.campaignName} onChange={(event) => setValues({ ...values, campaignName: event.target.value })} maxLength={240} /></Field>
