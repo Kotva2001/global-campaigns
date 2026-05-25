@@ -54,6 +54,7 @@ export const DealCell = ({ campaignId, influencerId, dealId, onChanged }: Props)
   }
 
   return (
+    <span data-mutate-cell className="inline-block">
     <Select open={open} onOpenChange={setOpen} value={dealId ?? "__none__"} onValueChange={onChange}>
       <SelectTrigger className="h-7 w-auto min-w-[80px] max-w-[180px] border-none bg-transparent px-2 py-0 text-xs shadow-none hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 [&>svg]:hidden">
         <SelectValue>
@@ -75,5 +76,6 @@ export const DealCell = ({ campaignId, influencerId, dealId, onChanged }: Props)
         {deals.length === 0 && <div className="px-2 py-1.5 text-xs text-muted-foreground">No deals yet for this influencer.</div>}
       </SelectContent>
     </Select>
+    </span>
   );
 };
