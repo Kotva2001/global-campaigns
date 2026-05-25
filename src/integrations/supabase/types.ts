@@ -512,7 +512,42 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      scan_settings_public: {
+        Row: {
+          auto_add_known_influencers: boolean | null
+          brand_keywords: string[] | null
+          eur_czk_rate: number | null
+          eur_czk_rate_updated_at: string | null
+          id: string | null
+          platforms_to_scan: string[] | null
+          scan_frequency_minutes: number | null
+          stats_refresh_frequency_minutes: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          auto_add_known_influencers?: boolean | null
+          brand_keywords?: string[] | null
+          eur_czk_rate?: number | null
+          eur_czk_rate_updated_at?: string | null
+          id?: string | null
+          platforms_to_scan?: string[] | null
+          scan_frequency_minutes?: number | null
+          stats_refresh_frequency_minutes?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          auto_add_known_influencers?: boolean | null
+          brand_keywords?: string[] | null
+          eur_czk_rate?: number | null
+          eur_czk_rate_updated_at?: string | null
+          id?: string | null
+          platforms_to_scan?: string[] | null
+          scan_frequency_minutes?: number | null
+          stats_refresh_frequency_minutes?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       can_edit: { Args: { _user_id: string }; Returns: boolean }
