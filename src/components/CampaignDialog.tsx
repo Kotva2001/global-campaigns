@@ -193,16 +193,22 @@ export const CampaignDialog = ({ open, onOpenChange, editing, initialInfluencerI
     if (!name) { toast.error("Name is required"); return; }
     if (!instagram) { toast.error("Instagram handle is required"); return; }
     setCreatingInfluencer(true);
+    const handle = instagram.replace(/^@+/, "");
     const { data, error } = await supabase.from("influencers").insert({
       name,
       country: newInfluencer.country,
-      instagram_handle: [instagram],
+      instagram_handle: [handle],
       platforms: ["Instagram"],
       status: newInfluencer.status,
     }).select().single();
     setCreatingInfluencer(false);
     if (error || !data) {
-      toastError("Could not create influencer", error);
+      console.error("[createInfluencerInline] insert failed", error);
+      toast.error("Could not create influencer", {
+        description: error?.message
+          ? `${error.message}${error.details ? ` — ${error.details}` : ""}${error.hint ? ` (${error.hint})` : ""}`
+          : "Unknown error — check console for details.",
+      });
       return;
     }
     const created = data as InfluencerRecord;
