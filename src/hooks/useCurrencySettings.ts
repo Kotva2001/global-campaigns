@@ -19,7 +19,7 @@ export const useCurrencySettings = () => {
   const [loadingRate, setLoadingRate] = useState(false);
 
   const loadRate = useCallback(async () => {
-    const { data, error } = await supabase.from("scan_settings").select("id, eur_czk_rate, eur_czk_rate_updated_at").limit(1).maybeSingle();
+    const { data, error } = await (supabase as any).from("scan_settings_public").select("id, eur_czk_rate, eur_czk_rate_updated_at").limit(1).maybeSingle();
     if (error) return;
     const row = data as unknown as SettingsRow | null;
     if (row?.eur_czk_rate != null) setEurCzkRate(Number(row.eur_czk_rate));
@@ -40,7 +40,7 @@ export const useCurrencySettings = () => {
 
   const saveRate = async (rate: number) => {
     setLoadingRate(true);
-    const { data } = await supabase.from("scan_settings").select("id").limit(1).maybeSingle();
+    const { data } = await (supabase as any).from("scan_settings_public").select("id").limit(1).maybeSingle();
     const row = data as { id: string } | null;
     const payload = { eur_czk_rate: rate, eur_czk_rate_updated_at: new Date().toISOString() } as never;
     const result = row
