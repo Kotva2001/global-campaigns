@@ -256,10 +256,10 @@ export const CampaignDialog = ({ open, onOpenChange, editing, initialInfluencerI
                   ))}
                 </SelectContent>
               </Select>
-              <Button type="button" variant="secondary" className="shrink-0 gap-2" onClick={() => setNewInfluencerOpen((v) => !v)}><Plus className="h-4 w-4" /> New</Button>
+              <Button data-mutate type="button" variant="secondary" className="shrink-0 gap-2" onClick={() => setNewInfluencerOpen((v) => !v)}><Plus className="h-4 w-4" /> New</Button>
             </div>
             {newInfluencerOpen && (
-              <div className="mt-2 space-y-2 rounded-md border border-border bg-muted/30 p-3">
+              <div data-mutate className="mt-2 space-y-2 rounded-md border border-border bg-muted/30 p-3">
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <div className="space-y-1">
                     <Label className="text-xs">Name *</Label>
