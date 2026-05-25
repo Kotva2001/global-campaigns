@@ -188,6 +188,7 @@ const EditableNumberCell = ({
 
   return (
     <button
+      data-mutate-cell
       onClick={() => setEditing(true)}
       className="group relative ml-auto flex items-center gap-1 tabular-nums text-muted-foreground hover:text-foreground"
     >
@@ -223,7 +224,7 @@ const EditableSelectCell = ({
     await updateCampaign(campaignId, { [column]: next } as TablesUpdate<"campaigns">, cellKey, flash, onChanged);
   };
   return (
-    <div className="relative inline-block">
+    <div data-mutate-cell className="relative inline-block">
       <Select value={value || undefined} onValueChange={onChange}>
         <SelectTrigger className="h-7 w-auto border-none bg-transparent px-2 py-0 text-xs font-semibold shadow-none hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 [&>svg]:hidden">
           <SelectValue>{renderDisplay(value)}</SelectValue>
@@ -307,7 +308,7 @@ const CampaignNameCell = ({
   }
 
   return (
-    <div className="relative inline-block max-w-[220px]">
+    <div data-mutate-cell className="relative inline-block max-w-[220px]">
       <Select value={matchingProduct?.id ?? "__custom_current__"} onValueChange={pickProduct}>
         <SelectTrigger className="h-7 w-full max-w-[220px] truncate border-none bg-transparent px-2 py-0 text-sm font-medium shadow-none hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 [&>svg]:hidden">
           <SelectValue>
@@ -430,7 +431,7 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
                       {platforms.map((platform) => <span key={platform}>{platformBadge(platform)}</span>)}
                     </div>
                   </div>
-                  {onEditInfluencer && <Button size="sm" variant="secondary" className="gap-2" onClick={onEditInfluencer}><Edit3 className="h-4 w-4" /> Edit Influencer</Button>}
+                  {onEditInfluencer && <Button data-mutate size="sm" variant="secondary" className="gap-2" onClick={onEditInfluencer}><Edit3 className="h-4 w-4" /> Edit Influencer</Button>}
                 </div>
               </SheetHeader>
 
@@ -537,7 +538,7 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
                             <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-muted-foreground">{formatPercent(campaign.engagementRate)}</td>
                             <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-muted-foreground">{formatPercent(campaign.conversionRate)}</td>
                             <td className="sticky right-0 whitespace-nowrap bg-card px-3 py-2.5 group-hover:bg-card-hover">
-                              <div className="flex justify-end gap-1">
+                              <div data-mutate className="flex justify-end gap-1">
                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEditCampaign?.(campaign)}><Edit3 className="h-4 w-4" /></Button>
                                 <button
                                   type="button"

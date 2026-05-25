@@ -5,6 +5,12 @@
 /* Viewer role: hide all mutating actions (Add / Edit / Delete / Approve / Dismiss). */
 html[data-role="viewer"] [data-mutate] { display: none !important; }
 
+/* Viewer role: disable inline-editable cells (views, likes, cost, etc.) without
+   removing the displayed value. Clicks are blocked and hover indicators hidden. */
+html[data-role="viewer"] [data-mutate-cell],
+html[data-role="viewer"] [data-mutate-cell] * { pointer-events: none !important; }
+html[data-role="viewer"] [data-mutate-cell] .lucide-pencil { display: none !important; }
+
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
 */
