@@ -188,6 +188,7 @@ const EditableNumberCell = ({
 
   return (
     <button
+      data-mutate-cell
       onClick={() => setEditing(true)}
       className="group relative ml-auto flex items-center gap-1 tabular-nums text-muted-foreground hover:text-foreground"
     >
@@ -223,7 +224,7 @@ const EditableSelectCell = ({
     await updateCampaign(campaignId, { [column]: next } as TablesUpdate<"campaigns">, cellKey, flash, onChanged);
   };
   return (
-    <div className="relative inline-block">
+    <div data-mutate-cell className="relative inline-block">
       <Select value={value || undefined} onValueChange={onChange}>
         <SelectTrigger className="h-7 w-auto border-none bg-transparent px-2 py-0 text-xs font-semibold shadow-none hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 [&>svg]:hidden">
           <SelectValue>{renderDisplay(value)}</SelectValue>
@@ -307,7 +308,7 @@ const CampaignNameCell = ({
   }
 
   return (
-    <div className="relative inline-block max-w-[220px]">
+    <div data-mutate-cell className="relative inline-block max-w-[220px]">
       <Select value={matchingProduct?.id ?? "__custom_current__"} onValueChange={pickProduct}>
         <SelectTrigger className="h-7 w-full max-w-[220px] truncate border-none bg-transparent px-2 py-0 text-sm font-medium shadow-none hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 [&>svg]:hidden">
           <SelectValue>
