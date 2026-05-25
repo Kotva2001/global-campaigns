@@ -27,9 +27,11 @@ import {
 import { ProductDialog } from "@/components/ProductDialog";
 import { formatCurrency } from "@/lib/formatters";
 import type { ProductRecord } from "@/types/product";
+import { useCanEdit } from "@/hooks/useUserRole";
 
 const Products = () => {
   const [products, setProducts] = useState<ProductRecord[]>([]);
+  const canEdit = useCanEdit();
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -142,8 +144,8 @@ const Products = () => {
             {filtered.map((product) => (
               <Card
                 key={product.id}
-                onClick={() => { setEditing(product); setDialogOpen(true); }}
-                className="cursor-pointer border-border bg-card p-4 transition-colors hover:border-primary/40 hover:bg-card-hover"
+                onClick={canEdit ? () => { setEditing(product); setDialogOpen(true); } : undefined}
+                className={`${canEdit ? "cursor-pointer hover:border-primary/40 hover:bg-card-hover" : ""} border-border bg-card p-4 transition-colors`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
