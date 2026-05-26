@@ -275,7 +275,7 @@ const CampaignNameCell = ({
     setCustomMode(false);
     await updateCampaign(
       campaignId,
-      { campaign_name: product.name, campaign_cost: getProductPurchaseCost(product).value, currency: product.currency },
+      { campaign_name: product.name, product_cost: getProductPurchaseCost(product).value, currency: product.currency },
       cellKey,
       flash,
       onChanged,
@@ -481,7 +481,7 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
                     <table className="w-full text-sm">
                       <thead className="sticky top-0 z-10 bg-muted/60 backdrop-blur">
                         <tr className="border-b border-border">
-                          {['Date', 'Campaign', 'Platform', 'Collab', 'Link', 'Deal', 'Views', 'Likes', 'Comments', 'Cost', 'Revenue', 'Engagement', 'Conversion', ''].map((head) => (
+                          {['Date', 'Campaign', 'Platform', 'Collab', 'Link', 'Deal', 'Views', 'Likes', 'Comments', 'Cost', 'Product Cost', 'Revenue', 'Engagement', 'Conversion', ''].map((head) => (
                             <th key={head} className="whitespace-nowrap px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{head}</th>
                           ))}
                         </tr>
@@ -534,6 +534,7 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
                             <td className="whitespace-nowrap px-3 py-2.5 text-right"><EditableNumberCell value={campaign.likes} campaignId={campaign.id} field="likes" formatAs="number" flashed={!!flashedCells[`${campaign.id}:likes`]} flash={flash} onChanged={onChanged} /></td>
                             <td className="whitespace-nowrap px-3 py-2.5 text-right"><EditableNumberCell value={campaign.comments} campaignId={campaign.id} field="comments" formatAs="number" flashed={!!flashedCells[`${campaign.id}:comments`]} flash={flash} onChanged={onChanged} /></td>
                             <td className="whitespace-nowrap px-3 py-2.5 text-right"><EditableNumberCell value={campaign.campaignCost} campaignId={campaign.id} field="campaignCost" currency={campaign.currency} formatAs="currency" flashed={!!flashedCells[`${campaign.id}:campaignCost`]} flash={flash} onChanged={onChanged} /></td>
+                            <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-muted-foreground">{campaign.productCost != null ? formatCurrency(campaign.productCost, campaign.currency) : "—"}</td>
                             <td className="whitespace-nowrap px-3 py-2.5 text-right"><EditableNumberCell value={campaign.purchaseRevenue} campaignId={campaign.id} field="purchaseRevenue" currency={campaign.currency} formatAs="currency" flashed={!!flashedCells[`${campaign.id}:purchaseRevenue`]} flash={flash} onChanged={onChanged} /></td>
                             <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-muted-foreground">{formatPercent(campaign.engagementRate)}</td>
                             <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-muted-foreground">{formatPercent(campaign.conversionRate)}</td>
@@ -554,7 +555,7 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
                           </tr>
                         ))}
                         {!filteredCampaigns.length && (
-                          <tr><td colSpan={14} className="px-3 py-10 text-center text-muted-foreground">
+                          <tr><td colSpan={15} className="px-3 py-10 text-center text-muted-foreground">
                             {campaigns.length === 0 ? "No campaigns yet." : "No campaigns match your search."}
                           </td></tr>
                         )}

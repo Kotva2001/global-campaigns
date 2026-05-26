@@ -15,6 +15,7 @@ export interface CampaignEntry {
   collaborationType: string;
   currency: CurrencyCode;
   campaignCost: number | null;
+  productCost: number | null;
   utmLink: string;
   managedBy: string;
   views: number | null;

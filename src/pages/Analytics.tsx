@@ -177,6 +177,7 @@ const Analytics = () => {
       collaborationType: "",
       currency: "CZK",
       campaignCost: r.cost,
+      productCost: null,
       utmLink: "",
       managedBy: "",
       views: r.views,

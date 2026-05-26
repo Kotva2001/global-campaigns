@@ -42,6 +42,7 @@ interface CampaignRow {
   collaboration_type: string | null;
   currency: string | null;
   campaign_cost: number | string | null;
+  product_cost: number | string | null;
   utm_link: string | null;
   managed_by: string | null;
   views: number | null;
@@ -142,6 +143,7 @@ const mapCampaign = (row: CampaignRow, influencer: InfluencerRecord): CampaignEn
   collaborationType: row.collaboration_type ?? "",
   currency: row.currency === "EUR" || row.currency === "HUF" || row.currency === "RON" ? row.currency : "CZK",
   campaignCost: num(row.campaign_cost),
+  productCost: num(row.product_cost),
   utmLink: row.utm_link ?? "",
   managedBy: row.managed_by ?? "",
   views: num(row.views),
