@@ -112,6 +112,7 @@ export type Database = {
           managed_by: string | null
           notes: string | null
           platform: string
+          product_cost: number
           publish_date: string | null
           purchase_revenue: number | null
           sessions: number | null
@@ -141,6 +142,7 @@ export type Database = {
           managed_by?: string | null
           notes?: string | null
           platform: string
+          product_cost?: number
           publish_date?: string | null
           purchase_revenue?: number | null
           sessions?: number | null
@@ -170,6 +172,7 @@ export type Database = {
           managed_by?: string | null
           notes?: string | null
           platform?: string
+          product_cost?: number
           publish_date?: string | null
           purchase_revenue?: number | null
           sessions?: number | null
