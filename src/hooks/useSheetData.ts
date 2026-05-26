@@ -34,7 +34,6 @@ interface CampaignRow {
   collaboration_type: string | null;
   currency: string | null;
   campaign_cost: number | string | null;
-  product_cost: number | string | null;
   utm_link: string | null;
   managed_by: string | null;
   views: number | null;
@@ -52,6 +51,11 @@ interface InfluencerLookupRow {
   country: string;
 }
 
+interface DealCostRow {
+  id: string;
+  total_cost: number | string | null;
+}
+
 const formatDate = (iso: string | null): string => {
   if (!iso) return "";
   const d = new Date(iso);
@@ -59,7 +63,7 @@ const formatDate = (iso: string | null): string => {
   return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}`;
 };
 
-const mapRow = (r: CampaignRow, influencerById: Map<string, InfluencerLookupRow>): CampaignEntry => {
+const mapRow = (r: CampaignRow, influencerById: Map<string, InfluencerLookupRow>, productCostByDealId: Map<string, number>): CampaignEntry => {
   const influencer = r.influencer_id ? influencerById.get(r.influencer_id) : undefined;
   return {
   id: r.id,
@@ -75,7 +79,7 @@ const mapRow = (r: CampaignRow, influencerById: Map<string, InfluencerLookupRow>
   collaborationType: r.collaboration_type ?? "",
   currency: r.currency === "EUR" || r.currency === "HUF" || r.currency === "RON" ? r.currency : "CZK",
   campaignCost: num(r.campaign_cost),
-  productCost: num(r.product_cost),
+  productCost: r.deal_id ? productCostByDealId.get(r.deal_id) ?? null : null,
   utmLink: r.utm_link ?? "",
   managedBy: r.managed_by ?? "",
   views: num(r.views),
@@ -101,17 +105,26 @@ export const useSheetData = () => {
       const { data: rows, error: err } = await supabase
         .from("campaigns")
         .select(
-          "id, influencer_id, deal_id, campaign_name, platform, publish_date, video_url, collaboration_type, currency, campaign_cost, product_cost, utm_link, managed_by, views, likes, comments, sessions, engagement_rate, purchase_revenue, conversion_rate",
+          "id, influencer_id, deal_id, campaign_name, platform, publish_date, video_url, collaboration_type, currency, campaign_cost, utm_link, managed_by, views, likes, comments, sessions, engagement_rate, purchase_revenue, conversion_rate",
         )
         .order("publish_date", { ascending: false, nullsFirst: false });
       if (err) throw err;
-      const influencerIds = [...new Set(((rows ?? []) as CampaignRow[]).map((row) => row.influencer_id).filter(Boolean))] as string[];
-      const { data: influencers, error: influencerErr } = influencerIds.length
-        ? await supabase.from("influencers").select("id,name,country").in("id", influencerIds)
-        : { data: [], error: null };
+      const campaignRows = (rows ?? []) as unknown as CampaignRow[];
+      const influencerIds = [...new Set(campaignRows.map((row) => row.influencer_id).filter(Boolean))] as string[];
+      const dealIds = [...new Set(campaignRows.map((row) => row.deal_id).filter(Boolean))] as string[];
+      const [{ data: influencers, error: influencerErr }, { data: deals, error: dealsErr }] = await Promise.all([
+        influencerIds.length
+          ? supabase.from("influencers").select("id,name,country").in("id", influencerIds)
+          : Promise.resolve({ data: [], error: null }),
+        dealIds.length
+          ? supabase.from("deals").select("id,total_cost").in("id", dealIds)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
       if (influencerErr) throw influencerErr;
+      if (dealsErr) throw dealsErr;
       const influencerById = new Map((influencers ?? []).map((influencer) => [influencer.id, influencer]));
-      setData(((rows ?? []) as unknown as CampaignRow[]).map((row) => mapRow(row, influencerById)));
+      const productCostByDealId = new Map(((deals ?? []) as DealCostRow[]).map((deal) => [deal.id, num(deal.total_cost) ?? 0]));
+      setData(campaignRows.map((row) => mapRow(row, influencerById, productCostByDealId)));
       setLastFetched(new Date());
     } catch (e) {
       const msg =
