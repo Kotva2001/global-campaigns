@@ -114,9 +114,17 @@ export const useSheetData = () => {
       setData(((rows ?? []) as unknown as CampaignRow[]).map((row) => mapRow(row, influencerById)));
       setLastFetched(new Date());
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Unknown error";
+      const msg =
+        e instanceof Error
+          ? e.message
+          : typeof e === "object" && e !== null && "message" in e
+            ? String((e as { message: unknown }).message)
+            : typeof e === "string"
+              ? e
+              : JSON.stringify(e);
       setError(msg);
       toast.error(`Failed to load campaigns: ${msg}`);
+      console.error("[useSheetData] refresh failed", e);
     } finally {
       setLoading(false);
     }
