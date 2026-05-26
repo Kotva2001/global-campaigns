@@ -274,7 +274,7 @@ const CampaignNameCell = ({
     setCustomMode(false);
     await updateCampaign(
       campaignId,
-      { campaign_name: product.name, currency: product.currency },
+      { campaign_name: product.name },
       cellKey,
       flash,
       onChanged,
