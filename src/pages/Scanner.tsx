@@ -1176,7 +1176,7 @@ function ApproveDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Campaign cost (Kč)</Label>
+            <Label>Total spend (Kč) — reference</Label>
             <Input
               type="number"
               min="0"
@@ -1199,7 +1199,7 @@ function ApproveDialog({
               </div>
             ) : (
               <p className="text-[11px] text-muted-foreground">
-                Auto: {collab === "paid" ? "cash + products" : "sum of products"} = {autoCost.toLocaleString()} Kč
+                Auto: {collab === "paid" ? "cash + products" : "sum of products"} = {autoCost.toLocaleString()} Kč. Saved as collaboration fee (cash only) + product cost (products) on the campaign.
               </p>
             )}
           </div>
