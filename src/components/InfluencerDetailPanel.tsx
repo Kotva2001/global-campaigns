@@ -275,7 +275,7 @@ const CampaignNameCell = ({
     setCustomMode(false);
     await updateCampaign(
       campaignId,
-      { campaign_name: product.name, campaign_cost: getProductPurchaseCost(product).value, currency: product.currency },
+      { campaign_name: product.name, product_cost: getProductPurchaseCost(product).value, currency: product.currency },
       cellKey,
       flash,
       onChanged,
@@ -555,7 +555,7 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
                           </tr>
                         ))}
                         {!filteredCampaigns.length && (
-                          <tr><td colSpan={14} className="px-3 py-10 text-center text-muted-foreground">
+                          <tr><td colSpan={15} className="px-3 py-10 text-center text-muted-foreground">
                             {campaigns.length === 0 ? "No campaigns yet." : "No campaigns match your search."}
                           </td></tr>
                         )}
