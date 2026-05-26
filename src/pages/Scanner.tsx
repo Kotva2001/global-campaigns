@@ -963,7 +963,11 @@ function ApproveDialog({
     const comments = detection.comments ?? 0;
     const engagementRate = views > 0 ? ((likes + comments) / views) * 100 : null;
     const influencerId = detection.influencer_id ?? matched?.id ?? null;
-    const finalCost = collab === "organic" ? 0 : Number(cost) || 0;
+    // Collaboration fee = cash paid to the influencer ONLY (never the product cost).
+    // For barter/organic there is no cash paid, so the fee is 0.
+    const collabFee = collab === "paid" ? Number(cashPayment) || 0 : 0;
+    // Product cost = total value of products sent on this campaign.
+    const productCostTotal = productSum;
 
     try {
       // Map internal collab kind to the values the database accepts (Title-case, matches existing data).
@@ -990,14 +994,15 @@ function ApproveDialog({
         firstDealId = insertedDeals?.[0]?.id ?? null;
       }
 
-      const { error: campaignError } = await supabase.from("campaigns").insert({
+       const { error: campaignError } = await supabase.from("campaigns").insert({
         campaign_name: name || detection.video_title || null,
         platform: detection.platform,
         publish_date: detection.published_at ? detection.published_at.slice(0, 10) : null,
         video_url: detection.video_url,
         video_id: detection.video_id,
         collaboration_type: collabLabel ?? "Organic",
-        campaign_cost: finalCost,
+        campaign_cost: collabFee,
+        product_cost: productCostTotal,
         currency: "CZK",
         deal_id: firstDealId,
         views,
