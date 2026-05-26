@@ -28,7 +28,6 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { COUNTRY_FLAGS, COUNTRY_NAMES } from "@/lib/countries";
 import { computeKPIs } from "@/lib/calculations";
 import { formatCompact, formatCurrency, formatNumber, formatPercent } from "@/lib/formatters";
-import { getProductPurchaseCost } from "@/lib/productCost";
 import type { CurrencyCode, ExchangeRates } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import type { CampaignEntry, InfluencerRecord } from "@/types/campaign";
@@ -275,7 +274,7 @@ const CampaignNameCell = ({
     setCustomMode(false);
     await updateCampaign(
       campaignId,
-      { campaign_name: product.name, product_cost: getProductPurchaseCost(product).value, currency: product.currency },
+      { campaign_name: product.name },
       cellKey,
       flash,
       onChanged,

@@ -974,21 +974,26 @@ function ApproveDialog({
       // "organic" has no corresponding deal record — skip deal creation entirely.
       const collabLabel = collab === "paid" ? "Paid" : collab === "barter" ? "Barter" : null;
 
-      // Create deals per product (when an influencer is linked and this is not organic)
+      // Create one linked deal for this campaign's product shipment.
+      // The campaign stores only the collaboration fee; product value is read from the linked deal.
       let firstDealId: string | null = null;
       if (influencerId && lines.length > 0 && collabLabel) {
-        const dealRows = lines.map((l) => ({
+        const dealName = lines.length === 1 ? lines[0].product.name : `${lines.length} products`;
+        const dealNotes = lines
+          .map((l) => `${l.product.name}${l.qty > 1 ? ` × ${l.qty}` : ""}`)
+          .join("\n");
+        const dealRow = {
           influencer_id: influencerId,
-          product_id: l.product.id,
-          deal_name: l.product.name,
-          total_cost: getProductPurchaseCost(l.product).value * l.qty,
-          currency: (l.product.currency as string) || "CZK",
+          product_id: lines.length === 1 ? lines[0].product.id : null,
+          deal_name: dealName,
+          total_cost: productCostTotal,
+          currency: "CZK",
           collaboration_type: collabLabel,
-          notes: l.qty > 1 ? `Quantity: ${l.qty}` : null,
-        }));
+          notes: dealNotes || null,
+        };
         const { data: insertedDeals, error: dealError } = await supabase
           .from("deals")
-          .insert(dealRows)
+          .insert(dealRow)
           .select("id");
         if (dealError) throw dealError;
         firstDealId = insertedDeals?.[0]?.id ?? null;
@@ -1002,7 +1007,6 @@ function ApproveDialog({
         video_id: detection.video_id,
         collaboration_type: collabLabel ?? "Organic",
         campaign_cost: collabFee,
-        product_cost: productCostTotal,
         currency: "CZK",
         deal_id: firstDealId,
         views,
