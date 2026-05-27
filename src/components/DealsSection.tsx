@@ -10,6 +10,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { DealDialog } from "@/components/DealDialog";
+import { BulkAddDealsDialog } from "@/components/BulkAddDealsDialog";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { CurrencyCode } from "@/lib/currency";
@@ -30,6 +31,7 @@ export const DealsSection = ({ influencerId, campaigns, onChanged }: Props) => {
   const [deals, setDeals] = useState<DealRow[]>([]);
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
   const [editing, setEditing] = useState<DealRecord | null>(null);
   const [deletingDeal, setDeletingDeal] = useState<DealRow | null>(null);
 
@@ -104,9 +106,14 @@ export const DealsSection = ({ influencerId, campaigns, onChanged }: Props) => {
       <div className="mt-5">
         <div className="mb-2 flex items-center justify-between">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Deals</h3>
-          <Button data-mutate size="sm" variant="secondary" className="gap-2" onClick={() => { setEditing(null); setDialogOpen(true); }}>
-            <Plus className="h-4 w-4" /> Add Deal
-          </Button>
+          <div data-mutate className="flex gap-2">
+            <Button size="sm" variant="outline" className="gap-2" onClick={() => setBulkOpen(true)}>
+              <Plus className="h-4 w-4" /> Bulk Add Deals
+            </Button>
+            <Button size="sm" variant="secondary" className="gap-2" onClick={() => { setEditing(null); setDialogOpen(true); }}>
+              <Plus className="h-4 w-4" /> Add Deal
+            </Button>
+          </div>
         </div>
         {deals.length === 0 ? (
           <Card className="border-dashed border-border bg-card/40 p-4 text-center text-xs text-muted-foreground">
@@ -188,6 +195,13 @@ export const DealsSection = ({ influencerId, campaigns, onChanged }: Props) => {
         onOpenChange={setDialogOpen}
         influencerId={influencerId}
         editing={editing}
+        onSaved={() => { void load(); onChanged?.(); }}
+      />
+
+      <BulkAddDealsDialog
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        influencerId={influencerId}
         onSaved={() => { void load(); onChanged?.(); }}
       />
 
