@@ -106,7 +106,7 @@ const Analytics = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from("campaigns")
-        .select("id, influencer_id, campaign_name, platform, publish_date, campaign_cost, currency, views, engagement_rate, purchase_revenue");
+        .select("id, influencer_id, campaign_name, platform, publish_date, campaign_cost, collaboration_type, currency, views, engagement_rate, purchase_revenue");
       if (error) {
         toastError("Could not load campaigns", error);
         setLoading(false);
@@ -132,7 +132,7 @@ const Analytics = () => {
         platform: normalizePlatform(r.platform),
         date: r.publish_date ? parseISO(r.publish_date) : null,
         dateIso: r.publish_date,
-        cost: convertCurrency(num(r.campaign_cost), currency, "CZK", { EUR_CZK: eurCzkRate }),
+        cost: convertCurrency(campaignCollaborationCost(num(r.campaign_cost), r.collaboration_type), currency, "CZK", { EUR_CZK: eurCzkRate }),
         currency,
         views: num(r.views),
         engagement: r.engagement_rate == null ? null : num(r.engagement_rate),
