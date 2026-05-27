@@ -337,7 +337,7 @@ const CampaignNameCell = ({
   );
 };
 
-export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInfluencer, onAddCampaign, onEditCampaign, onChanged, displayCurrency = "CZK", rates }: Props) => {
+export const InfluencerDetailPanel = ({ creator, campaigns, deals, onClose, onEditInfluencer, onAddCampaign, onEditCampaign, onChanged, displayCurrency = "CZK", rates }: Props) => {
   const [deleteCampaign, setDeleteCampaign] = useState<CampaignEntry | null>(null);
   const [products, setProducts] = useState<ProductRecord[]>([]);
   const [flashedCells, setFlashedCells] = useState<Record<string, number>>({});
@@ -399,7 +399,7 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
     }, 1200);
   };
 
-  const kpis = useMemo(() => computeKPIs(campaigns, displayCurrency, rates), [campaigns, displayCurrency, rates]);
+  const kpis = useMemo(() => computeKPIs(campaigns, displayCurrency, rates, deals), [campaigns, displayCurrency, rates, deals]);
   const platforms = useMemo(() => {
     const fromCreator = creator?.platforms?.filter(Boolean) ?? [];
     const fromCampaigns = campaigns.map((campaign) => campaign.platform).filter(Boolean);
