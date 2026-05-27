@@ -178,6 +178,7 @@ const Analytics = () => {
       currency: "CZK",
       campaignCost: r.cost,
       productCost: null,
+      productCostCurrency: null,
       utmLink: "",
       managedBy: "",
       views: r.views,
