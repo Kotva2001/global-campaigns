@@ -36,17 +36,39 @@ export const DealsSection = ({ influencerId, campaigns, onChanged }: Props) => {
   const load = async () => {
     const { data, error } = await supabase
       .from("deals")
-      .select("id,influencer_id,product_id,deal_name,total_cost,quantity,currency,collaboration_type,notes,created_at,products(name)")
+      .select("id,influencer_id,product_id,deal_name,total_cost,currency,collaboration_type,notes,created_at,quantity,products(name)")
       .eq("influencer_id", influencerId)
       .order("created_at", { ascending: false });
-    if (error) { toastError("Could not load deals", error); return; }
+    if (error) {
+      // Fall back without quantity column in case the schema cache is stale
+      const fallback = await supabase
+        .from("deals")
+        .select("id,influencer_id,product_id,deal_name,total_cost,currency,collaboration_type,notes,created_at,products(name)")
+        .eq("influencer_id", influencerId)
+        .order("created_at", { ascending: false });
+      if (fallback.error) { toastError("Could not load deals", fallback.error); return; }
+      setDeals((fallback.data ?? []).map((d: any) => ({
+        id: d.id,
+        influencer_id: d.influencer_id,
+        product_id: d.product_id,
+        deal_name: d.deal_name,
+        total_cost: Number(d.total_cost) || 0,
+        quantity: 1,
+        currency: d.currency,
+        collaboration_type: d.collaboration_type,
+        notes: d.notes,
+        created_at: d.created_at,
+        product_name: d.products?.name ?? null,
+      })));
+      return;
+    }
     setDeals((data ?? []).map((d: any) => ({
       id: d.id,
       influencer_id: d.influencer_id,
       product_id: d.product_id,
       deal_name: d.deal_name,
       total_cost: Number(d.total_cost) || 0,
-      quantity: Number(d.quantity) || 1,
+      quantity: d.quantity == null ? 1 : Number(d.quantity) || 1,
       currency: d.currency,
       collaboration_type: d.collaboration_type,
       notes: d.notes,
