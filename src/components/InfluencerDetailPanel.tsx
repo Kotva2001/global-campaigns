@@ -29,6 +29,7 @@ import { COUNTRY_FLAGS, COUNTRY_NAMES } from "@/lib/countries";
 import { computeKPIs } from "@/lib/calculations";
 import { formatCompact, formatCurrency, formatNumber, formatPercent } from "@/lib/formatters";
 import type { CurrencyCode, ExchangeRates } from "@/lib/currency";
+import { isBarterCollaboration } from "@/lib/campaign-costs";
 import { cn } from "@/lib/utils";
 import type { CampaignEntry, InfluencerRecord } from "@/types/campaign";
 import type { TablesUpdate } from "@/integrations/supabase/types";
@@ -220,7 +221,10 @@ const EditableSelectCell = ({
   const cellKey = `${campaignId}:${column}`;
   const onChange = async (next: string) => {
     if (next === value) return;
-    await updateCampaign(campaignId, { [column]: next } as TablesUpdate<"campaigns">, cellKey, flash, onChanged);
+    const payload = column === "collaboration_type" && isBarterCollaboration(next)
+      ? { [column]: next, campaign_cost: 0 }
+      : { [column]: next };
+    await updateCampaign(campaignId, payload as TablesUpdate<"campaigns">, cellKey, flash, onChanged);
   };
   return (
     <div data-mutate-cell className="relative inline-block">
