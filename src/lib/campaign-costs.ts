@@ -12,7 +12,8 @@ export const campaignCollaborationCost = (
   amount: number | null | undefined,
   collaborationType: string | null | undefined,
 ): number | null => {
-  if (isBarterCollaboration(collaborationType)) return 0;
+  // Barter collaborations never have a collaboration fee — show "—" in the UI.
+  if (isBarterCollaboration(collaborationType)) return null;
   return amount ?? null;
 };
 
