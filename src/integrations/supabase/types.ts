@@ -209,6 +209,7 @@ export type Database = {
           influencer_id: string
           notes: string | null
           product_id: string | null
+          quantity: number
           total_cost: number
           updated_at: string
         }
@@ -221,6 +222,7 @@ export type Database = {
           influencer_id: string
           notes?: string | null
           product_id?: string | null
+          quantity?: number
           total_cost?: number
           updated_at?: string
         }
@@ -233,6 +235,7 @@ export type Database = {
           influencer_id?: string
           notes?: string | null
           product_id?: string | null
+          quantity?: number
           total_cost?: number
           updated_at?: string
         }

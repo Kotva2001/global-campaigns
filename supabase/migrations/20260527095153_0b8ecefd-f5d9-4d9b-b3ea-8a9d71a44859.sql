@@ -1,0 +1,1 @@
+ALTER TABLE public.deals ADD COLUMN IF NOT EXISTS quantity integer NOT NULL DEFAULT 1;
