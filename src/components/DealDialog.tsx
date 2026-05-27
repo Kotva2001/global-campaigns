@@ -41,6 +41,8 @@ export const DealDialog = ({ open, onOpenChange, influencerId, editing, onSaved 
   const [showResults, setShowResults] = useState(false);
   const [dealName, setDealName] = useState("");
   const [totalCost, setTotalCost] = useState("0");
+  const [quantity, setQuantity] = useState("1");
+  const [costManuallyEdited, setCostManuallyEdited] = useState(false);
   const [currency, setCurrency] = useState<CurrencyCode>("EUR");
   const [collab, setCollab] = useState<string>("Barter");
   const [notes, setNotes] = useState("");
@@ -58,6 +60,8 @@ export const DealDialog = ({ open, onOpenChange, influencerId, editing, onSaved 
       setProductId(editing.product_id);
       setDealName(editing.deal_name ?? "");
       setTotalCost(String(editing.total_cost ?? 0));
+      setQuantity(String(editing.quantity ?? 1));
+      setCostManuallyEdited(true);
       setCurrency((editing.currency as CurrencyCode) ?? "EUR");
       setCollab(editing.collaboration_type ?? "Barter");
       setNotes(editing.notes ?? "");
@@ -74,6 +78,8 @@ export const DealDialog = ({ open, onOpenChange, influencerId, editing, onSaved 
       setSelectedProduct(null);
       setDealName("");
       setTotalCost("0");
+      setQuantity("1");
+      setCostManuallyEdited(false);
       setCurrency("EUR");
       setCollab("Barter");
       setNotes("");
@@ -110,7 +116,9 @@ export const DealDialog = ({ open, onOpenChange, influencerId, editing, onSaved 
     setProductResults([]);
     setShowResults(false);
     if (!editing) {
-      setTotalCost(String(getProductPurchaseCost(p).value));
+      const qty = Math.max(1, Number(quantity) || 1);
+      setTotalCost(String(getProductPurchaseCost(p).value * qty));
+      setCostManuallyEdited(false);
       setCurrency((p.currency as CurrencyCode) ?? "EUR");
     }
     if (!dealName) setDealName(p.name);
@@ -119,6 +127,19 @@ export const DealDialog = ({ open, onOpenChange, influencerId, editing, onSaved 
   const clearProduct = () => {
     setProductId(null);
     setSelectedProduct(null);
+  };
+
+  const handleQuantityChange = (raw: string) => {
+    setQuantity(raw);
+    if (!costManuallyEdited && selectedProduct) {
+      const qty = Math.max(1, Number(raw) || 1);
+      setTotalCost(String(getProductPurchaseCost(selectedProduct).value * qty));
+    }
+  };
+
+  const handleCostChange = (raw: string) => {
+    setTotalCost(raw);
+    setCostManuallyEdited(true);
   };
 
   const save = async () => {
@@ -134,6 +155,7 @@ export const DealDialog = ({ open, onOpenChange, influencerId, editing, onSaved 
         product_id: productId,
         deal_name: dealName || null,
         total_cost: cost,
+        quantity: Math.max(1, Math.floor(Number(quantity) || 1)),
         currency,
         collaboration_type: collab,
         notes: notes || null,
@@ -298,10 +320,25 @@ export const DealDialog = ({ open, onOpenChange, influencerId, editing, onSaved 
             <Label>Deal name</Label>
             <Input value={dealName} onChange={(e) => setDealName(e.target.value)} placeholder="e.g. Craftmaker S30 shipment" />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-1.5">
+              <Label>Quantity</Label>
+              <Input
+                type="number"
+                min="1"
+                step="1"
+                value={quantity}
+                onChange={(e) => handleQuantityChange(e.target.value)}
+              />
+            </div>
             <div className="space-y-1.5">
               <Label>Total cost</Label>
-              <Input type="number" min="0" step="0.01" value={totalCost} onChange={(e) => setTotalCost(e.target.value)} />
+              <Input type="number" min="0" step="0.01" value={totalCost} onChange={(e) => handleCostChange(e.target.value)} />
+              {selectedProduct && (
+                <p className="text-[11px] text-muted-foreground">
+                  Unit: {getProductPurchaseCost(selectedProduct).value.toLocaleString()} {selectedProduct.currency}
+                </p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Currency</Label>

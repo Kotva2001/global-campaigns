@@ -36,7 +36,7 @@ export const DealsSection = ({ influencerId, campaigns, onChanged }: Props) => {
   const load = async () => {
     const { data, error } = await supabase
       .from("deals")
-      .select("id,influencer_id,product_id,deal_name,total_cost,currency,collaboration_type,notes,created_at,products(name)")
+      .select("id,influencer_id,product_id,deal_name,total_cost,quantity,currency,collaboration_type,notes,created_at,products(name)")
       .eq("influencer_id", influencerId)
       .order("created_at", { ascending: false });
     if (error) { toastError("Could not load deals", error); return; }
@@ -46,6 +46,7 @@ export const DealsSection = ({ influencerId, campaigns, onChanged }: Props) => {
       product_id: d.product_id,
       deal_name: d.deal_name,
       total_cost: Number(d.total_cost) || 0,
+      quantity: Number(d.quantity) || 1,
       currency: d.currency,
       collaboration_type: d.collaboration_type,
       notes: d.notes,
@@ -95,6 +96,9 @@ export const DealsSection = ({ influencerId, campaigns, onChanged }: Props) => {
               const linked = campaignsByDeal.get(d.id) ?? [];
               const split = linked.length > 0 ? d.total_cost / linked.length : d.total_cost;
               const isOpen = !!open[d.id];
+              const qty = Math.max(1, d.quantity || 1);
+              const unitPrice = d.total_cost / qty;
+              const titleLabel = `${d.deal_name || d.product_name || "Untitled deal"}${qty > 1 ? ` × ${qty}` : ""}`;
               return (
                 <Card key={d.id} className="overflow-hidden border-border bg-card">
                   <button
@@ -104,9 +108,15 @@ export const DealsSection = ({ influencerId, campaigns, onChanged }: Props) => {
                     {isOpen ? <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" /> : <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />}
                     <Package className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-semibold">{d.deal_name || d.product_name || "Untitled deal"}</div>
+                      <div className="truncate text-sm font-semibold">{titleLabel}</div>
                       <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
-                        <span className="font-medium tabular-nums text-foreground">{formatCurrency(d.total_cost, d.currency)}</span>
+                        {qty > 1 ? (
+                          <span className="font-medium tabular-nums text-foreground">
+                            {formatCurrency(unitPrice, d.currency)} × {qty} = {formatCurrency(d.total_cost, d.currency)}
+                          </span>
+                        ) : (
+                          <span className="font-medium tabular-nums text-foreground">{formatCurrency(d.total_cost, d.currency)}</span>
+                        )}
                         <span>·</span>
                         <span>{linked.length} campaign{linked.length === 1 ? "" : "s"}</span>
                         {linked.length > 0 && <><span>·</span><span>{formatCurrency(split, d.currency)} each</span></>}

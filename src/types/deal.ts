@@ -6,6 +6,7 @@ export interface DealRecord {
   product_id: string | null;
   deal_name: string | null;
   total_cost: number;
+  quantity: number;
   currency: CurrencyCode;
   collaboration_type: string | null;
   notes: string | null;
