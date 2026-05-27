@@ -205,6 +205,7 @@ const Dashboard = () => {
       <InfluencerDetailPanel
         creator={detailCreator}
         campaigns={detailCampaigns}
+        deals={detailCreator ? deals.filter((d) => d.influencerId === detailCreator.id) : []}
         displayCurrency={displayCurrency}
         rates={rates}
         onClose={() => setDetailCreator(null)}
