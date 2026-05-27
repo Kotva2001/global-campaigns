@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { COUNTRIES, COUNTRY_FLAGS, COUNTRY_NAMES } from "@/lib/countries";
 import { computeKPIs } from "@/lib/calculations";
 import { convertCurrency, normalizeCurrency, type CurrencyCode } from "@/lib/currency";
+import { campaignCollaborationCost } from "@/lib/campaign-costs";
 import { formatCompact, formatCurrency, formatNumber, formatPercent } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { useCurrencySettings } from "@/hooks/useCurrencySettings";
@@ -35,6 +36,7 @@ interface CampaignRow {
   platform: string;
   publish_date: string | null;
   campaign_cost: number | string | null;
+  collaboration_type: string | null;
   currency: string | null;
   views: number | null;
   engagement_rate: number | string | null;
