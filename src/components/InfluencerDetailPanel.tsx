@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { COUNTRY_FLAGS, COUNTRY_NAMES } from "@/lib/countries";
-import { computeKPIs } from "@/lib/calculations";
+import { computeKPIs, type DealLike } from "@/lib/calculations";
 import { formatCompact, formatCurrency, formatNumber, formatPercent } from "@/lib/formatters";
 import type { CurrencyCode, ExchangeRates } from "@/lib/currency";
 import { isBarterCollaboration } from "@/lib/campaign-costs";
@@ -45,6 +45,7 @@ import { normalize } from "@/lib/normalize";
 interface Props {
   creator: InfluencerRecord | null;
   campaigns: CampaignEntry[];
+  deals?: DealLike[];
   onClose: () => void;
   onEditInfluencer?: () => void;
   onAddCampaign?: () => void;
