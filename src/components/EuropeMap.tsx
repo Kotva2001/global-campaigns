@@ -9,6 +9,7 @@ import { formatCompact, formatCurrency, formatPercent } from "@/lib/formatters";
 import { convertCurrency, type CurrencyCode, type ExchangeRates } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import type { CampaignEntry } from "@/types/campaign";
+import type { DealLike } from "@/lib/calculations";
 import europeGeoRaw from "@/data/europe.geo.json";
 
 type CountryProps = { iso: string; name: string };
@@ -27,6 +28,7 @@ interface CountryStat {
 
 interface Props {
   rows: CampaignEntry[];
+  deals?: DealLike[];
   selected: string;
   onSelect: (country: string) => void;
   displayCurrency: CurrencyCode;
@@ -36,7 +38,7 @@ interface Props {
 const WIDTH = 1000;
 const HEIGHT = 450;
 
-export const EuropeMap = ({ rows, selected, onSelect, displayCurrency, rates }: Props) => {
+export const EuropeMap = ({ rows, deals, selected, onSelect, displayCurrency, rates }: Props) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const gRef = useRef<SVGGElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -50,6 +52,7 @@ export const EuropeMap = ({ rows, selected, onSelect, displayCurrency, rates }: 
   const stats = useMemo(() => {
     const map = new Map<string, CountryStat>();
     const inflSets = new Map<string, Set<string>>();
+    const influencersByCountry = new Map<string, Set<string>>();
     for (const r of rows) {
       let s = map.get(r.country);
       if (!s) {
@@ -64,16 +67,35 @@ export const EuropeMap = ({ rows, selected, onSelect, displayCurrency, rates }: 
         if (!inflSets.has(r.country)) inflSets.set(r.country, new Set());
         inflSets.get(r.country)!.add(r.influencer);
       }
+      if (r.influencerId) {
+        if (!influencersByCountry.has(r.country)) influencersByCountry.set(r.country, new Set());
+        influencersByCountry.get(r.country)!.add(r.influencerId);
+      }
     }
     for (const [country, set] of inflSets) {
       const s = map.get(country);
       if (s) s.influencers = set.size;
     }
+    // Add product costs from deals (scoped to influencers active in that country),
+    // deduped by deal id.
+    if (deals && deals.length) {
+      for (const [country, infIds] of influencersByCountry) {
+        const s = map.get(country);
+        if (!s) continue;
+        const seen = new Set<string>();
+        for (const d of deals) {
+          if (!infIds.has(d.influencerId)) continue;
+          if (seen.has(d.id)) continue;
+          seen.add(d.id);
+          s.spend += convertCurrency(d.productCost, d.productCostCurrency, displayCurrency, rates) ?? 0;
+        }
+      }
+    }
     for (const s of map.values()) {
       s.roi = s.spend > 0 ? ((s.revenue - s.spend) / s.spend) * 100 : null;
     }
     return map;
-  }, [rows, displayCurrency, rates]);
+  }, [rows, deals, displayCurrency, rates]);
 
   const totals = useMemo(() => {
     let campaigns = 0;

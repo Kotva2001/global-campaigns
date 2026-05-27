@@ -58,7 +58,7 @@ const Dashboard = () => {
   const detailCampaigns = useMemo(() => detailCreator ? data.filter((campaign) => campaign.influencerId === detailCreator.id) : [], [data, detailCreator]);
   const convertedSub = useMemo(() => {
     const eur = filtered.reduce((sum, row) => sum + (row.currency === "EUR" ? (row.campaignCost ?? 0) : 0), 0);
-    return eur > 0 && displayCurrency === "CZK" ? `(incl. ${eur.toLocaleString("cs-CZ")} € converted)` : undefined;
+    return eur > 0 && displayCurrency === "CZK" ? `(incl. ${eur.toLocaleString("cs-CZ")} € in paid collabs)` : undefined;
   }, [displayCurrency, filtered]);
 
   const marketLabel =
@@ -125,6 +125,7 @@ const Dashboard = () => {
 
       <EuropeMap
         rows={data}
+        deals={deals}
         selected={selectedCountry}
         onSelect={filters.setSelectedCountry}
         displayCurrency={displayCurrency}
