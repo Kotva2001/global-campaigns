@@ -20,7 +20,7 @@ import {
 } from "@/lib/calculations";
 
 const Index = () => {
-  const { config, updateConfig, data, loading, lastFetched, refresh, configured } = useSheetData();
+  const { config, updateConfig, data, deals, loading, lastFetched, refresh, configured } = useSheetData();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const filters = useFilters(data);
@@ -33,8 +33,21 @@ const Index = () => {
   );
   const totalViews = useMemo(() => data.reduce((a, r) => a + (r.views ?? 0), 0), [data]);
 
-  const kpis = useMemo(() => computeKPIs(filtered), [filtered]);
-  const influencers = useMemo(() => summarizeInfluencers(filtered), [filtered]);
+  const dealsForFiltered = useMemo(() => {
+    const ids = new Set(filtered.map((r) => r.influencerId).filter(Boolean) as string[]);
+    return deals.filter((d) => ids.has(d.influencerId));
+  }, [deals, filtered]);
+  const dealsByInfluencerId = useMemo(() => {
+    const map = new Map<string, typeof deals>();
+    for (const d of dealsForFiltered) {
+      const arr = map.get(d.influencerId) ?? [];
+      arr.push(d);
+      map.set(d.influencerId, arr);
+    }
+    return map;
+  }, [dealsForFiltered]);
+  const kpis = useMemo(() => computeKPIs(filtered, "CZK", undefined, dealsForFiltered), [filtered, dealsForFiltered]);
+  const influencers = useMemo(() => summarizeInfluencers(filtered, "CZK", undefined, dealsByInfluencerId), [filtered, dealsByInfluencerId]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">

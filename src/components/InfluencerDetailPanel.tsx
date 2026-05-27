@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { COUNTRY_FLAGS, COUNTRY_NAMES } from "@/lib/countries";
-import { computeKPIs } from "@/lib/calculations";
+import { computeKPIs, type DealLike } from "@/lib/calculations";
 import { formatCompact, formatCurrency, formatNumber, formatPercent } from "@/lib/formatters";
 import type { CurrencyCode, ExchangeRates } from "@/lib/currency";
 import { isBarterCollaboration } from "@/lib/campaign-costs";
@@ -45,6 +45,7 @@ import { normalize } from "@/lib/normalize";
 interface Props {
   creator: InfluencerRecord | null;
   campaigns: CampaignEntry[];
+  deals?: DealLike[];
   onClose: () => void;
   onEditInfluencer?: () => void;
   onAddCampaign?: () => void;
@@ -336,7 +337,7 @@ const CampaignNameCell = ({
   );
 };
 
-export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInfluencer, onAddCampaign, onEditCampaign, onChanged, displayCurrency = "CZK", rates }: Props) => {
+export const InfluencerDetailPanel = ({ creator, campaigns, deals, onClose, onEditInfluencer, onAddCampaign, onEditCampaign, onChanged, displayCurrency = "CZK", rates }: Props) => {
   const [deleteCampaign, setDeleteCampaign] = useState<CampaignEntry | null>(null);
   const [products, setProducts] = useState<ProductRecord[]>([]);
   const [flashedCells, setFlashedCells] = useState<Record<string, number>>({});
@@ -398,7 +399,7 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
     }, 1200);
   };
 
-  const kpis = useMemo(() => computeKPIs(campaigns, displayCurrency, rates), [campaigns, displayCurrency, rates]);
+  const kpis = useMemo(() => computeKPIs(campaigns, displayCurrency, rates, deals), [campaigns, displayCurrency, rates, deals]);
   const platforms = useMemo(() => {
     const fromCreator = creator?.platforms?.filter(Boolean) ?? [];
     const fromCampaigns = campaigns.map((campaign) => campaign.platform).filter(Boolean);

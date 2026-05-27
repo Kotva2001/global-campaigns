@@ -24,7 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { COUNTRIES, COUNTRY_FLAGS, COUNTRY_NAMES } from "@/lib/countries";
 import { FlagIcon, FLAG_COMPONENTS, hasFlag } from "@/components/FlagIcon";
 import { instagramHandlesFromValue } from "@/lib/instagram";
-import { computeKPIs } from "@/lib/calculations";
+import { computeKPIs, type DealLike } from "@/lib/calculations";
 import { formatCompact } from "@/lib/formatters";
 import { campaignCollaborationCost, normalizeDealCostCurrency, type DealCostValue } from "@/lib/campaign-costs";
 import { copyExternalLinkToClipboard } from "@/lib/external-link-copy";
@@ -56,6 +56,7 @@ interface CampaignRow {
 
 interface DealCostRow {
   id: string;
+  influencer_id: string | null;
   total_cost: number | string | null;
   currency: string | null;
 }
@@ -165,6 +166,7 @@ const mapCampaign = (row: CampaignRow, influencer: InfluencerRecord, productCost
 const Creators = () => {
   const [influencers, setInfluencers] = useState<InfluencerRecord[]>([]);
   const [campaigns, setCampaigns] = useState<CampaignEntry[]>([]);
+  const [allDeals, setAllDeals] = useState<DealLike[]>([]);
   const { scores } = useCreatorScores();
   const [loading, setLoading] = useState(true);
   const [country, setCountry] = useState("All");
@@ -234,25 +236,37 @@ const Creators = () => {
 
   const load = async () => {
     setLoading(true);
-    const [{ data: infl, error: inflError }, { data: camps, error: campError }] = await Promise.all([
+    const [
+      { data: infl, error: inflError },
+      { data: camps, error: campError },
+      { data: deals, error: dealError },
+    ] = await Promise.all([
       supabase.from("influencers").select("*").order("name"),
       supabase.from("campaigns").select("*").order("publish_date", { ascending: false, nullsFirst: false }),
+      supabase.from("deals").select("id,influencer_id,total_cost,currency"),
     ]);
     if (inflError) toastError("Could not load creators", inflError);
     if (campError) toastError("Could not load campaigns", campError);
+    if (dealError) toastError("Could not load deals", dealError);
     const creatorRows = (infl ?? []) as InfluencerRecord[];
     const campaignRows = (camps ?? []) as CampaignRow[];
-    const dealIds = Array.from(new Set(campaignRows.map((campaign) => campaign.deal_id).filter(Boolean))) as string[];
-    const { data: deals, error: dealError } = dealIds.length
-      ? await supabase.from("deals").select("id,total_cost,currency").in("id", dealIds)
-      : { data: [], error: null };
-    if (dealError) toastError("Could not load deals", dealError);
-    const productCostByDealId = new Map(((deals ?? []) as DealCostRow[]).map((deal) => [deal.id, {
+    const dealRowsAll = (deals ?? []) as DealCostRow[];
+    const productCostByDealId = new Map(dealRowsAll.map((deal) => [deal.id, {
       amount: num(deal.total_cost) ?? 0,
       currency: normalizeDealCostCurrency(deal.currency),
     }]));
     const byId = new Map(creatorRows.map((creator) => [creator.id, creator]));
     setInfluencers(creatorRows);
+    setAllDeals(
+      dealRowsAll
+        .filter((d) => !!d.influencer_id)
+        .map<DealLike>((d) => ({
+          id: d.id,
+          influencerId: d.influencer_id as string,
+          productCost: num(d.total_cost) ?? 0,
+          productCostCurrency: normalizeDealCostCurrency(d.currency),
+        })),
+    );
     setSelectedCreators((current) => current.filter((id) => creatorRows.some((creator) => creator.id === id)));
     setCampaigns(campaignRows.flatMap((campaign) => {
       const creator = campaign.influencer_id ? byId.get(campaign.influencer_id) : undefined;
@@ -289,6 +303,16 @@ const Creators = () => {
     });
     return map;
   }, [campaigns]);
+
+  const dealsByInfluencerId = useMemo(() => {
+    const map = new Map<string, DealLike[]>();
+    for (const d of allDeals) {
+      const arr = map.get(d.influencerId) ?? [];
+      arr.push(d);
+      map.set(d.influencerId, arr);
+    }
+    return map;
+  }, [allDeals]);
 
   const filtered = useMemo(() => {
     const query = normalize(search.trim());
@@ -516,6 +540,7 @@ const Creators = () => {
                 key={creator.id}
                 creator={creator}
                 campaigns={campaignGroups.get(creator.id) ?? []}
+                deals={dealsByInfluencerId.get(creator.id) ?? []}
                 maxCampaigns={summary.maxCampaigns || 1}
                 index={i}
                 score={scores.get(creator.id)?.score ?? null}
@@ -536,7 +561,7 @@ const Creators = () => {
 
       <CreatorDialog open={creatorOpen} onOpenChange={setCreatorOpen} editing={editing} onSaved={() => { setCreatorOpen(false); void load(); }} />
       <CampaignDialog open={campaignOpen} onOpenChange={setCampaignOpen} editing={editingCampaign} initialInfluencerId={campaignInfluencerId} onSaved={() => { setCampaignOpen(false); setEditingCampaign(null); void load(); }} />
-      <InfluencerDetailPanel creator={detailCreator} campaigns={detailCreator ? campaignGroups.get(detailCreator.id) ?? [] : []} onClose={closeDetail} onEditInfluencer={() => { setEditing(detailCreator); setCreatorOpen(true); }} onAddCampaign={() => detailCreator && openCampaign(detailCreator.id)} onEditCampaign={(campaign) => { setEditingCampaign(campaign); setCampaignOpen(true); }} onChanged={load} />
+      <InfluencerDetailPanel creator={detailCreator} campaigns={detailCreator ? campaignGroups.get(detailCreator.id) ?? [] : []} deals={detailCreator ? dealsByInfluencerId.get(detailCreator.id) ?? [] : []} onClose={closeDetail} onEditInfluencer={() => { setEditing(detailCreator); setCreatorOpen(true); }} onAddCampaign={() => detailCreator && openCampaign(detailCreator.id)} onEditCampaign={(campaign) => { setEditingCampaign(campaign); setCampaignOpen(true); }} onChanged={load} />
 
       <AlertDialog open={mergeOpen} onOpenChange={setMergeOpen}>
         <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Merge selected creators?</AlertDialogTitle><AlertDialogDescription>Choose which profile to keep. Campaigns from the other creator will be reassigned before that duplicate is deleted.</AlertDialogDescription></AlertDialogHeader><div className="space-y-2 py-2"><Select value={keepCreatorId} onValueChange={setKeepCreatorId}><SelectTrigger><SelectValue placeholder="Creator to keep" /></SelectTrigger><SelectContent>{selectedCreators.map((id) => { const creator = influencers.find((row) => row.id === id); return creator ? <SelectItem key={id} value={id}>Keep {creator.name} ({creator.country})</SelectItem> : null; })}</SelectContent></Select></div><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={mergeCreators}>Merge creators</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
@@ -575,18 +600,18 @@ const CreatorGridSkeleton = () => (
 );
 
 const CreatorCard = ({
-  creator, campaigns, maxCampaigns, index, score, rank, podium, selected, onSelect, onOpen, onAddCampaign, onEdit, onTogglePause, onDelete,
+  creator, campaigns, deals, maxCampaigns, index, score, rank, podium, selected, onSelect, onOpen, onAddCampaign, onEdit, onTogglePause, onDelete,
 }: {
-  creator: InfluencerRecord; campaigns: CampaignEntry[]; maxCampaigns: number; index: number;
+  creator: InfluencerRecord; campaigns: CampaignEntry[]; deals: DealLike[]; maxCampaigns: number; index: number;
   score: number | null;
   rank: number | null;
   podium?: boolean;
   selected: boolean; onSelect: (checked: boolean) => void; onOpen: () => void;
   onAddCampaign: () => void; onEdit: () => void; onTogglePause: () => void; onDelete: () => void;
 }) => {
-  const kpis = computeKPIs(campaigns);
+  const kpis = computeKPIs(campaigns, "CZK", undefined, deals);
   const meta = STATUS_META[creator.status];
-  const hasCampaigns = campaigns.length > 0;
+  const hasCampaigns = campaigns.length > 0 || deals.length > 0;
   const top = topPlatformOf(campaigns);
   const accent = platformAccent(top);
   const accentVar = `hsl(${accent.hue})`;

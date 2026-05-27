@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { CampaignEntry, Platform } from "@/types/campaign";
 import { campaignCollaborationCost, normalizeDealCostCurrency, type DealCostValue } from "@/lib/campaign-costs";
+import type { DealLike } from "@/lib/calculations";
 
 // Kept for API compatibility with existing components — no longer used.
 export interface SheetConfig {
@@ -54,6 +55,7 @@ interface InfluencerLookupRow {
 
 interface DealCostRow {
   id: string;
+  influencer_id: string | null;
   total_cost: number | string | null;
   currency: string | null;
 }
@@ -98,6 +100,7 @@ const mapRow = (r: CampaignRow, influencerById: Map<string, InfluencerLookupRow>
 
 export const useSheetData = () => {
   const [data, setData] = useState<CampaignEntry[]>([]);
+  const [deals, setDeals] = useState<DealLike[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastFetched, setLastFetched] = useState<Date | null>(null);
@@ -115,23 +118,31 @@ export const useSheetData = () => {
       if (err) throw err;
       const campaignRows = (rows ?? []) as unknown as CampaignRow[];
       const influencerIds = [...new Set(campaignRows.map((row) => row.influencer_id).filter(Boolean))] as string[];
-      const dealIds = [...new Set(campaignRows.map((row) => row.deal_id).filter(Boolean))] as string[];
-      const [{ data: influencers, error: influencerErr }, { data: deals, error: dealsErr }] = await Promise.all([
+      const [{ data: influencers, error: influencerErr }, { data: dealRows, error: dealsErr }] = await Promise.all([
         influencerIds.length
           ? supabase.from("influencers").select("id,name,country").in("id", influencerIds)
           : Promise.resolve({ data: [], error: null }),
-        dealIds.length
-          ? supabase.from("deals").select("id,total_cost,currency").in("id", dealIds)
-          : Promise.resolve({ data: [], error: null }),
+        supabase.from("deals").select("id,influencer_id,total_cost,currency"),
       ]);
       if (influencerErr) throw influencerErr;
       if (dealsErr) throw dealsErr;
       const influencerById = new Map((influencers ?? []).map((influencer) => [influencer.id, influencer]));
-      const productCostByDealId = new Map(((deals ?? []) as DealCostRow[]).map((deal) => [deal.id, {
+      const allDealRows = (dealRows ?? []) as DealCostRow[];
+      const productCostByDealId = new Map(allDealRows.map((deal) => [deal.id, {
         amount: num(deal.total_cost) ?? 0,
         currency: normalizeDealCostCurrency(deal.currency),
       }]));
       setData(campaignRows.map((row) => mapRow(row, influencerById, productCostByDealId)));
+      setDeals(
+        allDealRows
+          .filter((d) => !!d.influencer_id)
+          .map<DealLike>((d) => ({
+            id: d.id,
+            influencerId: d.influencer_id as string,
+            productCost: num(d.total_cost) ?? 0,
+            productCostCurrency: normalizeDealCostCurrency(d.currency),
+          })),
+      );
       setLastFetched(new Date());
     } catch (e) {
       const msg =
@@ -163,6 +174,7 @@ export const useSheetData = () => {
       void refresh();
     },
     data,
+    deals,
     loading,
     error,
     lastFetched,

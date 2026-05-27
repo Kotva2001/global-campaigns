@@ -28,7 +28,7 @@ import { COUNTRY_FLAGS, COUNTRY_NAMES } from "@/lib/countries";
 import type { InfluencerRecord } from "@/types/campaign";
 
 const Dashboard = () => {
-  const { data, loading, lastFetched, refresh } = useSheetData();
+  const { data, deals, loading, lastFetched, refresh } = useSheetData();
   const { displayCurrency, setDisplayCurrency, eurCzkRate } = useCurrencySettings();
   const [campaignOpen, setCampaignOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState(null);
@@ -40,8 +40,21 @@ const Dashboard = () => {
   const { selectedCountry, filtered } = filters;
 
   const rates = useMemo(() => ({ EUR_CZK: eurCzkRate }), [eurCzkRate]);
-  const kpis = useMemo(() => computeKPIs(filtered, displayCurrency, rates), [displayCurrency, filtered, rates]);
-  const influencers = useMemo(() => summarizeInfluencers(filtered, displayCurrency, rates), [displayCurrency, filtered, rates]);
+  const dealsForFiltered = useMemo(() => {
+    const ids = new Set(filtered.map((r) => r.influencerId).filter(Boolean) as string[]);
+    return deals.filter((d) => ids.has(d.influencerId));
+  }, [deals, filtered]);
+  const dealsByInfluencerId = useMemo(() => {
+    const map = new Map<string, typeof deals>();
+    for (const d of dealsForFiltered) {
+      const arr = map.get(d.influencerId) ?? [];
+      arr.push(d);
+      map.set(d.influencerId, arr);
+    }
+    return map;
+  }, [dealsForFiltered]);
+  const kpis = useMemo(() => computeKPIs(filtered, displayCurrency, rates, dealsForFiltered), [displayCurrency, filtered, rates, dealsForFiltered]);
+  const influencers = useMemo(() => summarizeInfluencers(filtered, displayCurrency, rates, dealsByInfluencerId), [displayCurrency, filtered, rates, dealsByInfluencerId]);
   const detailCampaigns = useMemo(() => detailCreator ? data.filter((campaign) => campaign.influencerId === detailCreator.id) : [], [data, detailCreator]);
   const convertedSub = useMemo(() => {
     const eur = filtered.reduce((sum, row) => sum + (row.currency === "EUR" ? (row.campaignCost ?? 0) : 0), 0);
@@ -192,6 +205,7 @@ const Dashboard = () => {
       <InfluencerDetailPanel
         creator={detailCreator}
         campaigns={detailCampaigns}
+        deals={detailCreator ? deals.filter((d) => d.influencerId === detailCreator.id) : []}
         displayCurrency={displayCurrency}
         rates={rates}
         onClose={() => setDetailCreator(null)}
