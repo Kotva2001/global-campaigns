@@ -28,6 +28,7 @@ import { formatCurrency, formatNumber, formatPercent } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { CampaignEntry } from "@/types/campaign";
 import { recalcDealSplit } from "@/lib/deals";
+import { isBarterCollaboration } from "@/lib/campaign-costs";
 
 interface Props {
   rows: CampaignEntry[];
@@ -161,7 +162,10 @@ export const DataTable = ({ rows, onChanged, onAddCampaign, onEditCampaign }: Pr
 
   const bulkUpdateCollab = async (collaborationType: string) => {
     setBulkCollab(collaborationType);
-    const { error } = await supabase.from("campaigns").update({ collaboration_type: collaborationType }).in("id", selectedIds);
+    const payload = isBarterCollaboration(collaborationType)
+      ? { collaboration_type: collaborationType, campaign_cost: 0 }
+      : { collaboration_type: collaborationType };
+    const { error } = await supabase.from("campaigns").update(payload).in("id", selectedIds);
     if (error) return toast.error(error.message);
     toast.success(`Updated ${selectedIds.length} campaigns`);
     setSelected({});
@@ -194,7 +198,7 @@ export const DataTable = ({ rows, onChanged, onAddCampaign, onEditCampaign }: Pr
     { id: "date", header: "Date", accessorKey: "publishDate", cell: ({ getValue }) => <span className="whitespace-nowrap text-muted-foreground">{String(getValue() || "—")}</span> },
     { id: "collab", header: "Collab", accessorKey: "collaborationType", cell: ({ getValue }) => collabBadge(String(getValue() || "")) },
     { id: "cost", header: () => <div className="text-right">Cost</div>, accessorKey: "campaignCost", cell: ({ row, getValue }) => <div className="text-right tabular-nums text-foreground">{formatCurrency(getValue() as number | null, row.original.currency)}</div> },
-    { id: "productCost", header: () => <div className="text-right">Product Cost</div>, accessorKey: "productCost", cell: ({ row, getValue }) => <div className="text-right tabular-nums text-muted-foreground">{formatCurrency(getValue() as number | null, row.original.currency)}</div> },
+    { id: "productCost", header: () => <div className="text-right">Product Cost</div>, accessorKey: "productCost", cell: ({ row, getValue }) => <div className="text-right tabular-nums text-muted-foreground">{formatCurrency(getValue() as number | null, row.original.productCostCurrency ?? row.original.currency)}</div> },
     { id: "views", header: () => <div className="text-right">Views</div>, accessorKey: "views", cell: ({ row, getValue }) => <div className="text-right font-bold"><EditableNumber value={getValue() as number | null} campaignId={row.original.id} field="views" onChanged={onChanged} /></div> },
     { id: "likes", header: () => <div className="text-right">Likes</div>, accessorKey: "likes", cell: ({ row, getValue }) => <div className="text-right"><EditableNumber value={getValue() as number | null} campaignId={row.original.id} field="likes" onChanged={onChanged} /></div> },
     { id: "comments", header: () => <div className="text-right">Comments</div>, accessorKey: "comments", cell: ({ row, getValue }) => <div className="text-right"><EditableNumber value={getValue() as number | null} campaignId={row.original.id} field="comments" onChanged={onChanged} /></div> },

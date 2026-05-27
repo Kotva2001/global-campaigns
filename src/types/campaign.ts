@@ -16,6 +16,7 @@ export interface CampaignEntry {
   currency: CurrencyCode;
   campaignCost: number | null;
   productCost: number | null;
+  productCostCurrency: CurrencyCode | null;
   utmLink: string;
   managedBy: string;
   views: number | null;

@@ -26,6 +26,7 @@ import { FlagIcon, FLAG_COMPONENTS, hasFlag } from "@/components/FlagIcon";
 import { instagramHandlesFromValue } from "@/lib/instagram";
 import { computeKPIs } from "@/lib/calculations";
 import { formatCompact } from "@/lib/formatters";
+import { campaignCollaborationCost, normalizeDealCostCurrency, type DealCostValue } from "@/lib/campaign-costs";
 import { copyExternalLinkToClipboard } from "@/lib/external-link-copy";
 import { normalize } from "@/lib/normalize";
 import { cn } from "@/lib/utils";
@@ -56,6 +57,7 @@ interface CampaignRow {
 interface DealCostRow {
   id: string;
   total_cost: number | string | null;
+  currency: string | null;
 }
 
 const STATUS_META = {
@@ -133,7 +135,7 @@ const formatDate = (iso: string | null) => {
   return Number.isNaN(date.getTime()) ? iso : date.toLocaleDateString("cs-CZ");
 };
 
-const mapCampaign = (row: CampaignRow, influencer: InfluencerRecord, productCostByDealId: Map<string, number>): CampaignEntry => ({
+const mapCampaign = (row: CampaignRow, influencer: InfluencerRecord, productCostByDealId: Map<string, DealCostValue>): CampaignEntry => ({
   id: row.id,
   influencerId: row.influencer_id,
   dealId: row.deal_id ?? null,
@@ -146,8 +148,9 @@ const mapCampaign = (row: CampaignRow, influencer: InfluencerRecord, productCost
   videoLink: row.video_url ?? "",
   collaborationType: row.collaboration_type ?? "",
   currency: row.currency === "EUR" || row.currency === "HUF" || row.currency === "RON" ? row.currency : "CZK",
-  campaignCost: num(row.campaign_cost),
-  productCost: row.deal_id ? productCostByDealId.get(row.deal_id) ?? null : null,
+  campaignCost: campaignCollaborationCost(num(row.campaign_cost), row.collaboration_type),
+  productCost: row.deal_id ? productCostByDealId.get(row.deal_id)?.amount ?? null : null,
+  productCostCurrency: row.deal_id ? productCostByDealId.get(row.deal_id)?.currency ?? null : null,
   utmLink: row.utm_link ?? "",
   managedBy: row.managed_by ?? "",
   views: num(row.views),
@@ -241,10 +244,13 @@ const Creators = () => {
     const campaignRows = (camps ?? []) as CampaignRow[];
     const dealIds = Array.from(new Set(campaignRows.map((campaign) => campaign.deal_id).filter(Boolean))) as string[];
     const { data: deals, error: dealError } = dealIds.length
-      ? await supabase.from("deals").select("id,total_cost").in("id", dealIds)
+      ? await supabase.from("deals").select("id,total_cost,currency").in("id", dealIds)
       : { data: [], error: null };
     if (dealError) toastError("Could not load deals", dealError);
-    const productCostByDealId = new Map(((deals ?? []) as DealCostRow[]).map((deal) => [deal.id, num(deal.total_cost) ?? 0]));
+    const productCostByDealId = new Map(((deals ?? []) as DealCostRow[]).map((deal) => [deal.id, {
+      amount: num(deal.total_cost) ?? 0,
+      currency: normalizeDealCostCurrency(deal.currency),
+    }]));
     const byId = new Map(creatorRows.map((creator) => [creator.id, creator]));
     setInfluencers(creatorRows);
     setSelectedCreators((current) => current.filter((id) => creatorRows.some((creator) => creator.id === id)));

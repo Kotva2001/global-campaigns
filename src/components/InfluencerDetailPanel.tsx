@@ -29,6 +29,7 @@ import { COUNTRY_FLAGS, COUNTRY_NAMES } from "@/lib/countries";
 import { computeKPIs } from "@/lib/calculations";
 import { formatCompact, formatCurrency, formatNumber, formatPercent } from "@/lib/formatters";
 import type { CurrencyCode, ExchangeRates } from "@/lib/currency";
+import { isBarterCollaboration } from "@/lib/campaign-costs";
 import { cn } from "@/lib/utils";
 import type { CampaignEntry, InfluencerRecord } from "@/types/campaign";
 import type { TablesUpdate } from "@/integrations/supabase/types";
@@ -220,7 +221,10 @@ const EditableSelectCell = ({
   const cellKey = `${campaignId}:${column}`;
   const onChange = async (next: string) => {
     if (next === value) return;
-    await updateCampaign(campaignId, { [column]: next } as TablesUpdate<"campaigns">, cellKey, flash, onChanged);
+    const payload = column === "collaboration_type" && isBarterCollaboration(next)
+      ? { [column]: next, campaign_cost: 0 }
+      : { [column]: next };
+    await updateCampaign(campaignId, payload as TablesUpdate<"campaigns">, cellKey, flash, onChanged);
   };
   return (
     <div data-mutate-cell className="relative inline-block">
@@ -533,7 +537,7 @@ export const InfluencerDetailPanel = ({ creator, campaigns, onClose, onEditInflu
                             <td className="whitespace-nowrap px-3 py-2.5 text-right"><EditableNumberCell value={campaign.likes} campaignId={campaign.id} field="likes" formatAs="number" flashed={!!flashedCells[`${campaign.id}:likes`]} flash={flash} onChanged={onChanged} /></td>
                             <td className="whitespace-nowrap px-3 py-2.5 text-right"><EditableNumberCell value={campaign.comments} campaignId={campaign.id} field="comments" formatAs="number" flashed={!!flashedCells[`${campaign.id}:comments`]} flash={flash} onChanged={onChanged} /></td>
                             <td className="whitespace-nowrap px-3 py-2.5 text-right"><EditableNumberCell value={campaign.campaignCost} campaignId={campaign.id} field="campaignCost" currency={campaign.currency} formatAs="currency" flashed={!!flashedCells[`${campaign.id}:campaignCost`]} flash={flash} onChanged={onChanged} /></td>
-                            <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-muted-foreground">{campaign.productCost != null ? formatCurrency(campaign.productCost, campaign.currency) : "—"}</td>
+                            <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-muted-foreground">{campaign.productCost != null ? formatCurrency(campaign.productCost, campaign.productCostCurrency ?? campaign.currency) : "—"}</td>
                             <td className="whitespace-nowrap px-3 py-2.5 text-right"><EditableNumberCell value={campaign.purchaseRevenue} campaignId={campaign.id} field="purchaseRevenue" currency={campaign.currency} formatAs="currency" flashed={!!flashedCells[`${campaign.id}:purchaseRevenue`]} flash={flash} onChanged={onChanged} /></td>
                             <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-muted-foreground">{formatPercent(campaign.engagementRate)}</td>
                             <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-muted-foreground">{formatPercent(campaign.conversionRate)}</td>

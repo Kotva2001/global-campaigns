@@ -81,6 +81,7 @@ export const parseRow = (
     currency: detectCurrency(`${c(6)} ${c(14)}`, fallbackCurrency),
     campaignCost: parseCzechNumber(c(6)),
     productCost: null,
+    productCostCurrency: null,
     utmLink: c(7),
     managedBy: c(8),
     views: parseCzechNumber(c(9)),

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { CampaignEntry, Platform } from "@/types/campaign";
+import { campaignCollaborationCost, normalizeDealCostCurrency, type DealCostValue } from "@/lib/campaign-costs";
 
 // Kept for API compatibility with existing components — no longer used.
 export interface SheetConfig {
@@ -54,6 +55,7 @@ interface InfluencerLookupRow {
 interface DealCostRow {
   id: string;
   total_cost: number | string | null;
+  currency: string | null;
 }
 
 const formatDate = (iso: string | null): string => {
@@ -63,8 +65,9 @@ const formatDate = (iso: string | null): string => {
   return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}`;
 };
 
-const mapRow = (r: CampaignRow, influencerById: Map<string, InfluencerLookupRow>, productCostByDealId: Map<string, number>): CampaignEntry => {
+const mapRow = (r: CampaignRow, influencerById: Map<string, InfluencerLookupRow>, productCostByDealId: Map<string, DealCostValue>): CampaignEntry => {
   const influencer = r.influencer_id ? influencerById.get(r.influencer_id) : undefined;
+  const productCost = r.deal_id ? productCostByDealId.get(r.deal_id) : undefined;
   return {
   id: r.id,
   influencerId: r.influencer_id,
@@ -78,8 +81,9 @@ const mapRow = (r: CampaignRow, influencerById: Map<string, InfluencerLookupRow>
   videoLink: r.video_url ?? "",
   collaborationType: r.collaboration_type ?? "",
   currency: r.currency === "EUR" || r.currency === "HUF" || r.currency === "RON" ? r.currency : "CZK",
-  campaignCost: num(r.campaign_cost),
-  productCost: r.deal_id ? productCostByDealId.get(r.deal_id) ?? null : null,
+  campaignCost: campaignCollaborationCost(num(r.campaign_cost), r.collaboration_type),
+  productCost: productCost?.amount ?? null,
+  productCostCurrency: productCost?.currency ?? null,
   utmLink: r.utm_link ?? "",
   managedBy: r.managed_by ?? "",
   views: num(r.views),
@@ -117,13 +121,16 @@ export const useSheetData = () => {
           ? supabase.from("influencers").select("id,name,country").in("id", influencerIds)
           : Promise.resolve({ data: [], error: null }),
         dealIds.length
-          ? supabase.from("deals").select("id,total_cost").in("id", dealIds)
+          ? supabase.from("deals").select("id,total_cost,currency").in("id", dealIds)
           : Promise.resolve({ data: [], error: null }),
       ]);
       if (influencerErr) throw influencerErr;
       if (dealsErr) throw dealsErr;
       const influencerById = new Map((influencers ?? []).map((influencer) => [influencer.id, influencer]));
-      const productCostByDealId = new Map(((deals ?? []) as DealCostRow[]).map((deal) => [deal.id, num(deal.total_cost) ?? 0]));
+      const productCostByDealId = new Map(((deals ?? []) as DealCostRow[]).map((deal) => [deal.id, {
+        amount: num(deal.total_cost) ?? 0,
+        currency: normalizeDealCostCurrency(deal.currency),
+      }]));
       setData(campaignRows.map((row) => mapRow(row, influencerById, productCostByDealId)));
       setLastFetched(new Date());
     } catch (e) {

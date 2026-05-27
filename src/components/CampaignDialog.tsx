@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { COUNTRIES, COUNTRY_FLAGS } from "@/lib/countries";
 import { defaultCurrencyForCountry, type CurrencyCode } from "@/lib/currency";
+import { isBarterCollaboration } from "@/lib/campaign-costs";
 import { extractYouTubeVideoId } from "@/lib/youtube";
 import type { CampaignEntry, InfluencerRecord, Platform } from "@/types/campaign";
 import { Button } from "@/components/ui/button";
@@ -152,6 +153,7 @@ export const CampaignDialog = ({ open, onOpenChange, editing, initialInfluencerI
     }
 
     const value = parsed.data;
+    const isPaidCollaboration = value.collaborationType?.toLowerCase().includes("paid") && !isBarterCollaboration(value.collaborationType);
     const payload = {
       influencer_id: value.influencerId,
       campaign_name: value.campaignName || null,
@@ -161,7 +163,7 @@ export const CampaignDialog = ({ open, onOpenChange, editing, initialInfluencerI
       video_id: extractYouTubeVideoId(value.videoLink ?? ""),
       collaboration_type: value.collaborationType || null,
       currency: value.currency,
-      campaign_cost: toDbNumber(value.campaignCost) ?? 0,
+      campaign_cost: isPaidCollaboration ? toDbNumber(value.campaignCost) ?? 0 : 0,
       utm_link: value.utmLink || null,
       managed_by: value.managedBy || null,
       views: toDbNumber(value.views) ?? 0,
