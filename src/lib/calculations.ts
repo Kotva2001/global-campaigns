@@ -9,6 +9,22 @@ const avg = (xs: (number | null)[]) => {
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
 };
 
+const sumUniqueDealCosts = (
+  rows: CampaignEntry[],
+  displayCurrency: CurrencyCode,
+  rates?: ExchangeRates,
+): number => {
+  const seen = new Set<string>();
+  let total = 0;
+  for (const r of rows) {
+    if (!r.dealId || r.productCost == null) continue;
+    if (seen.has(r.dealId)) continue;
+    seen.add(r.dealId);
+    total += convertCurrency(r.productCost, r.productCostCurrency ?? r.currency, displayCurrency, rates);
+  }
+  return total;
+};
+
 export interface KPISet {
   campaigns: number;
   stories: number;
