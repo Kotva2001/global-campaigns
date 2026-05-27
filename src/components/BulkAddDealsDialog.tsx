@@ -34,19 +34,20 @@ interface ParsedRow {
 const CURRENCIES: CurrencyCode[] = ["CZK", "EUR", "HUF", "RON"];
 const COLLAB_OPTIONS = ["Barter", "Paid", "Hybrid", "Other"] as const;
 
-const splitLine = (line: string) => {
-  // Split by comma; if name itself may contain commas, take last two numeric-looking tokens as qty/price.
-  const parts = line.split(",").map((p) => p.trim()).filter((p) => p.length > 0);
-  if (parts.length === 0) return null;
-  if (parts.length === 1) return { name: parts[0], quantity: NaN, price: NaN };
-  if (parts.length === 2) {
-    const maybeQty = Number(parts[1].replace(/\s/g, "").replace(",", "."));
-    return { name: parts[0], quantity: maybeQty, price: NaN };
+const parseLine = (line: string): { name: string; quantity: number } | null => {
+  const trimmed = line.trim();
+  if (!trimmed) return null;
+  // Try "name, qty"
+  const commaMatch = trimmed.match(/^(.*),\s*(\d+)\s*$/);
+  if (commaMatch) {
+    return { name: commaMatch[1].trim(), quantity: Math.max(1, parseInt(commaMatch[2], 10) || 1) };
   }
-  const price = Number(parts[parts.length - 1].replace(/\s/g, "").replace(",", "."));
-  const quantity = Number(parts[parts.length - 2].replace(/\s/g, "").replace(",", "."));
-  const name = parts.slice(0, parts.length - 2).join(", ");
-  return { name, quantity, price };
+  // Try "name x2" / "name × 3" (with optional space)
+  const xMatch = trimmed.match(/^(.*?)[\s]*[x×X]\s*(\d+)\s*$/);
+  if (xMatch && xMatch[1].trim().length > 0) {
+    return { name: xMatch[1].trim(), quantity: Math.max(1, parseInt(xMatch[2], 10) || 1) };
+  }
+  return { name: trimmed, quantity: 1 };
 };
 
 export const BulkAddDealsDialog = ({ open, onOpenChange, influencerId, onSaved }: Props) => {
@@ -79,15 +80,12 @@ export const BulkAddDealsDialog = ({ open, onOpenChange, influencerId, onSaved }
     try {
       const parsed = await Promise.all(
         lines.map(async (line, idx) => {
-          const bits = splitLine(line);
+          const bits = parseLine(line);
           if (!bits) return null;
           const candidates = await searchProducts(bits.name, 10);
           const best = candidates[0] ?? null;
-          const qty = Number.isFinite(bits.quantity) && bits.quantity > 0 ? Math.floor(bits.quantity) : 1;
-          let price = Number.isFinite(bits.price) && bits.price >= 0 ? bits.price : NaN;
-          if (!Number.isFinite(price)) {
-            price = best ? getProductPurchaseCost(best).value : 0;
-          }
+          const qty = bits.quantity;
+          const price = best ? getProductPurchaseCost(best).value : 0;
           return {
             id: `${Date.now()}-${idx}`,
             rawName: bits.name,
@@ -164,7 +162,7 @@ export const BulkAddDealsDialog = ({ open, onOpenChange, influencerId, onSaved }
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={6}
-              placeholder={"Paste products here — one per line. Format: product name, quantity, price\n\nTesařská tužka Pica Dry, 4, 185.26\nCRAFTMAKER Pro Station S30, 1, 1353.89\nSTRONGBOLD Superhorse H700, 2, 703.58"}
+              placeholder={"Paste product names — one per line. Add quantity with comma or x:\n\nPica Dry, 4\nCraftmaker S30\nStrongbold H700 x2"}
               className="font-mono text-xs"
             />
           </div>
