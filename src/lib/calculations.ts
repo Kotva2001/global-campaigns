@@ -9,6 +9,22 @@ const avg = (xs: (number | null)[]) => {
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
 };
 
+const sumUniqueDealCosts = (
+  rows: CampaignEntry[],
+  displayCurrency: CurrencyCode,
+  rates?: ExchangeRates,
+): number => {
+  const seen = new Set<string>();
+  let total = 0;
+  for (const r of rows) {
+    if (!r.dealId || r.productCost == null) continue;
+    if (seen.has(r.dealId)) continue;
+    seen.add(r.dealId);
+    total += convertCurrency(r.productCost, r.productCostCurrency ?? r.currency, displayCurrency, rates);
+  }
+  return total;
+};
+
 export interface KPISet {
   campaigns: number;
   stories: number;
@@ -24,7 +40,9 @@ export interface KPISet {
 export const computeKPIs = (rows: CampaignEntry[], displayCurrency: CurrencyCode = "CZK", rates?: ExchangeRates): KPISet => {
   const videoRows = rows.filter((r) => r.platform !== "Story");
   const storyRows = rows.filter((r) => r.platform === "Story");
-  const totalSpend = sum(rows.map((r) => convertCurrency(r.campaignCost, r.currency, displayCurrency, rates)));
+  const fees = sum(rows.map((r) => convertCurrency(r.campaignCost, r.currency, displayCurrency, rates)));
+  const productCost = sumUniqueDealCosts(rows, displayCurrency, rates);
+  const totalSpend = fees + productCost;
   const totalRevenue = sum(rows.map((r) => convertCurrency(r.purchaseRevenue, r.currency, displayCurrency, rates)));
   return {
     campaigns: videoRows.length,
@@ -65,7 +83,9 @@ export const summarizeInfluencers = (rows: CampaignEntry[], displayCurrency: Cur
   for (const [key, entries] of map) {
     const videos = entries.filter((e) => e.platform !== "Story");
     const stories = entries.filter((e) => e.platform === "Story");
-    const totalSpend = sum(entries.map((e) => convertCurrency(e.campaignCost, e.currency, displayCurrency, rates)));
+    const fees = sum(entries.map((e) => convertCurrency(e.campaignCost, e.currency, displayCurrency, rates)));
+    const productCost = sumUniqueDealCosts(entries, displayCurrency, rates);
+    const totalSpend = fees + productCost;
     const totalRevenue = sum(entries.map((e) => convertCurrency(e.purchaseRevenue, e.currency, displayCurrency, rates)));
     const totalViews = sum(videos.map((e) => e.views));
     const top = [...videos].sort((a, b) => (b.views ?? 0) - (a.views ?? 0))[0];
