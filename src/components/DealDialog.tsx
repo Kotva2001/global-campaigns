@@ -320,10 +320,25 @@ export const DealDialog = ({ open, onOpenChange, influencerId, editing, onSaved 
             <Label>Deal name</Label>
             <Input value={dealName} onChange={(e) => setDealName(e.target.value)} placeholder="e.g. Craftmaker S30 shipment" />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-1.5">
+              <Label>Quantity</Label>
+              <Input
+                type="number"
+                min="1"
+                step="1"
+                value={quantity}
+                onChange={(e) => handleQuantityChange(e.target.value)}
+              />
+            </div>
             <div className="space-y-1.5">
               <Label>Total cost</Label>
-              <Input type="number" min="0" step="0.01" value={totalCost} onChange={(e) => setTotalCost(e.target.value)} />
+              <Input type="number" min="0" step="0.01" value={totalCost} onChange={(e) => handleCostChange(e.target.value)} />
+              {selectedProduct && (
+                <p className="text-[11px] text-muted-foreground">
+                  Unit: {getProductPurchaseCost(selectedProduct).value.toLocaleString()} {selectedProduct.currency}
+                </p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Currency</Label>
