@@ -28,6 +28,7 @@ import { formatCurrency, formatNumber, formatPercent } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { CampaignEntry } from "@/types/campaign";
 import { recalcDealSplit } from "@/lib/deals";
+import { isBarterCollaboration } from "@/lib/campaign-costs";
 
 interface Props {
   rows: CampaignEntry[];
@@ -161,7 +162,10 @@ export const DataTable = ({ rows, onChanged, onAddCampaign, onEditCampaign }: Pr
 
   const bulkUpdateCollab = async (collaborationType: string) => {
     setBulkCollab(collaborationType);
-    const { error } = await supabase.from("campaigns").update({ collaboration_type: collaborationType }).in("id", selectedIds);
+    const payload = isBarterCollaboration(collaborationType)
+      ? { collaboration_type: collaborationType, campaign_cost: 0 }
+      : { collaboration_type: collaborationType };
+    const { error } = await supabase.from("campaigns").update(payload).in("id", selectedIds);
     if (error) return toast.error(error.message);
     toast.success(`Updated ${selectedIds.length} campaigns`);
     setSelected({});
