@@ -1,6 +1,13 @@
 import type { CampaignEntry } from "@/types/campaign";
 import { convertCurrency, type CurrencyCode, type ExchangeRates } from "@/lib/currency";
 
+export interface DealLike {
+  id: string;
+  influencerId: string;
+  productCost: number;
+  productCostCurrency: CurrencyCode | null;
+}
+
 const sum = (xs: (number | null)[]) =>
   xs.reduce<number>((a, b) => a + (b ?? 0), 0);
 
@@ -25,6 +32,25 @@ const sumUniqueDealCosts = (
   return total;
 };
 
+/**
+ * Sum a deal list (linked or unlinked) into the display currency, deduped by deal id.
+ * Caller is responsible for scoping the list (e.g. to a single influencer or country).
+ */
+const sumDealList = (
+  deals: DealLike[],
+  displayCurrency: CurrencyCode,
+  rates?: ExchangeRates,
+): number => {
+  const seen = new Set<string>();
+  let total = 0;
+  for (const d of deals) {
+    if (seen.has(d.id)) continue;
+    seen.add(d.id);
+    total += convertCurrency(d.productCost, d.productCostCurrency, displayCurrency, rates);
+  }
+  return total;
+};
+
 export interface KPISet {
   campaigns: number;
   stories: number;
@@ -37,11 +63,24 @@ export interface KPISet {
   avgEngagement: number | null;
 }
 
-export const computeKPIs = (rows: CampaignEntry[], displayCurrency: CurrencyCode = "CZK", rates?: ExchangeRates): KPISet => {
+/**
+ * Compute KPIs. When `allDeals` is provided, SPEND includes every deal in that list
+ * (deduped by id) in addition to campaign collaboration fees — even deals not linked
+ * to any campaign. The caller is responsible for scoping deals to the relevant
+ * influencers (e.g. by country / detail-panel influencer).
+ */
+export const computeKPIs = (
+  rows: CampaignEntry[],
+  displayCurrency: CurrencyCode = "CZK",
+  rates?: ExchangeRates,
+  allDeals?: DealLike[],
+): KPISet => {
   const videoRows = rows.filter((r) => r.platform !== "Story");
   const storyRows = rows.filter((r) => r.platform === "Story");
   const fees = sum(rows.map((r) => convertCurrency(r.campaignCost, r.currency, displayCurrency, rates)));
-  const productCost = sumUniqueDealCosts(rows, displayCurrency, rates);
+  const productCost = allDeals
+    ? sumDealList(allDeals, displayCurrency, rates)
+    : sumUniqueDealCosts(rows, displayCurrency, rates);
   const totalSpend = fees + productCost;
   const totalRevenue = sum(rows.map((r) => convertCurrency(r.purchaseRevenue, r.currency, displayCurrency, rates)));
   return {
@@ -71,7 +110,12 @@ export interface InfluencerSummary {
   topCampaign: string;
 }
 
-export const summarizeInfluencers = (rows: CampaignEntry[], displayCurrency: CurrencyCode = "CZK", rates?: ExchangeRates): InfluencerSummary[] => {
+export const summarizeInfluencers = (
+  rows: CampaignEntry[],
+  displayCurrency: CurrencyCode = "CZK",
+  rates?: ExchangeRates,
+  dealsByInfluencerId?: Map<string, DealLike[]>,
+): InfluencerSummary[] => {
   const map = new Map<string, CampaignEntry[]>();
   for (const r of rows) {
     if (!r.influencer) continue;
@@ -84,7 +128,13 @@ export const summarizeInfluencers = (rows: CampaignEntry[], displayCurrency: Cur
     const videos = entries.filter((e) => e.platform !== "Story");
     const stories = entries.filter((e) => e.platform === "Story");
     const fees = sum(entries.map((e) => convertCurrency(e.campaignCost, e.currency, displayCurrency, rates)));
-    const productCost = sumUniqueDealCosts(entries, displayCurrency, rates);
+    const influencerId = entries.find((e) => e.influencerId)?.influencerId ?? null;
+    const influencerDeals = dealsByInfluencerId && influencerId
+      ? dealsByInfluencerId.get(influencerId) ?? []
+      : null;
+    const productCost = influencerDeals
+      ? sumDealList(influencerDeals, displayCurrency, rates)
+      : sumUniqueDealCosts(entries, displayCurrency, rates);
     const totalSpend = fees + productCost;
     const totalRevenue = sum(entries.map((e) => convertCurrency(e.purchaseRevenue, e.currency, displayCurrency, rates)));
     const totalViews = sum(videos.map((e) => e.views));
