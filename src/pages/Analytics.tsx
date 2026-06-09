@@ -327,7 +327,7 @@ const Analytics = () => {
 
         {/* KPIs */}
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-          <KpiCard label="Total Campaigns" value={formatNumber(kpis.campaigns)} />
+          <KpiCard label="Videos / Posts" value={formatNumber(kpis.campaigns)} />
           <KpiCard label="Stories" value={formatNumber(kpis.stories)} valueClass="text-[hsl(var(--platform-story))]" />
           <KpiCard label="Total Spend" value={formatCurrency(kpis.spend)} />
           <KpiCard label="Total Revenue" value={formatCurrency(kpis.revenue)} valueClass={kpis.revenue > 0 ? "text-success" : undefined} />
