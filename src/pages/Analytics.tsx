@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { format, parseISO, startOfMonth } from "date-fns";
+import { format, parseISO, startOfMonth, subMonths } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
 import { toastError } from "@/lib/toast-helpers";
@@ -257,6 +257,28 @@ const Analytics = () => {
   }, [filtered]);
 
   // Top campaigns
+  // Content Output: last 12 months, stacked by platform (YouTube / Instagram)
+  const contentOutput = useMemo(() => {
+    const now = startOfMonth(new Date());
+    const buckets: { key: string; label: string; YouTube: number; Instagram: number }[] = [];
+    const index = new Map<string, number>();
+    for (let i = 11; i >= 0; i--) {
+      const d = startOfMonth(subMonths(now, i));
+      const key = format(d, "yyyy-MM");
+      index.set(key, buckets.length);
+      buckets.push({ key, label: format(d, "MMM"), YouTube: 0, Instagram: 0 });
+    }
+    for (const r of rows) {
+      if (!r.date) continue;
+      const key = format(startOfMonth(r.date), "yyyy-MM");
+      const idx = index.get(key);
+      if (idx == null) continue;
+      if (r.platform === "YouTube" || r.platform === "YB Shorts") buckets[idx].YouTube += 1;
+      else if (r.platform === "Instagram" || r.platform === "Story") buckets[idx].Instagram += 1;
+    }
+    return buckets;
+  }, [rows]);
+
   const ranked = useMemo(() => {
     const score = (r: Row) => {
       if (rankMetric === "views") return r.views;
