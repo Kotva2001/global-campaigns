@@ -24,6 +24,8 @@ interface MonthlyStats {
   productCost: number;
   ytViews: number;
   igViews: number;
+  ytCount: number;
+  igCount: number;
   topCreator: { id: string; name: string; views: number; engagement: number | null } | null;
   topCreators: { id: string; name: string; views: number; engagement: number | null }[];
 }
@@ -104,6 +106,8 @@ const fetchMonthStats = async (
   let totalViews = 0;
   let ytViews = 0;
   let igViews = 0;
+  let ytCount = 0;
+  let igCount = 0;
   const engagements: number[] = [];
   let productCost = 0;
   const dealsCounted = new Set<string>();
@@ -113,8 +117,8 @@ const fetchMonthStats = async (
     const v = num(c.views);
     totalViews += v;
     const plat = normalizePlatform(c.platform);
-    if (plat === "YouTube") ytViews += v;
-    else if (plat === "Instagram") igViews += v;
+    if (plat === "YouTube") { ytViews += v; ytCount += 1; }
+    else if (plat === "Instagram") { igViews += v; igCount += 1; }
     if (c.engagement_rate != null) {
       const e = num(c.engagement_rate);
       if (Number.isFinite(e)) engagements.push(e);
@@ -161,6 +165,8 @@ const fetchMonthStats = async (
     productCost,
     ytViews,
     igViews,
+    ytCount,
+    igCount,
     topCreator,
     topCreators,
   };
@@ -273,10 +279,11 @@ export const MonthlyOverview = () => {
                 accent="pink"
               />
               <MetricCard
-                label="Active Campaigns"
+                label="Videos / Posts"
                 value={formatNumber(current.activeCampaigns)}
                 change={previous ? pctChange(current.activeCampaigns, previous.activeCampaigns) : null}
                 accent="cyan"
+                sub={`${current.ytCount} YouTube, ${current.igCount} Instagram`}
               />
               <MetricCard
                 label="Product Cost"
@@ -428,12 +435,14 @@ const MetricCard = ({
   change,
   accent = "cyan",
   inverse = false,
+  sub,
 }: {
   label: string;
   value: string;
   change: number | null;
   accent?: "cyan" | "pink";
   inverse?: boolean;
+  sub?: string;
 }) => {
   const accentColor = accent === "pink" ? "hsl(var(--platform-instagram))" : "hsl(var(--primary))";
   const positive = change != null && change > 0.05;
@@ -460,6 +469,7 @@ const MetricCard = ({
           <span>{Math.abs(change).toFixed(1)}% vs last month</span>
         </div>
       )}
+      {sub && <div className="mt-0.5 text-[10px] text-muted-foreground/70">{sub}</div>}
     </Card>
   );
 };
