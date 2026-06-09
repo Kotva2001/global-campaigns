@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { toast } from "sonner";
 import { Trash2, Plus, UserPlus, Copy } from "lucide-react";
-import { useUserRole, type AppRole } from "@/hooks/useUserRole";
+import { useUserRole, useIsOwner, type AppRole } from "@/hooks/useUserRole";
 
 type Row = {
   id: string;
@@ -24,6 +24,7 @@ type Row = {
 
 export const UserManagement = () => {
   const { user: me } = useUserRole();
+  const isOwner = useIsOwner();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [newEmail, setNewEmail] = useState("");
@@ -176,7 +177,7 @@ export const UserManagement = () => {
             <Select value={caRole} onValueChange={(v) => setCaRole(v as AppRole)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="admin">Admin</SelectItem>
+                {isOwner && <SelectItem value="admin">Admin</SelectItem>}
                 <SelectItem value="editor">Editor</SelectItem>
                 <SelectItem value="viewer">Viewer</SelectItem>
               </SelectContent>
@@ -225,7 +226,7 @@ export const UserManagement = () => {
           <Select value={newRole} onValueChange={(v) => setNewRole(v as AppRole)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="admin">Admin</SelectItem>
+              {isOwner && <SelectItem value="admin">Admin</SelectItem>}
               <SelectItem value="editor">Editor</SelectItem>
               <SelectItem value="viewer">Viewer</SelectItem>
             </SelectContent>
@@ -264,7 +265,7 @@ export const UserManagement = () => {
                     <Select value={row.role} onValueChange={(v) => updateRole(row, v as AppRole)} disabled={!!isMe}>
                       <SelectTrigger className="h-8 w-[110px] text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="admin">Admin</SelectItem>
+                        {isOwner && <SelectItem value="admin">Admin</SelectItem>}
                         <SelectItem value="editor">Editor</SelectItem>
                         <SelectItem value="viewer">Viewer</SelectItem>
                       </SelectContent>

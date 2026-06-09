@@ -40,10 +40,10 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
 
-    // Check caller is admin
+    // Check caller is admin (and whether they are the owner)
     const { data: roleRow } = await admin
       .from("user_roles")
-      .select("role")
+      .select("role, is_owner")
       .eq("user_id", userData.user.id)
       .maybeSingle();
     if (!roleRow || roleRow.role !== "admin") {
@@ -52,6 +52,7 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    const callerIsOwner = Boolean(roleRow.is_owner);
 
     const body = await req.json();
     const email = String(body.email ?? "").trim().toLowerCase();
@@ -84,6 +85,17 @@ Deno.serve(async (req) => {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+    // Only the owner may create new admin accounts. Mirrors the DB RLS policy
+    // `admins_insert_non_privileged` which forbids admin-to-admin escalation.
+    if (role === "admin" && !callerIsOwner) {
+      return new Response(
+        JSON.stringify({ error: "Only the owner can create admin accounts" }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Create auth user (auto-confirmed so they can sign in immediately)
