@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { format, parseISO, startOfMonth } from "date-fns";
+import { format, parseISO, startOfMonth, subMonths } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
 import { toastError } from "@/lib/toast-helpers";
@@ -257,6 +257,28 @@ const Analytics = () => {
   }, [filtered]);
 
   // Top campaigns
+  // Content Output: last 12 months, stacked by platform (YouTube / Instagram)
+  const contentOutput = useMemo(() => {
+    const now = startOfMonth(new Date());
+    const buckets: { key: string; label: string; YouTube: number; Instagram: number }[] = [];
+    const index = new Map<string, number>();
+    for (let i = 11; i >= 0; i--) {
+      const d = startOfMonth(subMonths(now, i));
+      const key = format(d, "yyyy-MM");
+      index.set(key, buckets.length);
+      buckets.push({ key, label: format(d, "MMM"), YouTube: 0, Instagram: 0 });
+    }
+    for (const r of rows) {
+      if (!r.date) continue;
+      const key = format(startOfMonth(r.date), "yyyy-MM");
+      const idx = index.get(key);
+      if (idx == null) continue;
+      if (r.platform === "YouTube" || r.platform === "YB Shorts") buckets[idx].YouTube += 1;
+      else if (r.platform === "Instagram" || r.platform === "Story") buckets[idx].Instagram += 1;
+    }
+    return buckets;
+  }, [rows]);
+
   const ranked = useMemo(() => {
     const score = (r: Row) => {
       if (rankMetric === "views") return r.views;
@@ -327,7 +349,7 @@ const Analytics = () => {
 
         {/* KPIs */}
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-          <KpiCard label="Total Campaigns" value={formatNumber(kpis.campaigns)} />
+          <KpiCard label="Videos / Posts" value={formatNumber(kpis.campaigns)} />
           <KpiCard label="Stories" value={formatNumber(kpis.stories)} valueClass="text-[hsl(var(--platform-story))]" />
           <KpiCard label="Total Spend" value={formatCurrency(kpis.spend)} />
           <KpiCard label="Total Revenue" value={formatCurrency(kpis.revenue)} valueClass={kpis.revenue > 0 ? "text-success" : undefined} />
@@ -480,6 +502,42 @@ const Analytics = () => {
                 )}
               </Card>
             </div>
+
+            {/* Content Output */}
+            <Card className="border-border bg-card p-4 shadow-[0_0_24px_-12px_hsl(var(--primary)/0.5)]">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="text-sm font-bold">Content Output · last 12 months</div>
+                <div className="flex items-center gap-3 text-[10px] uppercase tracking-wider text-muted-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-sm" style={{ background: "hsl(var(--platform-youtube))" }} />
+                    YouTube
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-sm" style={{ background: "hsl(var(--platform-instagram))" }} />
+                    Instagram
+                  </span>
+                </div>
+              </div>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={contentOutput} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="label" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                  <YAxis allowDecimals={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                  <Tooltip
+                    cursor={{ fill: "hsl(var(--primary) / 0.06)" }}
+                    contentStyle={{
+                      background: "hsl(var(--popover))",
+                      border: "1px solid hsl(var(--primary) / 0.4)",
+                      borderRadius: 8,
+                      boxShadow: "0 0 20px -6px hsl(var(--primary) / 0.6)",
+                    }}
+                    formatter={(v: number, name) => [`${v} ${v === 1 ? "post" : "posts"}`, name]}
+                  />
+                  <Bar dataKey="YouTube" stackId="p" fill="hsl(var(--platform-youtube))" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="Instagram" stackId="p" fill="hsl(var(--platform-instagram))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
 
             {/* Top Campaigns */}
             <Card className="border-border bg-card">

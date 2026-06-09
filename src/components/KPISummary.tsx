@@ -19,7 +19,7 @@ export const KPISummary = ({ kpis, currency = "CZK", convertedSub, onSelectMetri
       <KPI
         index={0}
         icon={<Activity className="h-4 w-4" />}
-        label="Campaigns"
+        label="Videos / Posts"
         valueNode={<CountUp value={kpis.campaigns} format={(n) => formatNumber(Math.round(n))} />}
         sub={`${kpis.influencers} influencers`}
         onClick={() => onSelectMetric?.("campaigns")}
