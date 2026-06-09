@@ -503,6 +503,42 @@ const Analytics = () => {
               </Card>
             </div>
 
+            {/* Content Output */}
+            <Card className="border-border bg-card p-4 shadow-[0_0_24px_-12px_hsl(var(--primary)/0.5)]">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="text-sm font-bold">Content Output · last 12 months</div>
+                <div className="flex items-center gap-3 text-[10px] uppercase tracking-wider text-muted-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-sm" style={{ background: "hsl(var(--platform-youtube))" }} />
+                    YouTube
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-sm" style={{ background: "hsl(var(--platform-instagram))" }} />
+                    Instagram
+                  </span>
+                </div>
+              </div>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={contentOutput} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="label" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                  <YAxis allowDecimals={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                  <Tooltip
+                    cursor={{ fill: "hsl(var(--primary) / 0.06)" }}
+                    contentStyle={{
+                      background: "hsl(var(--popover))",
+                      border: "1px solid hsl(var(--primary) / 0.4)",
+                      borderRadius: 8,
+                      boxShadow: "0 0 20px -6px hsl(var(--primary) / 0.6)",
+                    }}
+                    formatter={(v: number, name) => [`${v} ${v === 1 ? "post" : "posts"}`, name]}
+                  />
+                  <Bar dataKey="YouTube" stackId="p" fill="hsl(var(--platform-youtube))" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="Instagram" stackId="p" fill="hsl(var(--platform-instagram))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+
             {/* Top Campaigns */}
             <Card className="border-border bg-card">
               <div className="flex items-center justify-between gap-4 border-b border-border p-4">
