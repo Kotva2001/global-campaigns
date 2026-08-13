@@ -64,6 +64,10 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
       return;
     }
+    // A valid auth session must unlock the app immediately. Role lookup is a
+    // separate, fail-closed step and must never be responsible for setting the
+    // authenticated user after an OAuth callback.
+    setUser(u);
     // Only show the loading skeleton on the very first load. Subsequent
     // refreshes (e.g. TOKEN_REFRESHED when returning to the tab) must not
     // flip loading back to true, which would unmount the entire app.
@@ -106,10 +110,11 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    let authEventVersion = 0;
+    let active = true;
+    let sessionCheckFinished = false;
     // Set up listener BEFORE checking session.
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      authEventVersion += 1;
+      if (!active) return;
       const u = session?.user ?? null;
       const previousSession = currentSessionRef.current;
       const sameUser = previousSession?.user?.id === u?.id;
@@ -120,23 +125,33 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
       // the tab regains focus. Only sign-out may clear app state. Repeated
       // sign-in/token events for the same user must preserve mounted children.
       if (event === "SIGNED_OUT") {
-        if (previousSession || user) {
+        const hasOAuthCallbackParams = /(?:access_token|refresh_token|code)=/.test(
+          `${window.location.search}${window.location.hash}`,
+        );
+
+        // During a full-page OAuth return the auth client can emit a transient
+        // signed-out event before it finishes consuming callback tokens. Never
+        // erase storage in that state. Only clear it when a real prior session
+        // is being signed out.
+        if (previousSession && !hasOAuthCallbackParams) {
           setUser(null);
           void loadRole(null);
+          clearAllSessionStorage();
+          try { localStorage.removeItem(LAST_ACTIVITY_KEY); } catch { /* */ }
         }
-        clearAllSessionStorage();
-        try { localStorage.removeItem(LAST_ACTIVITY_KEY); } catch { /* */ }
         return;
       }
       if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
         if (!u) {
           // No session (e.g. INITIAL_SESSION on a logged-out visit):
-          // clear loading so the login screen can render.
-          void loadRole(null);
+          // only settle as signed out after the explicit session check. This
+          // prevents a stale null INITIAL_SESSION from winning over the OAuth
+          // callback that is being processed at the same time.
+          if (sessionCheckFinished) void loadRole(null);
           return;
         }
-        if (!sameUser && u) setUser(u);
-        if (u && roleLoadedForUserRef.current !== u.id) void loadRole(u);
+        setUser(u);
+        if (roleLoadedForUserRef.current !== u.id) void loadRole(u);
         try { localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now())); } catch { /* */ }
         return;
       }
@@ -147,19 +162,25 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
       }
     });
 
-    const versionBeforeSessionCheck = authEventVersion;
     supabase.auth.getSession().then(({ data }) => {
-      // OAuth may complete while this initial session request is in flight.
-      // Never let its stale signed-out result overwrite the newer SIGNED_IN event.
-      if (authEventVersion !== versionBeforeSessionCheck) return;
+      if (!active) return;
+      sessionCheckFinished = true;
       const session = data.session ?? null;
       const u = session?.user ?? null;
+
+      // A newer auth event may have supplied the OAuth session while this
+      // request was in flight. Never overwrite it with a stale null result.
+      if (!session && currentSessionRef.current?.user) return;
+
       currentSessionRef.current = session;
       setUser(u);
       void loadRole(u);
     });
 
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      active = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   // Inactivity auto-logout (24h)
