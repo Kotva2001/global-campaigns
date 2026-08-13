@@ -125,10 +125,20 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
       // the tab regains focus. Only sign-out may clear app state. Repeated
       // sign-in/token events for the same user must preserve mounted children.
       if (event === "SIGNED_OUT") {
-        setUser(null);
-        void loadRole(null);
-        clearAllSessionStorage();
-        try { localStorage.removeItem(LAST_ACTIVITY_KEY); } catch { /* */ }
+        const hasOAuthCallbackParams = /(?:access_token|refresh_token|code)=/.test(
+          `${window.location.search}${window.location.hash}`,
+        );
+
+        // During a full-page OAuth return the auth client can emit a transient
+        // signed-out event before it finishes consuming callback tokens. Never
+        // erase storage in that state. Only clear it when a real prior session
+        // is being signed out.
+        if (previousSession && !hasOAuthCallbackParams) {
+          setUser(null);
+          void loadRole(null);
+          clearAllSessionStorage();
+          try { localStorage.removeItem(LAST_ACTIVITY_KEY); } catch { /* */ }
+        }
         return;
       }
       if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
