@@ -106,8 +106,10 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    let authEventVersion = 0;
     // Set up listener BEFORE checking session.
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      authEventVersion += 1;
       const u = session?.user ?? null;
       const previousSession = currentSessionRef.current;
       const sameUser = previousSession?.user?.id === u?.id;
@@ -139,7 +141,11 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
       }
     });
 
+    const versionBeforeSessionCheck = authEventVersion;
     supabase.auth.getSession().then(({ data }) => {
+      // OAuth may complete while this initial session request is in flight.
+      // Never let its stale signed-out result overwrite the newer SIGNED_IN event.
+      if (authEventVersion !== versionBeforeSessionCheck) return;
       const session = data.session ?? null;
       const u = session?.user ?? null;
       currentSessionRef.current = session;
