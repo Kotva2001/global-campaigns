@@ -129,6 +129,12 @@ export const UserRoleProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
       if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
+        if (!u) {
+          // No session (e.g. INITIAL_SESSION on a logged-out visit):
+          // clear loading so the login screen can render.
+          void loadRole(null);
+          return;
+        }
         if (!sameUser && u) setUser(u);
         if (u && roleLoadedForUserRef.current !== u.id) void loadRole(u);
         try { localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now())); } catch { /* */ }
